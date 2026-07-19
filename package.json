@@ -1,8 +1,29 @@
 {
   "name": "money-manage",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build" },
-  "devDependencies": { "vite": "^6.1.0" }
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --experimental-strip-types --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts"
+  },
+  "dependencies": {
+    "next": "^15.2.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3"
+  }
 }
