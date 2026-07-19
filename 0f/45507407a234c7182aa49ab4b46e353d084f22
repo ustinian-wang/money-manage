@@ -1,0 +1,19 @@
+types/social-security.ts
+  s_6af0778c6110cd::t_007d0d3a578ff4 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0f45507407a234c7182aa49ab4b46e353d084f22",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
