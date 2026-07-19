@@ -13,6 +13,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts"
   },
   "dependencies": {
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "next": "^15.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
