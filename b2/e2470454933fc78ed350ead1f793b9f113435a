@@ -1,0 +1,40 @@
+app/globals.css
+  s_6af0778c6110cd::t_d679ba4f275bc3 8-12,15-19
+  s_6af0778c6110cd::t_5de8282528909e 1-6
+  s_6af0778c6110cd::t_001df27151a9a6 7,13-14
+app/page.tsx
+  s_6af0778c6110cd::t_5de8282528909e 1-2,4,10,17-20,37,93,121,131-132
+  s_6af0778c6110cd::t_001df27151a9a6 22,24,58-59,71,97,148-149
+  s_6af0778c6110cd::t_594ccec2551e0f 33-34
+  s_6af0778c6110cd::t_958b63c1e09a6b 47,67
+  s_6af0778c6110cd::t_7ba7cdbf775587 79-83,91
+  s_6af0778c6110cd::t_5c9a5e79791a77 115-116
+  s_6af0778c6110cd::t_2c65ab5d6cfcbc 127
+  s_6af0778c6110cd::t_d679ba4f275bc3 3,5,8-9,11-16,21,23,25-27,35,38-46,50-51,53,57,60-66,68-70,72-78,84-90,94-96,122-124,128,133-137,140-147
+  s_6af0778c6110cd::t_48e18a99d0eda0 130
+  s_6af0778c6110cd::t_da9198ac760a23 36,49
+  s_6af0778c6110cd::t_c14673af3dd67d 129
+  s_6af0778c6110cd::t_9a4c366d7d51f6 125
+  s_6af0778c6110cd::t_b72f1fc32e919d 98-114,117-120
+  s_6af0778c6110cd::t_5c42964f025190 92
+  s_6af0778c6110cd::t_d804b86e21ff2d 126
+  s_6af0778c6110cd::t_ac6b847acc2e64 6-7,28-32,48,52,54
+  s_6af0778c6110cd::t_3eec8559e1359e 55-56
+  s_6af0778c6110cd::t_7187cb5c6c08c8 138-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b2e2470454933fc78ed350ead1f793b9f113435a",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
