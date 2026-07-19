@@ -1,0 +1,59 @@
+types/installment.ts
+  s_6af0778c6110cd::t_67ab91288ce4c1 48-54
+  s_6af0778c6110cd::t_d81937a3fdce2b 16,18-22,74
+  s_6af0778c6110cd::t_8efb3531642461 23-26
+  s_6af0778c6110cd::t_f81552fd282bdf 40-41,44,73,75,90-91,93
+  s_6af0778c6110cd::t_cd5f6a90ae2563 1-8,10-15,17,27-33,36,56,59-64,72,77,81,92,97
+  s_6af0778c6110cd::t_4d2f214593dada 57
+  s_6af0778c6110cd::t_6740bf32aae95b 9,34-35,37-39,42-43,45-47,55,58,65-71,76,78-80,82-89,94-96,98
+domain/installment/index.test.ts
+  s_6af0778c6110cd::t_cd5f6a90ae2563 1-8,10,18-44,46-53,55-65,68-75,77-95,106
+  s_6af0778c6110cd::t_3dd5fe1abaa3bb 66-67
+  s_6af0778c6110cd::t_1a0ab09093962c 9,96-105
+  s_6af0778c6110cd::t_8efb3531642461 11-17
+  s_6af0778c6110cd::t_ab769d7eb114ea 45,54,76
+domain/installment/index.ts
+  s_6af0778c6110cd::t_cd5f6a90ae2563 4-6,9-10,12-18,20-52,57
+  s_6af0778c6110cd::t_143be858cc1205 11
+  s_6af0778c6110cd::t_d81937a3fdce2b 53-56
+  s_6af0778c6110cd::t_cb24be433564ac 1-3,7-8
+  s_6af0778c6110cd::t_f81552fd282bdf 19
+domain/installment/calculators.ts
+  s_6af0778c6110cd::t_cb24be433564ac 1-2
+  s_6af0778c6110cd::t_f81552fd282bdf 24-29,31,33,35,37
+  s_6af0778c6110cd::t_cd5f6a90ae2563 3-23,30,32,34,36,38-56
+domain/installment/calculator.ts
+  s_6af0778c6110cd::t_cb24be433564ac 1-2
+  s_6af0778c6110cd::t_d81937a3fdce2b 66
+  s_6af0778c6110cd::t_c026b383996d62 8
+  s_6af0778c6110cd::t_6740bf32aae95b 3-7,9-30,33-35,37-38,40-63,65,68-77
+  s_6af0778c6110cd::t_74a6d96fbf295f 31-32,36,39
+  s_6af0778c6110cd::t_69e43926d67243 64
+  s_6af0778c6110cd::t_81b744f380365b 67
+domain/installment/validation.ts
+  s_6af0778c6110cd::t_cd5f6a90ae2563 2,12-20,23-31,33-48,51-54
+  s_6af0778c6110cd::t_f81552fd282bdf 21-22,32,50
+  s_6af0778c6110cd::t_cb24be433564ac 1
+  s_6af0778c6110cd::t_8efb3531642461 9
+  s_6af0778c6110cd::t_d81937a3fdce2b 3-8,10-11,49
+domain/installment/calculator.test.ts
+  s_6af0778c6110cd::t_1a0ab09093962c 44-55
+  s_6af0778c6110cd::t_6740bf32aae95b 1-21,23-36,38-43
+  s_6af0778c6110cd::t_8cd5e36c5f297b 22,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "528b1947e63b078b0c4e5d03758dbb015878dfe2",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
