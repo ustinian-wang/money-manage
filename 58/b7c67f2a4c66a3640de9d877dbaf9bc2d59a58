@@ -1,0 +1,33 @@
+tailwind.config.ts
+  s_6af0778c6110cd::t_5de8282528909e 1-3,5-8,15-21
+  s_6af0778c6110cd::t_001df27151a9a6 4,9-14
+.nvmrc
+  s_6af0778c6110cd::t_2acdede5c85a7d 1
+app/layout.tsx
+  s_6af0778c6110cd::t_5de8282528909e 1-4,7-15
+  s_6af0778c6110cd::t_001df27151a9a6 5-6
+tsconfig.json
+  s_6af0778c6110cd::t_5de8282528909e 1-20
+next.config.ts
+  s_6af0778c6110cd::t_5de8282528909e 1-7
+postcss.config.mjs
+  s_6af0778c6110cd::t_5de8282528909e 1-8
+data/financial-profile.json
+  s_6af0778c6110cd::t_bb13bf9c2e9d42 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "58b7c67f2a4c66a3640de9d877dbaf9bc2d59a58",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
