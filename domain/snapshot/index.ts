@@ -9,7 +9,7 @@ import type {
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function snapshotDate(snapshot: FinancialSnapshot): string {
-    if (snapshot.effectiveDate && DATE_PATTERN.test(snapshot.effectiveDate)) return snapshot.effectiveDate;
+    if (snapshot.effectiveDate && DATE_PATTERN.test(snapshot.effectiveDate) && !Number.isNaN(Date.parse(`${snapshot.effectiveDate}T00:00:00Z`))) return snapshot.effectiveDate;
     if (snapshot.effectiveMonth && /^\d{4}-\d{2}$/.test(snapshot.effectiveMonth)) return `${snapshot.effectiveMonth}-01`;
     throw new RangeError('快照生效日期必须是 YYYY-MM-DD，或提供 YYYY-MM 月份');
 }
@@ -21,7 +21,7 @@ export function toMonthCount(value: number, unit: 'month' | 'year'): number {
 
 export function resolveSimulationWindow(options: SimulationOptions = {}) {
     const asOfDate = options.asOfDate || new Date().toISOString().slice(0, 10);
-    if (!DATE_PATTERN.test(asOfDate)) throw new RangeError('模拟起始日期必须是 YYYY-MM-DD');
+    if (!DATE_PATTERN.test(asOfDate) || Number.isNaN(Date.parse(`${asOfDate}T00:00:00Z`))) throw new RangeError('模拟起始日期必须是 YYYY-MM-DD');
     const horizonMonths = options.horizonMonths !== undefined
         ? Math.max(0, Math.round(options.horizonMonths))
         : Math.max(0, Math.round((options.horizonYears ?? 30) * 12));
@@ -31,6 +31,7 @@ export function resolveSimulationWindow(options: SimulationOptions = {}) {
 }
 
 export function classifySnapshotDate(snapshot: FinancialSnapshot, asOfDate = new Date().toISOString().slice(0, 10)) {
+    if (!DATE_PATTERN.test(asOfDate) || Number.isNaN(Date.parse(`${asOfDate}T00:00:00Z`))) throw new RangeError('比较日期必须是 YYYY-MM-DD');
     const date = snapshotDate(snapshot);
     return date < asOfDate ? 'history' : date === asOfDate ? 'current' : 'future';
 }
@@ -59,7 +60,7 @@ export function applySnapshotChanges(previous: SnapshotState, changes: SnapshotC
 }
 
 export function getPreviousSnapshot(snapshots: FinancialSnapshot[], effectiveDate: string): FinancialSnapshot | undefined {
-    if (!DATE_PATTERN.test(effectiveDate)) throw new RangeError('比较日期必须是 YYYY-MM-DD');
+    if (!DATE_PATTERN.test(effectiveDate) || Number.isNaN(Date.parse(`${effectiveDate}T00:00:00Z`))) throw new RangeError('比较日期必须是 YYYY-MM-DD');
     return [...snapshots]
         .filter((item) => snapshotDate(item) < effectiveDate)
         .sort((a, b) => snapshotDate(b).localeCompare(snapshotDate(a)) || b.id.localeCompare(a.id))[0];

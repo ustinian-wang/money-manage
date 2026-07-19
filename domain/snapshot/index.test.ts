@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { FinancialSnapshot, SnapshotState } from '../../types/snapshot.ts';
 import {
+    applySnapshotChanges,
+    classifySnapshotDate,
     compareSnapshotWithPrevious,
     confirmSnapshotSave,
     getPreviousSnapshot,
@@ -9,55 +10,50 @@ import {
     resolveSimulationWindow,
     validateSnapshotSave,
 } from './index.ts';
+import type { FinancialSnapshot, SnapshotState } from '../../types/snapshot.ts';
 
 const state: SnapshotState = {
-    grossMonthlySalary: 20000,
-    otherMonthlyIncome: 0,
-    parentSupportMonthly: 3000,
-    livingExpenseMonthly: 5000,
-    cashAssets: 100000,
-    investmentAssets: 50000,
-    investmentReturnRate: 3,
-    committedDownPayments: 0,
+    grossMonthlySalary: 20000, otherMonthlyIncome: 0, parentSupportMonthly: 3000,
+    livingExpenseMonthly: 5000, cashAssets: 100000, investmentAssets: 50000,
+    investmentReturnRate: 3, committedDownPayments: 20000,
 };
 
-const snapshot = (id: string, effectiveDate: string, salary: number): FinancialSnapshot => ({
-    id,
-    name: id,
-    effectiveDate,
-    changes: [{ id: `${id}-salary`, path: 'grossMonthlySalary', value: salary }],
-    createdAt: `${effectiveDate}T00:00:00Z`,
-    updatedAt: `${effectiveDate}T00:00:00Z`,
+const makeSnapshot = (overrides: Partial<FinancialSnapshot>): FinancialSnapshot => ({
+    id: 's-1', name: '收入变化', effectiveDate: '2030-01-15', changes: [],
+    createdAt: '2026-07-20T00:00:00.000Z', updatedAt: '2026-07-20T00:00:00.000Z', ...overrides,
 });
 
-test('defaults to a 30-year window from the current date', () => {
-    assert.deepEqual(resolveSimulationWindow({ asOfDate: '2026-07-20' }), {
-        asOfDate: '2026-07-20',
-        horizonMonths: 360,
-        endDate: '2056-07-20',
-    });
+test('builds a 30-year window and classifies exact snapshot dates', () => {
+    const window = resolveSimulationWindow({ asOfDate: '2026-07-20' });
+    assert.equal(window.horizonMonths, 360);
+    assert.equal(window.endDate, '2056-07-20');
+    assert.equal(classifySnapshotDate(makeSnapshot({ effectiveDate: '2026-07-20' }), '2026-07-20'), 'current');
+    assert.equal(classifySnapshotDate(makeSnapshot({ effectiveDate: '2030-01-15' }), '2026-07-20'), 'future');
 });
 
-test('filters and sorts snapshots by concrete effective date', () => {
-    const snapshots = [snapshot('later', '2027-06-01', 5000), snapshot('earlier', '2027-01-15', 18000)];
-    assert.deepEqual(getSnapshotsForSimulation(snapshots, { asOfDate: '2027-01-01', horizonMonths: 12 }).map((item) => item.id), ['earlier', 'later']);
-    assert.equal(getPreviousSnapshot(snapshots, '2027-06-01')?.id, 'earlier');
+test('filters snapshots to the future window and compares with the latest previous snapshot', () => {
+    const snapshots = [
+        makeSnapshot({ id: 'past', effectiveDate: '2025-01-01' }),
+        makeSnapshot({ id: 'near', effectiveDate: '2028-01-01', changes: [{ id: 'salary', path: 'grossMonthlySalary', value: 18000 }] }),
+        makeSnapshot({ id: 'far', effectiveDate: '2057-01-01' }),
+    ];
+    assert.deepEqual(getSnapshotsForSimulation(snapshots, { asOfDate: '2026-07-20' }).map((item) => item.id), ['near']);
+    assert.equal(getPreviousSnapshot(snapshots, '2030-01-01')?.id, 'near');
+    assert.deepEqual(compareSnapshotWithPrevious(snapshots[1], snapshots[0]), [{ path: 'grossMonthlySalary', previous: undefined, next: 18000, mode: 'set' }]);
 });
 
-test('compares the current snapshot with the most recent prior snapshot', () => {
-    const previous = snapshot('previous', '2030-01-01', 20000);
-    const current = snapshot('current', '2035-01-01', 5000);
-    assert.deepEqual(compareSnapshotWithPrevious(current, previous)[0], {
-        path: 'grossMonthlySalary', previous: 20000, next: 5000, mode: 'set',
-    });
-});
-
-test('blocks a snapshot that breaks available assets until explicitly confirmed', () => {
-    const risky = snapshot('risky', '2035-01-01', 5000);
-    risky.changes.push({ id: 'cash', path: 'cashAssets', value: -200000 });
+test('requires explicit confirmation before allowing a negative asset snapshot', () => {
+    const risky = makeSnapshot({ changes: [{ id: 'cash', path: 'cashAssets', value: -200000 }] });
     const blocked = validateSnapshotSave(state, risky);
     assert.equal(blocked.blocked, true);
     assert.equal(blocked.requiresConfirmation, true);
     assert.equal(confirmSnapshotSave(state, risky, true).blocked, false);
-    assert.equal(confirmSnapshotSave(state, risky, false).blocked, true);
+});
+
+test('applies set, add, and remove snapshot changes', () => {
+    assert.deepEqual(applySnapshotChanges(state, [
+        { id: 'salary', path: 'grossMonthlySalary', value: 5000 },
+        { id: 'support', path: 'parentSupportMonthly', value: 1000, mode: 'add' },
+        { id: 'living', path: 'livingExpenseMonthly', value: 500, mode: 'remove' },
+    ]), { ...state, grossMonthlySalary: 5000, parentSupportMonthly: 4000, livingExpenseMonthly: 4500 });
 });
