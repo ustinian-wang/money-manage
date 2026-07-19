@@ -1,0 +1,24 @@
+tests/financial-timeline-and-persistence.test.ts
+  s_6af0778c6110cd::t_686fc151e0a0a7 13-14
+  s_6af0778c6110cd::t_6b27b4590ddee1 1-12,15-85,88-125
+  s_6af0778c6110cd::t_86fa1c1e121a99 86-87
+tests/finance-specialized-report.md
+  s_6af0778c6110cd::t_686fc151e0a0a7 5,10,24-28,33-34,43,47
+  s_6af0778c6110cd::t_017e4ea3fb9f76 1-4,6-9,11-23,29-32,35-42,44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "dbe3325d4b01de6c51abb4708be47dbe224d4a5c",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
