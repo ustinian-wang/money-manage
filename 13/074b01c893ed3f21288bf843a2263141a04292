@@ -1,0 +1,21 @@
+domain/snapshot/index.ts
+  s_6af0778c6110cd::t_6e416ca131ce69 34
+domain/snapshot/index.test.ts
+  s_6af0778c6110cd::t_6e416ca131ce69 4-5,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "13074b01c893ed3f21288bf843a2263141a04292",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
