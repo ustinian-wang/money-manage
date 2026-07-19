@@ -1,5 +1,5 @@
-import type { InterestPlan, InstallmentConsumption, RepaymentMode, RepaymentMonth, RepaymentSummary } from '../../types/installment.ts';
-import { resolveTermMonths } from './validation.ts';
+import type { InterestPlan, InstallmentConsumption, RepaymentMode, RepaymentMonth, RepaymentSummary } from '../../types/installment';
+import { resolveTermMonths } from './validation';
 
 const EPSILON = 0.005;
 

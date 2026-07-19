@@ -1,4 +1,4 @@
-import { termToMonths, type InstallmentConsumption, type InterestPlan } from '../../types/installment.ts';
+import { termToMonths, type InstallmentConsumption, type InterestPlan } from '../../types/installment';
 
 export function toMonthCount(value: number, unit: 'month' | 'year' = 'month'): number {
     if (!Number.isFinite(value)) return 0;

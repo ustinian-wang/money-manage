@@ -1,11 +1,11 @@
-import type { InstallmentConsumption, InstallmentSummary, RepaymentEntry } from '../../types/installment.ts';
-import { calculatePlanSchedule } from './calculators.ts';
-import { resolveTermMonths, validateConsumption } from './validation.ts';
+import type { InstallmentConsumption, InstallmentSummary, RepaymentEntry } from '../../types/installment';
+import { calculatePlanSchedule } from './calculators';
+import { resolveTermMonths, validateConsumption } from './validation';
 
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
-export { calculateEqualPrincipalInterestPayment, calculatePlanSchedule, resolveMonthlyRate } from './calculators.ts';
-export { resolveTermMonths, toMonthCount, validateConsumption, validateInterestPlan } from './validation.ts';
+export { calculateEqualPrincipalInterestPayment, calculatePlanSchedule, resolveMonthlyRate } from './calculators';
+export { resolveTermMonths, toMonthCount, validateConsumption, validateInterestPlan } from './validation';
 
 export function calculateDownPayment(consumption: InstallmentConsumption): number {
     validateConsumption(consumption);

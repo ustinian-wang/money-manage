@@ -1,5 +1,5 @@
-import type { InterestPlan, RepaymentEntry } from '../../types/installment.ts';
-import { validateInterestPlan } from './validation.ts';
+import type { InterestPlan, RepaymentEntry } from '../../types/installment';
+import { validateInterestPlan } from './validation';
 
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
