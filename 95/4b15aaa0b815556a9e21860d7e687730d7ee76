@@ -1,0 +1,28 @@
+package.json
+  s_6af0778c6110cd::t_2acdede5c85a7d 5-8
+  s_6af0778c6110cd::t_001df27151a9a6 17-18,21-25,27
+  s_6af0778c6110cd::t_5de8282528909e 3,9-11,14-15,19-20,26,28
+  s_6af0778c6110cd::t_6b27b4590ddee1 12-13
+  s_6af0778c6110cd::t_51073c8aec6312 16
+README.md
+  s_6af0778c6110cd::t_2acdede5c85a7d 1-28,39
+  s_6af0778c6110cd::t_686fc151e0a0a7 29-38
+.gitignore
+  s_6af0778c6110cd::t_6b27b4590ddee1 2-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "954b15aaa0b815556a9e21860d7e687730d7ee76",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
