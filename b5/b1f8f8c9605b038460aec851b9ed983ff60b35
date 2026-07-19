@@ -1,0 +1,19 @@
+app/globals.css
+  s_6af0778c6110cd::t_c928861d254337 15-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b5b1f8f8c9605b038460aec851b9ed983ff60b35",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
