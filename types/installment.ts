@@ -75,6 +75,9 @@ export interface InstallmentConsumption {
     financingAmount?: number;
     interestStructure: InterestStructure;
     startMonth?: string;
+    startDate?: string;
+    endDate?: string;
+    followRetirement?: boolean;
     enabled?: boolean;
 }
 

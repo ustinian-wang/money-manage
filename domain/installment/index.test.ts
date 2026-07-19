@@ -7,6 +7,8 @@ import {
     calculateMonthlyPayments,
     summarizeInstallmentConsumption,
     getInstallmentTermMonths,
+    resolveEffectiveTermMonths,
+    withEffectiveTerm,
 } from './index.ts';
 import { termToMonths, type InstallmentConsumption, type InterestPlan } from '../../types/installment.ts';
 
@@ -103,4 +105,26 @@ test('converts installment years to months consistently', () => {
     });
     assert.equal(getInstallmentTermMonths(yearly), 36);
     assert.equal(summarizeInstallmentConsumption(yearly).schedule.length, 36);
+});
+
+test('shortens the effective term at an explicit end date and recalculates plans', () => {
+    const value = consumption({
+        term: { value: 2, unit: 'year' }, termMonths: undefined,
+        startDate: '2027-01-15', endDate: '2027-06-30',
+        interestStructure: { mode: 'single', plans: [plan({ termMonths: 24 })] },
+    });
+    assert.equal(resolveEffectiveTermMonths(value), 6);
+    const shortened = withEffectiveTerm(value);
+    assert.equal(shortened.termMonths, 6);
+    assert.equal(shortened.interestStructure.plans[0]?.termMonths, 6);
+    assert.equal(summarizeInstallmentConsumption(shortened).schedule.length, 6);
+    assert.equal(summarizeInstallmentConsumption(shortened).monthlyPayment, 2000);
+});
+
+test('uses retirement date only when followRetirement is enabled', () => {
+    const value = consumption({
+        termMonths: 24, startDate: '2027-01-01', endDate: undefined, followRetirement: true,
+    });
+    assert.equal(resolveEffectiveTermMonths(value, '2027-06-01'), 6);
+    assert.equal(resolveEffectiveTermMonths({ ...value, followRetirement: false }, '2027-06-01'), 24);
 });
