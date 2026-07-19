@@ -12,6 +12,12 @@ button, input, select { font: inherit; }
 .field input, .field select { background: #f6f8f5; border: 1px solid #e3eae5; border-radius: .75rem; color: #17212b; padding: .6rem .7rem; width: 100%; }
 .money-slider { accent-color: #f07f62; cursor: grab; display: block; height: 1.25rem; width: 100%; }
 .money-slider:active { cursor: grabbing; }
+.percent-position { align-items: center; color: #84918d; display: flex; flex: 0 0 4.9rem; gap: .2rem; font-size: .72rem; }
+.percent-position input { background: #f8faf9; border: 1px solid #e3eae5; border-radius: .55rem; color: #52605b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; padding: .35rem .25rem; text-align: right; width: 3.7rem; }
+.field-input { background: #f6f8f5; border: 1px solid #e3eae5; border-radius: .75rem; color: #17212b; min-width: 0; padding: .65rem .75rem; width: 100%; }
+.field-input:focus, .field input:focus, .field select:focus, .percent-position input:focus { border-color: #f07f62; box-shadow: 0 0 0 3px rgba(240, 127, 98, .14); outline: none; }
+.forecast-bar { min-width: 2px; transition: height .18s ease; }
+.snapshot-row { align-items: center; background: #f8faf9; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: .75rem 1rem; }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; min-width: 580px; width: 100%; }
 th, td { border-bottom: 1px solid #edf1ee; padding: .7rem .5rem; text-align: left; font-size: .8rem; white-space: nowrap; }
