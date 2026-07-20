@@ -7,9 +7,14 @@
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "pm2:build": "npm run build",
+    "pm2:start": "npm run pm2:build && pm2 start ecosystem.config.cjs",
+    "pm2:restart": "npm run pm2:build && pm2 restart money-manage --update-env",
+    "pm2:stop": "pm2 stop money-manage",
+    "pm2:logs": "pm2 logs money-manage",
     "test": "node --experimental-strip-types --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts"
   },
   "dependencies": {
