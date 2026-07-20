@@ -79,3 +79,20 @@ td { color: #52605b; }
   font-size: 0.75rem;
   padding: 0.2rem 0.4rem;
 }
+
+/* 分期信息等长文本列：限宽并换行 */
+.cell-wrap {
+  max-width: 14rem;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.field-click-wrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  text-align: left;
+  max-width: 100%;
+}

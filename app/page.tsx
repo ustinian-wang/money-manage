@@ -5,13 +5,17 @@ import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import ReactECharts from 'echarts-for-react';
 
-type Expense = { id: string; name: string; category: string; mode: 'fixed' | 'percentage' | 'installment'; amount: number; rate?: number; total?: number; downPayment?: number; term?: number; interest?: number; startDate?: string; endDate?: string; followRetirement?: boolean };
+type Expense = { id: string; name: string; category: string; mode: 'fixed' | 'percentage' | 'installment' | 'one_time'; amount: number; rate?: number; total?: number; downPayment?: number; term?: number; interest?: number; startDate?: string; endDate?: string; followRetirement?: boolean };
 type SnapshotChange = { id: string; label: string; path: 'salary' | 'cash' | 'returnRate'; value: number };
 type Snapshot = { id: string; name: string; effectiveDate: string; changes: SnapshotChange[]; allowNegative: boolean };
 type EditableProps = { label: string; value: number; min: number; max: number; step: number; suffix?: string; onChange: (value: number) => void };
 type SocialRate = { personal: number; company: number };
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 const money = (value: number) => `¥${Math.round(value).toLocaleString('zh-CN')}`;
+// 差异色：增加=主题橙红，减少=主题绿
+const DELTA_UP = '#f07f62';
+const DELTA_DOWN = '#3d8f6e';
+const deltaTone = (delta: number) => (delta > 0 ? DELTA_UP : delta < 0 ? DELTA_DOWN : '#94a3b8');
 const uid = () => `expense-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const initialExpenses: Expense[] = [
   { id: 'parent-support', name: '上交父母', category: '家庭支持', mode: 'fixed', amount: 3000 },
@@ -26,6 +30,79 @@ const defaultSocialRates: Record<string, SocialRate> = { 养老保险: { persona
 const taxBrackets = [{ range: '不超过 3,000', rate: 3, quick: 0 }, { range: '3,000 - 12,000', rate: 10, quick: 210 }, { range: '12,000 - 25,000', rate: 20, quick: 1410 }, { range: '25,000 - 35,000', rate: 25, quick: 2660 }, { range: '35,000 - 55,000', rate: 30, quick: 4410 }, { range: '55,000 - 80,000', rate: 35, quick: 7160 }, { range: '超过 80,000', rate: 45, quick: 15160 }];
 const InfoTip = ({ children }: { children: ReactNode }) => <span className="group relative inline-flex align-middle"><button type="button" aria-label="查看说明" className="grid h-5 w-5 place-items-center rounded-full border border-slate-300 text-xs font-semibold text-slate-500 hover:border-[#f07f62] hover:text-[#d9654a]">i</button><span role="tooltip" className="pointer-events-none invisible absolute left-1/2 top-full z-[60] mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl bg-[#17212b] p-3 text-left text-xs font-normal leading-5 text-white opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">{children}</span></span>;
 const SectionTitle = ({ eyebrow, title, tip, compact = false }: { eyebrow?: string; title: string; tip?: ReactNode; compact?: boolean }) => <div className="flex min-w-0 items-center gap-2">{eyebrow && <p className="eyebrow shrink-0">{eyebrow}</p>}<h2 className={`${compact ? 'text-lg' : 'text-2xl'} min-w-0 font-semibold`}>{title}</h2>{tip && <InfoTip>{tip}</InfoTip>}</div>;
+
+type FinanceInput = { salary: number; cash: number; invest: number; returnRate: number; emergencyMonths: number; totalAssets: number; expenses: Expense[]; rentEnabled: boolean; elderlyEnabled: boolean; socialRates: Record<string, SocialRate> };
+type FinanceResult = ReturnType<typeof computeFinanceResult>;
+const healthLabel = (health: number) => (health >= 75 ? '可以考虑' : health >= 55 ? '谨慎评估' : '不建议');
+const dtiPercent = (result: { debt: number; net: number; investmentIncome: number }) => result.debt / Math.max(1, result.net + result.investmentIncome) * 100;
+// 持续月支出：不含 one_time（预测 month>=1 / year>=2 只用这笔）
+function recurringMonthlyExpenses(expenses: Expense[], net: number, investmentIncome: number) {
+  return expenses.reduce((sum, expense) => {
+    if (expense.mode === 'one_time') return sum;
+    if (expense.mode === 'fixed') return sum + expense.amount;
+    if (expense.mode === 'percentage') return sum + (net + investmentIncome) * (expense.rate || 0) / 100;
+    const principal = Math.max(0, (expense.total || 0) - (expense.downPayment || 0));
+    const rate = (expense.interest || 0) / 1200;
+    const maxByDate = expense.endDate && expense.startDate ? Math.max(1, Math.round((new Date(`${expense.endDate}T00:00:00`).getTime() - new Date(`${expense.startDate}T00:00:00`).getTime()) / (30.4375 * 86400000)) + 1) : 360;
+    const months = Math.min(expense.term || 1, maxByDate);
+    return sum + (rate ? principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1) : principal / months);
+  }, 0);
+}
+// 一次性合计：仅计入当期（仪表盘本月 / 预测第 0→1 期）
+function oneTimeTotal(expenses: Expense[]) {
+  return expenses.reduce((sum, expense) => expense.mode === 'one_time' ? sum + expense.amount : sum, 0);
+}
+function computeFinanceResult({ salary, cash, invest, returnRate, emergencyMonths, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates }: FinanceInput) {
+  const base = Math.min(salary, 31000);
+  const socialRows = Object.entries(socialRates).map(([name, rates]) => ({ name, personal: rates.personal, company: rates.company, personalAmount: base * rates.personal / 100, companyAmount: base * rates.company / 100 }));
+  const social = socialRows.reduce((sum, row) => sum + row.personalAmount, 0);
+  const deductions = [
+    { name: '基本减除费用', enabled: true, standard: 5000, rate: 100 },
+    { name: '住房租金', enabled: rentEnabled, standard: 1500, rate: rentEnabled ? 100 : 0 },
+    { name: '赡养老人', enabled: elderlyEnabled, standard: 2000, rate: elderlyEnabled ? 100 : 0 },
+  ].map((row) => ({ ...row, actual: row.standard * row.rate / 100 }));
+  const taxable = Math.max(0, salary - social - deductions.reduce((sum, row) => sum + row.actual, 0));
+  const tax = taxable <= 3000 ? taxable * 0.03 : taxable <= 12000 ? taxable * 0.1 - 210 : taxable <= 25000 ? taxable * 0.2 - 1410 : taxable <= 35000 ? taxable * 0.25 - 2660 : taxable <= 55000 ? taxable * 0.3 - 4410 : taxable <= 80000 ? taxable * 0.35 - 7160 : taxable * 0.45 - 15160;
+  const net = salary - social - Math.max(0, tax);
+  const investmentIncome = invest * returnRate / 100 / 12;
+  const recurring = recurringMonthlyExpenses(expenses, net, investmentIncome);
+  const oneTime = oneTimeTotal(expenses);
+  // 当期月度指标：一次性像 fixed 一样计入「本月」支出
+  const monthlyExpenses = recurring + oneTime;
+  const committedDownPayments = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + (expense.downPayment || 0), 0);
+  const liquidAssets = cash + invest;
+  const adjustedAvailableAssets = Math.max(0, liquidAssets - committedDownPayments);
+  const totalLiabilities = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + Math.max(0, (expense.total || 0) - (expense.downPayment || 0)), 0);
+  const netWorth = totalAssets - totalLiabilities;
+  const surplus = net + investmentIncome - monthlyExpenses;
+  const emergency = emergencyMonths;
+  const debt = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => {
+    const principal = Math.max(0, (expense.total || 0) - (expense.downPayment || 0));
+    const rate = (expense.interest || 0) / 1200;
+    const months = expense.term || 1;
+    return sum + (rate ? principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1) : principal / months);
+  }, 0);
+  const health = clamp(Math.round(92 - debt / Math.max(1, net + investmentIncome) * 105 - Math.max(0, 4 - emergency) * 5), 0, 100);
+  return { socialRows, social, deductions, tax: Math.max(0, tax), net, investmentIncome, monthlyExpenses, recurringMonthlyExpenses: recurring, oneTimeTotal: oneTime, surplus, emergency, debt, health, committedDownPayments, liquidAssets, adjustedAvailableAssets, totalLiabilities, netWorth };
+}
+// 年度预测：year1 结余扣一次性一次，year>=2 仅 recurring（与月度 month1 / month>=2 一致）
+function forecastYearlyTotals(cash: number, invest: number, returnRate: number, reinvestRate: number, net: number, investmentIncome: number, recurringMonthly: number, oneTime: number, committedDownPayments: number) {
+  const rows: Array<{ year: number; label: string; total: number }> = [];
+  let cashAsset = cash;
+  let investmentAsset = invest;
+  for (let year = 0; year <= 30; year += 1) {
+    const annualReturn = year === 0 ? 0 : investmentAsset * returnRate / 100;
+    const annualSurplus = Math.max(0, (net + investmentIncome - recurringMonthly) * 12 - (year === 1 ? oneTime : 0));
+    const salaryReinvestment = year === 0 ? 0 : annualSurplus * reinvestRate / 100;
+    if (year > 0) {
+      investmentAsset += annualReturn + salaryReinvestment;
+      cashAsset += annualSurplus - salaryReinvestment;
+    }
+    rows.push({ year, label: year === 0 ? '现在' : `${year}年`, total: cashAsset + investmentAsset });
+  }
+  return rows;
+}
+
 
 export default function HomePage() {
   const [salary, setSalary] = useState(16667);
@@ -100,41 +177,8 @@ export default function HomePage() {
   const updateInvestByAmount = (value: number) => { const availableCap = Math.max(0, totalAssets - committedDownPayments); syncAssets(totalAssets, clamp(value, 0, availableCap)); };
   const updateInvestByRatio = (value: number) => { const ratio = clamp(value, 0, 100); const availableCap = Math.max(0, totalAssets - committedDownPayments); syncAssets(totalAssets, Math.min(availableCap, totalAssets * ratio / 100)); };
 
-  const result = useMemo(() => {
-    const base = Math.min(salary, 31000);
-    const socialRows = [
-      ...Object.entries(socialRates).map(([name, rates]) => [name, rates.personal, rates.company] as [string, number, number]),
-    ].map(([name, personal, company]) => ({ name: String(name), personal: Number(personal), company: Number(company), personalAmount: base * Number(personal) / 100, companyAmount: base * Number(company) / 100 }));
-    const social = socialRows.reduce((sum, row) => sum + row.personalAmount, 0);
-    const deductions = [
-      { name: '基本减除费用', enabled: true, standard: 5000, rate: 100 },
-      { name: '住房租金', enabled: rentEnabled, standard: 1500, rate: rentEnabled ? 100 : 0 },
-      { name: '赡养老人', enabled: elderlyEnabled, standard: 2000, rate: elderlyEnabled ? 100 : 0 },
-    ].map((row) => ({ ...row, actual: row.standard * row.rate / 100 }));
-    const taxable = Math.max(0, salary - social - deductions.reduce((sum, row) => sum + row.actual, 0));
-    const tax = taxable <= 3000 ? taxable * 0.03 : taxable <= 12000 ? taxable * 0.1 - 210 : taxable <= 25000 ? taxable * 0.2 - 1410 : taxable <= 35000 ? taxable * 0.25 - 2660 : taxable <= 55000 ? taxable * 0.3 - 4410 : taxable <= 80000 ? taxable * 0.35 - 7160 : taxable * 0.45 - 15160;
-    const net = salary - social - Math.max(0, tax);
-    const investmentIncome = invest * returnRate / 100 / 12;
-    const monthlyExpenses = expenses.reduce((sum, expense) => {
-      if (expense.mode === 'fixed') return sum + expense.amount;
-      if (expense.mode === 'percentage') return sum + (net + investmentIncome) * (expense.rate || 0) / 100;
-      const principal = Math.max(0, (expense.total || 0) - (expense.downPayment || 0)); const rate = (expense.interest || 0) / 1200; const maxByDate = expense.endDate && expense.startDate ? Math.max(1, Math.round((new Date(`${expense.endDate}T00:00:00`).getTime() - new Date(`${expense.startDate}T00:00:00`).getTime()) / (30.4375 * 86400000)) + 1) : 360; const months = Math.min(expense.term || 1, maxByDate);
-      return sum + (rate ? principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1) : principal / months);
-    }, 0);
-    const committedDownPayments = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + (expense.downPayment || 0), 0);
-    const liquidAssets = cash + invest;
-    const adjustedAvailableAssets = Math.max(0, liquidAssets - committedDownPayments);
-    const totalLiabilities = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + Math.max(0, (expense.total || 0) - (expense.downPayment || 0)), 0);
-    const netWorth = totalAssets - totalLiabilities;
-    const surplus = net + investmentIncome - monthlyExpenses;
-    const emergency = emergencyMonths;
-    const debt = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => {
-      const principal = Math.max(0, (expense.total || 0) - (expense.downPayment || 0)); const rate = (expense.interest || 0) / 1200; const months = expense.term || 1;
-      return sum + (rate ? principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1) : principal / months);
-    }, 0);
-    const health = clamp(Math.round(92 - debt / Math.max(1, net + investmentIncome) * 105 - Math.max(0, 4 - emergency) * 5), 0, 100);
-    return { socialRows, social, deductions, tax: Math.max(0, tax), net, investmentIncome, monthlyExpenses, surplus, emergency, debt, health, committedDownPayments, liquidAssets, adjustedAvailableAssets, totalLiabilities, netWorth };
-  }, [salary, cash, emergencyMonths, invest, returnRate, expenses, rentEnabled, elderlyEnabled, totalAssets, socialRates]);
+  const financeInput = useMemo(() => ({ salary, cash, invest, returnRate, emergencyMonths, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates }), [salary, cash, invest, returnRate, emergencyMonths, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates]);
+  const result = useMemo(() => computeFinanceResult(financeInput), [financeInput]);
 
   const updateExpense = (id: string, patch: Partial<Expense>) => setExpenses((items) => items.map((item) => {
     if (item.id !== id) return item;
@@ -144,7 +188,7 @@ export default function HomePage() {
   }));
   const addExpense = () => setExpenses((items) => [...items, { id: uid(), name: '新支出', category: '其他', mode: 'fixed', amount: 1000 }]);
   const removeExpense = (id: string) => setExpenses((items) => items.filter((item) => item.id !== id));
-  const status = result.health >= 75 ? '可以考虑' : result.health >= 55 ? '谨慎评估' : '不建议';
+  const status = healthLabel(result.health);
   const today = new Date().toISOString().slice(0, 10);
   const forecast = useMemo(() => Array.from({ length: 360 }, (_, index) => {
     const date = new Date(); date.setMonth(date.getMonth() + index);
@@ -159,10 +203,12 @@ export default function HomePage() {
     const rows = [];
     let cashAsset = cash;
     let investmentAsset = invest;
-    const monthlyLiving = result.monthlyExpenses;
+    const recurring = result.recurringMonthlyExpenses;
+    const oneTime = result.oneTimeTotal;
     for (let year = 0; year <= 30; year += 1) {
       const annualReturn = year === 0 ? 0 : investmentAsset * returnRate / 100;
-      const annualSurplus = Math.max(0, (result.net + result.investmentIncome - monthlyLiving) * 12);
+      // year1 扣一次性；之后仅 recurring
+      const annualSurplus = Math.max(0, (result.net + result.investmentIncome - recurring) * 12 - (year === 1 ? oneTime : 0));
       const salaryReinvestment = year === 0 ? 0 : annualSurplus * reinvestRate / 100;
       if (year > 0) {
         investmentAsset += annualReturn + salaryReinvestment;
@@ -173,16 +219,21 @@ export default function HomePage() {
       rows.push({ year, label: year === 0 ? '现在' : `${year} 年`, cash: cashAsset, investment: investmentAsset, annualReturn, salaryReinvestment, total, available });
     }
     return rows;
-  }, [cash, invest, returnRate, reinvestRate, result.net, result.investmentIncome, result.monthlyExpenses, result.committedDownPayments]);
+  }, [cash, invest, returnRate, reinvestRate, result.net, result.investmentIncome, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments]);
   const monthlyAssetForecast = useMemo(() => {
     const rows = [];
     let cashAsset = cash;
     let investmentAsset = invest;
     const monthlyReturn = (1 + returnRate / 100) ** (1 / 12) - 1;
-    const monthlySurplus = Math.max(0, result.net + result.investmentIncome - result.monthlyExpenses);
-    const monthlyReinvestment = monthlySurplus * reinvestRate / 100;
+    const recurring = result.recurringMonthlyExpenses;
+    const oneTime = result.oneTimeTotal;
+    // month1（现在→下月）含一次性；month>=2 仅 recurring
+    const surplusFirst = Math.max(0, result.net + result.investmentIncome - recurring - oneTime);
+    const surplusRest = Math.max(0, result.net + result.investmentIncome - recurring);
     for (let month = 0; month <= 360; month += 1) {
       if (month > 0) {
+        const monthlySurplus = month === 1 ? surplusFirst : surplusRest;
+        const monthlyReinvestment = monthlySurplus * reinvestRate / 100;
         investmentAsset += investmentAsset * monthlyReturn + monthlyReinvestment;
         cashAsset += monthlySurplus - monthlyReinvestment;
       }
@@ -190,7 +241,7 @@ export default function HomePage() {
       rows.push({ month, label: month === 0 ? '现在' : `${Math.floor(month / 12)}年${month % 12}个月`, cash: cashAsset, investment: investmentAsset, total, available: Math.max(0, total - result.committedDownPayments) });
     }
     return rows;
-  }, [cash, invest, returnRate, reinvestRate, result.net, result.investmentIncome, result.monthlyExpenses, result.committedDownPayments]);
+  }, [cash, invest, returnRate, reinvestRate, result.net, result.investmentIncome, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments]);
   const assetChart = useMemo(() => {
     const width = 960; const height = 300;
     const padL = 210; const padR = 20; const padT = 32; const padB = 52;
@@ -232,12 +283,345 @@ export default function HomePage() {
     <header className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-2 lg:px-10"><div className="flex min-w-0 items-center gap-2.5"><div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div><div className="min-w-0"><p className="text-sm font-semibold leading-tight">财务管理</p><p className="truncate text-[11px] leading-tight text-slate-400">单人模型 · 改参即时重算</p></div></div><div className="relative flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 rounded-full bg-[#17212b] px-3 py-1 text-white"><span className="text-[11px] text-slate-300">健康分</span><strong className="text-base tabular-nums leading-none">{result.health}<span className="text-[11px] font-normal text-slate-400"> / 100</span></strong><span className="text-[11px] text-emerald-300">{status}</span></div><span className="hidden rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-500 sm:inline">{savedAt ? `已保存 ${savedAt}` : '双击编辑 · 自动保存'}</span><button ref={snapshotBtnRef} type="button" onClick={() => setShowSnapshotPanel((current) => !current)} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]">快照设置{snapshots.length > 0 ? ` · ${snapshots.length}` : ''}</button>{showSnapshotPanel && <FloatPanel open={showSnapshotPanel} anchorRef={snapshotBtnRef} onClose={() => setShowSnapshotPanel(false)} width={720}><div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">未来快照</h3><p className="mt-1 text-xs text-slate-400">保存前会确认负资产击穿</p></div><button type="button" onClick={() => setShowSnapshotPanel(false)} className="text-xs text-slate-400">关闭</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end"><label className="field"><span>快照名称</span><input value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} onBlur={saveEvent} /></label><DateEditable label="生效日期" value={snapshotDate} min={today} onChange={setSnapshotDate} /><label className="field"><span>变化后税前工资</span><input type="number" min="0" max="2000000" value={snapshotSalary} onChange={(event) => setSnapshotSalary(Number(event.target.value))} /></label><button type="button" onClick={addSnapshot} className="rounded-xl bg-[#17212b] px-4 py-2.5 text-sm font-semibold text-white">保存快照</button></div>{snapshotMessage && <p className="mt-3 text-sm text-emerald-700">{snapshotMessage}</p>}{snapshots.length > 0 ? <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto">{snapshots.map((snapshot, index) => { const previous = snapshots[index - 1]; const before = previous?.changes[0]?.value ?? salary; return <div key={snapshot.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm"><div><strong>{snapshot.name}</strong><span className="ml-3 text-slate-500">{snapshot.effectiveDate}</span><span className="ml-3 text-slate-600">税前工资 {money(before)} → {money(snapshot.changes[0].value)}</span>{snapshot.allowNegative && <span className="ml-3 text-amber-700">已确认允许击穿</span>}</div><button type="button" onClick={() => removeSnapshot(snapshot.id)} className="text-xs text-red-500">删除</button></div>; })}</div> : <p className="mt-4 text-sm text-slate-400">暂无快照，填写上方信息后保存。</p>}</FloatPanel>}</div></header>
     <section className="mx-auto grid max-w-[1920px] gap-2 px-6 pb-12 pt-3 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
       <div className="space-y-2"><section className="rounded-3xl bg-white p-6 shadow-lg"><div><SectionTitle title="财务参数" tip="按收入到卡、资产配置、结余安全垫、退休规划四组查看与调整。点击可编辑字段打开浮层；修改立即生效并自动保存。" /></div><div className="section-label">收入与到卡</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={100000000} step={1} onChange={setSalary} /><SocialBreakdown rows={result.socialRows} total={result.social} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 - 五险一金 - 本月预估个税" /></div><div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="总资产" value={totalAssets} min={0} max={2000000} step={1000} onChange={updateTotalAssets} /><Editable label="现金资产" value={cash} min={0} max={totalAssets} step={1000} onChange={updateCash} /><Editable label="理财资产" value={invest} min={0} max={totalAssets} step={1000} onChange={updateInvestByAmount} /><Editable label="理财资金占比" value={investRatio} min={0} max={100} step={1} suffix="%" onChange={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><Editable label="工资结余再投资比例" value={reinvestRate} min={0} max={100} step={1} suffix="%" onChange={setReinvestRate} /></div><div className="section-label">结余与安全垫</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入扣除本月全部支出后的剩余金额" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail="已承诺首付金额已从可用资产中扣除" /></div><div className="section-label flex items-center gap-2">退休与社保<input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={retirement.enabled} onChange={(event) => updateRetirement({ enabled: event.target.checked })} title="启用退休与社保规划" aria-label="启用退休与社保规划" /></div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><div className="relative block"><span className="flex items-center justify-between text-sm text-slate-600"><span>广州 2026 基数</span><span className="field-readonly">{money(retirement.base)} / 月</span></span></div><div className="relative block"><span className="flex items-center justify-between text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div></section>
-      <section className="rounded-3xl bg-white p-6 shadow-lg"><div className="flex flex-wrap items-center justify-between gap-4"><SectionTitle title="支出管理" tip="表格中展示支出字段；点击字段可打开浮层进行设置，修改后立即生效并自动保存。" /><button type="button" onClick={addExpense} className="rounded-xl bg-[#f07f62] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#df6e51]">+ 新增支出</button></div><div className="table-wrap mt-5"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th>分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option></select></label>} /></td><td><ClickField display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' ? <label className="block text-xs text-slate-500">每月金额<input className="field-input mt-1" type="number" min="0" step="100" value={expense.amount} onChange={(event) => { updateExpense(expense.id, { amount: Number(event.target.value) }); saveEvent(); }} /></label> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<input className="field-input mt-1" type="number" min="0" max="100" step="1" value={expense.rate || 0} onChange={(event) => { updateExpense(expense.id, { rate: Number(event.target.value) }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由右侧分期信息计算得出</p>} /></td><td><ClickField display={formatExpenseInstallment(expense)} width={360} panel={expense.mode === 'installment' ? <InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} /> : <p className="text-xs text-slate-500">仅分期类型可设置</p>} /></td><td><button type="button" onClick={() => removeExpense(expense.id)} className="text-xs text-red-500 hover:underline">删除</button></td></tr>)}</tbody></table></div></section></div>
+      <section className="rounded-3xl bg-white p-6 shadow-lg"><div className="flex flex-wrap items-center justify-between gap-4"><SectionTitle title="支出管理" tip="表格中展示支出字段；点击字段可打开浮层进行设置。操作列「分析」可对比含/不含本笔支出的系统指标与 30 年资产走势。" /><button type="button" onClick={addExpense} className="rounded-xl bg-[#f07f62] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#df6e51]">+ 新增支出</button></div><div className="table-wrap mt-5"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option><option value="one_time">一次性</option></select></label>} /></td><td><ClickField display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' || expense.mode === 'one_time' ? <label className="block text-xs text-slate-500">{expense.mode === 'one_time' ? '金额' : '每月金额'}<input className="field-input mt-1" type="number" min="0" step="100" value={expense.amount} onChange={(event) => { updateExpense(expense.id, { amount: Number(event.target.value) }); saveEvent(); }} /></label> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<input className="field-input mt-1" type="number" min="0" max="100" step="1" value={expense.rate || 0} onChange={(event) => { updateExpense(expense.id, { rate: Number(event.target.value) }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由右侧分期信息计算得出</p>} /></td><td className="cell-wrap"><ClickField display={formatExpenseInstallment(expense)} width={360} wrap panel={expense.mode === 'installment' ? <InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} /> : <p className="text-xs text-slate-500">仅分期类型可设置</p>} /></td><td><div className="flex items-center gap-2"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvestRate={reinvestRate} /><button type="button" onClick={() => removeExpense(expense.id)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div></section></div>
       <div className="min-w-0 w-full lg:sticky lg:top-4 lg:self-start"><section className="mb-2 rounded-3xl bg-white p-6 shadow-lg"><div className="relative flex flex-wrap items-start justify-between gap-4"><SectionTitle title="资产走势" tip="年化收益按月度复合增长，工资年度结余按设置的再投资比例追加到理财资产。数据从当前资金起点开始预测。" /><button ref={assetDetailBtnRef} type="button" onClick={() => setShowAssetDetails((current) => !current)} className="text-sm font-semibold text-[#d9654a]">查看明细</button>{showAssetDetails && <FloatPanel open={showAssetDetails} anchorRef={assetDetailBtnRef} onClose={() => setShowAssetDetails(false)} width={620}><div className="flex items-center justify-between"><h3 className="font-semibold">月度资产明细</h3><button type="button" onClick={() => setShowAssetDetails(false)} className="text-xs text-slate-400">关闭</button></div><div className="table-wrap mt-4 max-h-[420px] overflow-auto"><table><thead><tr><th>月份</th><th>现金资产</th><th>理财资产</th><th>总资产</th><th>调整后可用资产</th></tr></thead><tbody>{monthlyAssetForecast.map((row) => <tr key={row.month}><td>{row.label}</td><td>{money(row.cash)}</td><td>{money(row.investment)}</td><td>{money(row.total)}</td><td>{money(row.available)}</td></tr>)}</tbody></table></div></FloatPanel>}</div><div className="mt-5 overflow-x-auto rounded-2xl bg-slate-50 p-3"><svg viewBox="0 0 960 300" className="h-[16.8rem] min-w-0 w-full" role="img" aria-label="资产月度走势"><g>{assetChart.ticks.map((tick) => <g key={tick.ratio}><line x1={assetChart.padL} y1={tick.y} x2={assetChart.plotRight} y2={tick.y} stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="5 5" /><line x1={assetChart.padL - 8} y1={tick.y} x2={assetChart.padL} y2={tick.y} stroke="#64748b" strokeWidth="2" /><text x={assetChart.padL - 12} y={tick.y + 8} textAnchor="end" className="fill-slate-700 text-[27px] font-semibold">{money(tick.value)}</text></g>)}</g>{visibleAssetLines.cash && <path d={assetChart.paths.cash} fill="none" stroke="#94a3b8" strokeWidth="2.5" />}{visibleAssetLines.investment && <path d={assetChart.paths.investment} fill="none" stroke="#f07f62" strokeWidth="3" />}{visibleAssetLines.total && <path d={assetChart.paths.total} fill="none" stroke="#17212b" strokeWidth="3.5" />}<line x1={assetChart.padL} y1={assetChart.padT} x2={assetChart.padL} y2={300 - assetChart.padB} stroke="#64748b" strokeWidth="2.5" /><line x1={assetChart.padL} y1={300 - assetChart.padB} x2={assetChart.plotRight} y2={300 - assetChart.padB} stroke="#64748b" strokeWidth="2.5" /><text x={assetChart.padL + 8} y="28" className="fill-slate-600 text-[24px] font-semibold">当前资金起点：{money(cash + invest)}</text><text x={assetChart.padL} y="286" className="fill-slate-700 text-[27px] font-semibold">现在</text><text x={assetChart.plotMid} y="286" textAnchor="middle" className="fill-slate-700 text-[27px] font-semibold">15 年</text><text x={assetChart.plotRight} y="286" textAnchor="end" className="fill-slate-700 text-[27px] font-semibold">30 年</text></svg></div><div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500"><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, cash: !current.cash }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 `}><i className="h-2 w-2 rounded-full bg-slate-400" />现金资产</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, investment: !current.investment }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 `}><i className="h-2 w-2 rounded-full bg-[#f07f62]" />理财资产</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, total: !current.total }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 `}><i className="h-2 w-2 rounded-full bg-[#17212b]" />总资产</button></div></section><section className="rounded-3xl bg-white p-6 shadow-lg"><div className="flex items-center justify-between"><SectionTitle title="未来财务健康曲线" tip="从今天起模拟 30 年，快照在生效日期后接管对应参数。" /><span className="text-sm text-slate-500">当前方案 · 360 个月</span></div><div className="mt-8 overflow-hidden rounded-2xl bg-slate-50 p-3"><ReactECharts option={healthChartOption} style={{ height: 400, width: "100%" }} notMerge lazyUpdate /></div><div className="mt-4 flex justify-between text-base font-semibold text-slate-600"><span>现在</span><span>5 年</span><span>15 年</span><span>30 年</span></div></section></div></section><footer className="mx-auto max-w-[1920px] px-6 pb-8 text-xs text-slate-400 lg:px-10">原型版 · 个税和五险一金为月度估算，结果仅用于个人财务规划参考</footer>
     </main>;
 }
 
-function FloatPanel({ open, anchorRef, onClose, width = 256, children }: { open: boolean; anchorRef: RefObject<HTMLElement | null>; onClose: () => void; width?: number; children: ReactNode }) {
+
+function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate }: { expense: Expense; financeInput: FinanceInput; reinvestRate: number }) {
+  const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // overlay=叠加全量（默认）；isolated=仅本项
+  const [viewMode, setViewMode] = useState<'overlay' | 'isolated'>('overlay');
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
+  const [draft, setDraft] = useState<Expense>(expense);
+  // 打开时用已保存支出做初始草稿；测算只改 draft，不写回 expenses / 不触发保存
+  useEffect(() => {
+    if (open) {
+      setDraft({ ...expense });
+      setViewMode('overlay');
+    } else setSettingsOpen(false);
+  }, [open, expense]);
+  const patchDraft = (patch: Partial<Expense>) => setDraft((current) => {
+    const next = { ...current, ...patch };
+    if (next.mode === 'installment' && next.endDate && next.startDate) {
+      next.term = Math.min(next.term || 1, Math.max(1, Math.round((new Date(`${next.endDate}T00:00:00`).getTime() - new Date(`${next.startDate}T00:00:00`).getTime()) / (30.4375 * 86400000)) + 1));
+    }
+    return next;
+  });
+  const before = useMemo(() => {
+    // 叠加：去掉本笔；孤立：无任何支出
+    const expenses = viewMode === 'isolated' ? [] : financeInput.expenses.filter((item) => item.id !== expense.id);
+    return computeFinanceResult({ ...financeInput, expenses });
+  }, [financeInput, expense.id, viewMode]);
+  const after = useMemo(() => {
+    // 叠加：其他支出 + 本笔草稿；孤立：仅本笔草稿
+    if (viewMode === 'isolated') return computeFinanceResult({ ...financeInput, expenses: [draft] });
+    const has = financeInput.expenses.some((item) => item.id === expense.id);
+    const expenses = has
+      ? financeInput.expenses.map((item) => (item.id === expense.id ? draft : item))
+      : [...financeInput.expenses, draft];
+    return computeFinanceResult({ ...financeInput, expenses });
+  }, [financeInput, expense.id, draft, viewMode]);
+  const assetBefore = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvestRate, before.net, before.investmentIncome, before.recurringMonthlyExpenses, before.oneTimeTotal, before.committedDownPayments), [financeInput, reinvestRate, before]);
+  const assetAfter = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvestRate, after.net, after.investmentIncome, after.recurringMonthlyExpenses, after.oneTimeTotal, after.committedDownPayments), [financeInput, reinvestRate, after]);
+  const milestoneYears = [0, 5, 10, 15, 30];
+  const milestoneRows = useMemo(() => milestoneYears.map((year) => {
+    const b = assetBefore.find((row) => row.year === year);
+    const a = assetAfter.find((row) => row.year === year);
+    const beforeTotal = b?.total ?? 0;
+    const afterTotal = a?.total ?? 0;
+    return { year, label: year === 0 ? '现在' : `${year} 年`, beforeTotal, afterTotal, delta: afterTotal - beforeTotal };
+  }), [assetBefore, assetAfter]);
+  const chartOption = useMemo(() => ({
+    animation: false,
+    color: ['#94a3b8', '#f07f62'],
+    legend: { data: ['消费前（不含本笔）', '测算方案（草稿）'], bottom: 0, textStyle: { fontSize: 11, color: '#52605b' } },
+    grid: { left: 56, right: 16, top: 28, bottom: 44 },
+    tooltip: { trigger: 'axis', valueFormatter: (value: number) => money(Number(value)) },
+    xAxis: { type: 'category', data: assetBefore.map((row) => row.label), axisLabel: { fontSize: 10, color: '#64748b', interval: 4 }, axisLine: { lineStyle: { color: '#cbd5e1' } } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#64748b', formatter: (value: number) => `${Math.round(value / 10000)}万` }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
+    series: [
+      { name: '消费前（不含本笔）', type: 'line', smooth: true, symbol: 'none', data: assetBefore.map((row) => Math.round(row.total)), lineStyle: { width: 2.5, type: 'dashed' }, areaStyle: { color: 'rgba(148,163,184,0.12)' } },
+      { name: '测算方案（草稿）', type: 'line', smooth: true, symbol: 'none', data: assetAfter.map((row) => Math.round(row.total)), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(240,127,98,0.12)' } },
+    ],
+  }), [assetBefore, assetAfter]);
+  const metricDefs: Array<{ key: string; label: string; value: (result: FinanceResult) => number; format: (value: number) => string; worseWhenUp?: boolean; radarMax: number }> = [
+    { key: 'health', label: '健康分', value: (r) => r.health, format: (v) => `${Math.round(v)} 分`, radarMax: 100 },
+    { key: 'dti', label: '债务收入比', value: (r) => dtiPercent(r), format: (v) => `${v.toFixed(1)}%`, worseWhenUp: true, radarMax: 60 },
+    { key: 'monthly', label: '月度支出', value: (r) => r.monthlyExpenses, format: money, worseWhenUp: true, radarMax: Math.max(before.monthlyExpenses, after.monthlyExpenses, 1) * 1.2 },
+    { key: 'surplus', label: '月度剩余', value: (r) => r.surplus, format: money, radarMax: Math.max(Math.abs(before.surplus), Math.abs(after.surplus), 1) * 1.2 },
+    { key: 'debt', label: '分期月供', value: (r) => r.debt, format: money, worseWhenUp: true, radarMax: Math.max(before.debt, after.debt, 1) * 1.2 },
+    { key: 'available', label: '可用资产', value: (r) => r.adjustedAvailableAssets, format: money, radarMax: Math.max(before.adjustedAvailableAssets, after.adjustedAvailableAssets, 1) * 1.2 },
+    { key: 'netWorth', label: '净资产', value: (r) => r.netWorth, format: money, radarMax: Math.max(Math.abs(before.netWorth), Math.abs(after.netWorth), 1) * 1.2 },
+    { key: 'liability', label: '分期负债', value: (r) => r.totalLiabilities, format: money, worseWhenUp: true, radarMax: Math.max(before.totalLiabilities, after.totalLiabilities, 1) * 1.2 },
+  ];
+  const metricRows = useMemo(() => metricDefs.map((metric) => {
+    const beforeValue = metric.value(before);
+    const afterValue = metric.value(after);
+    const delta = afterValue - beforeValue;
+    const span = Math.max(Math.abs(beforeValue), Math.abs(afterValue), Math.abs(delta), 1);
+    const improved = metric.worseWhenUp ? delta < 0 : delta > 0;
+    const worsened = metric.worseWhenUp ? delta > 0 : delta < 0;
+    return { ...metric, beforeValue, afterValue, delta, span, improved, worsened, changed: Math.abs(delta) > 1e-9 };
+  }), [before, after]);
+  const deltaBarOption = useMemo(() => ({
+    animation: false,
+    grid: { left: 100, right: 88, top: 8, bottom: 8 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: Array<{ dataIndex: number }>) => {
+        const row = metricRows[params[0]?.dataIndex ?? 0];
+        if (!row) return '';
+        return `${row.label}<br/>消费前 ${row.format(row.beforeValue)}<br/>测算 ${row.format(row.afterValue)}<br/>差异 ${row.delta > 0 ? '+' : ''}${row.format(row.delta)}`;
+      },
+    },
+    xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } },
+    yAxis: { type: 'category', data: metricRows.map((row) => row.label), inverse: true, axisLabel: { fontSize: 11, color: '#52605b' }, axisLine: { show: false }, axisTick: { show: false } },
+    series: [{
+      type: 'bar',
+      barWidth: 14,
+      data: metricRows.map((row) => ({
+        value: Number(row.delta.toFixed(2)),
+        itemStyle: { color: !row.changed ? '#cbd5e1' : deltaTone(row.delta), borderRadius: 4 },
+        label: { show: true, position: row.delta >= 0 ? 'right' : 'left', formatter: `${row.delta > 0 ? '+' : ''}${row.format(row.delta)}`, color: '#334155', fontSize: 11 },
+      })),
+    }],
+  }), [metricRows]);
+  const compareBarOption = useMemo(() => ({
+    animation: false,
+    color: ['#94a3b8', '#f07f62'],
+    legend: { data: ['消费前', '测算'], top: 0, textStyle: { fontSize: 11 } },
+    grid: { left: 48, right: 16, top: 36, bottom: 64 },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: metricRows.map((row) => row.label), axisLabel: { rotate: 28, fontSize: 10, color: '#64748b' } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#64748b' }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
+    series: [
+      { name: '消费前', type: 'bar', barGap: '12%', data: metricRows.map((row) => Number(row.beforeValue.toFixed(2))) },
+      { name: '测算', type: 'bar', data: metricRows.map((row) => Number(row.afterValue.toFixed(2))) },
+    ],
+  }), [metricRows]);
+  const radarOption = useMemo(() => {
+    // 雷达：越高越好。对 worseWhenUp 指标取「满分 − 归一化」以便同向阅读
+    const indicator = metricRows.map((row) => ({ name: row.label, max: 100 }));
+    const normalize = (row: typeof metricRows[number], value: number) => {
+      const capped = clamp(Math.abs(value) / Math.max(row.radarMax, 1) * 100, 0, 100);
+      if (row.worseWhenUp) return 100 - capped;
+      if (value < 0 && row.key === 'surplus') return clamp(50 + value / Math.max(row.radarMax, 1) * 50, 0, 100);
+      return capped;
+    };
+    return {
+      animation: false,
+      color: ['#94a3b8', '#f07f62'],
+      legend: { data: ['消费前', '测算'], bottom: 0, textStyle: { fontSize: 11 } },
+      tooltip: { trigger: 'item' },
+      radar: { indicator, radius: '58%', axisName: { color: '#52605b', fontSize: 10 }, splitArea: { areaStyle: { color: ['#fff', '#f8faf9'] } } },
+      series: [{
+        type: 'radar',
+        data: [
+          { name: '消费前', value: metricRows.map((row) => Number(normalize(row, row.beforeValue).toFixed(1))), areaStyle: { color: 'rgba(148,163,184,0.18)' } },
+          { name: '测算', value: metricRows.map((row) => Number(normalize(row, row.afterValue).toFixed(1))), areaStyle: { color: 'rgba(240,127,98,0.16)' } },
+        ],
+      }],
+    };
+  }, [metricRows]);
+  const milestoneBarOption = useMemo(() => ({
+    animation: false,
+    color: ['#94a3b8', '#f07f62'],
+    legend: { data: ['消费前', '测算'], top: 0, textStyle: { fontSize: 11 } },
+    grid: { left: 56, right: 16, top: 36, bottom: 28 },
+    tooltip: { trigger: 'axis', valueFormatter: (value: number) => money(Number(value)) },
+    xAxis: { type: 'category', data: milestoneRows.map((row) => row.label), axisLabel: { fontSize: 11, color: '#64748b' } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#64748b', formatter: (value: number) => `${Math.round(value / 10000)}万` }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
+    series: [
+      { name: '消费前', type: 'bar', data: milestoneRows.map((row) => Math.round(row.beforeTotal)) },
+      { name: '测算', type: 'bar', data: milestoneRows.map((row) => Math.round(row.afterTotal)) },
+    ],
+  }), [milestoneRows]);
+  const deltaTotal30 = (assetAfter.at(-1)?.total ?? 0) - (assetBefore.at(-1)?.total ?? 0);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(expense);
+  const kpiCards = [
+    { label: '健康分变化', value: `${after.health - before.health >= 0 ? '+' : ''}${after.health - before.health}`, sub: `${before.health} → ${after.health}`, delta: after.health - before.health },
+    { label: '月度剩余变化', value: `${after.surplus - before.surplus >= 0 ? '+' : ''}${money(after.surplus - before.surplus)}`, sub: `${money(before.surplus)} → ${money(after.surplus)}`, delta: after.surplus - before.surplus },
+    { label: '月度支出变化', value: `${after.monthlyExpenses - before.monthlyExpenses >= 0 ? '+' : ''}${money(after.monthlyExpenses - before.monthlyExpenses)}`, sub: `${money(before.monthlyExpenses)} → ${money(after.monthlyExpenses)}`, delta: after.monthlyExpenses - before.monthlyExpenses },
+    { label: '30 年资产差额', value: `${deltaTotal30 >= 0 ? '+' : ''}${money(deltaTotal30)}`, sub: '测算 − 消费前', delta: deltaTotal30 },
+  ];
+  return (
+    <div className="relative inline-block">
+      <button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} className="text-xs font-semibold text-[#d9654a] hover:underline">分析</button>
+      {open && (
+        <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={920} maxHeightVh={90} center>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold">消费影响分析 · {draft.name || expense.name || '未命名'}</h3>
+              <p className="mt-1 text-xs text-slate-400">草稿测算不影响已保存数据。ID 用于对照原支出记录。</p>
+              <p className="mt-1 font-mono text-[11px] text-slate-500">ID：{expense.id}</p>
+            </div>
+            <button type="button" onClick={() => setOpen(false)} className="shrink-0 text-xs text-slate-400">关闭</button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 text-xs font-semibold">
+              <button type="button" onClick={() => setViewMode('overlay')} className={`rounded-lg px-3 py-1.5 transition ${viewMode === 'overlay' ? 'bg-[#17212b] text-white' : 'text-slate-500 hover:text-slate-700'}`}>叠加全量</button>
+              <button type="button" onClick={() => setViewMode('isolated')} className={`rounded-lg px-3 py-1.5 transition ${viewMode === 'isolated' ? 'bg-[#17212b] text-white' : 'text-slate-500 hover:text-slate-700'}`}>仅本项</button>
+            </div>
+            <p className="text-[11px] text-slate-500">「叠加全量」保留其他支出看有无本笔差异；「仅本项」忽略其他支出，只研究本笔。</p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-700">测算参数</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {formatExpenseMode(draft.mode)} · {formatExpensePayment(draft)}
+                {draft.mode === 'installment' ? ` · ${formatExpenseInstallment(draft)}` : ''}
+              </p>
+              {dirty && <p className="mt-1 text-[11px] font-medium text-amber-700">已相对保存值调整（未写入原数据）</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {dirty && <button type="button" onClick={() => setDraft({ ...expense })} className="text-[11px] font-semibold text-slate-500 hover:text-[#d9654a]">重置</button>}
+              <button ref={settingsBtnRef} type="button" onClick={() => setSettingsOpen((current) => !current)} className="rounded-xl bg-[#17212b] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2a3644]">测算设置</button>
+            </div>
+            {settingsOpen && (
+              <FloatPanel open={settingsOpen} anchorRef={settingsBtnRef} onClose={() => setSettingsOpen(false)} width={420} maxHeightVh={80} zIndex={90}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold">测算设置</h4>
+                    <p className="mt-1 text-[11px] text-slate-400">仅影响本浮层测算，不改已保存支出。</p>
+                    <p className="mt-1 font-mono text-[11px] text-slate-500">ID：{expense.id}</p>
+                  </div>
+                  <button type="button" onClick={() => setSettingsOpen(false)} className="text-xs text-slate-400">关闭</button>
+                </div>
+                <div className="mt-3 grid gap-3">
+                  <label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={draft.name} onChange={(event) => patchDraft({ name: event.target.value })} /></label>
+                  <label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={draft.category} onChange={(event) => patchDraft({ category: event.target.value })} /></label>
+                  <label className="block text-xs text-slate-500">类型
+                    <select className="field-input mt-1" value={draft.mode} onChange={(event) => patchDraft({ mode: event.target.value as Expense['mode'] })}>
+                      <option value="fixed">固定金额</option>
+                      <option value="percentage">按比例</option>
+                      <option value="installment">分期</option>
+                      <option value="one_time">一次性</option>
+                    </select>
+                  </label>
+                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                    <p>测算月付</p>
+                    <p className="mt-1 font-mono text-sm font-semibold text-[#c4533a]">{formatExpensePayment(draft)}</p>
+                  </div>
+                  {(draft.mode === 'fixed' || draft.mode === 'one_time') && (
+                    <label className="block text-xs text-slate-500">{draft.mode === 'one_time' ? '金额' : '每月金额'}<input className="field-input mt-1" type="number" min="0" step="100" value={draft.amount} onChange={(event) => patchDraft({ amount: Number(event.target.value) })} /></label>
+                  )}
+                  {draft.mode === 'percentage' && (
+                    <label className="block text-xs text-slate-500">收入比例（%）<input className="field-input mt-1" type="number" min="0" max="100" step="1" value={draft.rate || 0} onChange={(event) => patchDraft({ rate: Number(event.target.value) })} /></label>
+                  )}
+                  {draft.mode === 'installment' && (
+                    <InstallmentSettingsPanel expense={draft} onChange={patchDraft} />
+                  )}
+                  <button type="button" onClick={() => setDraft({ ...expense })} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#f07f62] hover:text-[#d9654a]">重置为已保存</button>
+                </div>
+              </FloatPanel>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {kpiCards.map((card) => (
+              <div key={card.label} className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+                <p className="text-[11px] font-semibold text-slate-500">{card.label}</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums" style={{ color: deltaTone(card.delta) }}>{card.value}</p>
+                <p className="mt-1 font-mono text-[11px] text-slate-400">{card.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white p-3">
+              <p className="text-sm font-semibold">雷达对照（越高越好）</p>
+              <p className="mt-1 text-[11px] text-slate-400">红表示增加，绿表示减少（与主题色一致）。</p>
+              <ReactECharts option={radarOption} style={{ height: 280, width: '100%' }} notMerge lazyUpdate />
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-white p-3">
+              <p className="text-sm font-semibold">指标绝对值对照</p>
+              <p className="mt-1 text-[11px] text-slate-400">灰=消费前，橙=测算草稿。</p>
+              <ReactECharts option={compareBarOption} style={{ height: 280, width: '100%' }} notMerge lazyUpdate />
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-3">
+            <p className="text-sm font-semibold">指标差异（测算 − 消费前）</p>
+            <ReactECharts option={deltaBarOption} style={{ height: Math.max(220, metricRows.length * 34), width: '100%' }} notMerge lazyUpdate />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-3">
+            <p className="text-sm font-semibold">指标对照表</p>
+            <div className="table-wrap mt-3">
+              <table>
+                <thead><tr><th>指标</th><th>消费前</th><th>测算</th><th>差额</th><th>方向</th></tr></thead>
+                <tbody>
+                  {metricRows.map((row) => (
+                    <tr key={row.key}>
+                      <td>{row.label}</td>
+                      <td className="font-mono">{row.format(row.beforeValue)}</td>
+                      <td className="font-mono font-semibold text-[#c4533a]">{row.format(row.afterValue)}</td>
+                      <td className="font-mono" style={{ color: row.changed ? deltaTone(row.delta) : '#94a3b8' }}>
+                        {row.changed ? `${row.delta > 0 ? '+' : ''}${row.format(row.delta)}` : '0'}
+                      </td>
+                      <td style={{ color: row.changed ? deltaTone(row.delta) : '#94a3b8' }}>{!row.changed ? '持平' : row.delta > 0 ? '增加' : '减少'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">30 年总资产曲线</p>
+                  <p className="mt-1 text-xs text-slate-500">随草稿即时重算。</p>
+                </div>
+                <p className="text-sm font-semibold tabular-nums" style={{ color: deltaTone(deltaTotal30) }}>
+                  30 年末 {deltaTotal30 > 0 ? '+' : ''}{money(deltaTotal30)}
+                </p>
+              </div>
+              <div className="mt-2 overflow-hidden rounded-xl bg-white p-2">
+                <ReactECharts option={chartOption} style={{ height: 240, width: '100%' }} notMerge lazyUpdate />
+              </div>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-sm font-semibold">关键年份资产柱状对比</p>
+              <div className="mt-2 overflow-hidden rounded-xl bg-white p-2">
+                <ReactECharts option={milestoneBarOption} style={{ height: 240, width: '100%' }} notMerge lazyUpdate />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-3">
+            <p className="text-sm font-semibold">关键年份资产表</p>
+            <div className="table-wrap mt-3">
+              <table>
+                <thead><tr><th>时点</th><th>消费前总资产</th><th>测算总资产</th><th>差额</th></tr></thead>
+                <tbody>
+                  {milestoneRows.map((row) => (
+                    <tr key={row.year}>
+                      <td>{row.label}</td>
+                      <td className="font-mono">{money(row.beforeTotal)}</td>
+                      <td className="font-mono font-semibold text-[#c4533a]">{money(row.afterTotal)}</td>
+                      <td className="font-mono" style={{ color: deltaTone(row.delta) }}>{row.delta > 0 ? '+' : ''}{money(row.delta)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </FloatPanel>
+      )}
+    </div>
+  );
+}
+
+function FloatPanel({ open, anchorRef, onClose, width = 256, maxHeightVh = 70, center = false, zIndex = 80, children }: { open: boolean; anchorRef: RefObject<HTMLElement | null>; onClose: () => void; width?: number; maxHeightVh?: number; center?: boolean; zIndex?: number; children: ReactNode }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   useEffect(() => {
@@ -246,11 +630,19 @@ function FloatPanel({ open, anchorRef, onClose, width = 256, children }: { open:
       const anchor = anchorRef.current;
       if (!anchor) return;
       const rect = anchor.getBoundingClientRect();
-      const panelH = panelRef.current?.offsetHeight ?? 240;
+      const maxH = window.innerHeight * (maxHeightVh / 100);
+      const panelH = Math.min(panelRef.current?.offsetHeight ?? 240, maxH);
       const panelW = Math.min(width, window.innerWidth - 32);
-      let left = Math.min(Math.max(16, rect.left), window.innerWidth - panelW - 16);
-      let top = rect.bottom + 8;
-      if (top + panelH > window.innerHeight - 16) top = Math.max(16, rect.top - panelH - 8);
+      let left: number;
+      let top: number;
+      if (center) {
+        left = Math.max(16, (window.innerWidth - panelW) / 2);
+        top = Math.max(window.innerHeight * 0.05, (window.innerHeight - panelH) / 2);
+      } else {
+        left = Math.min(Math.max(16, rect.left), window.innerWidth - panelW - 16);
+        top = rect.bottom + 8;
+        if (top + panelH > window.innerHeight - 16) top = Math.max(16, rect.top - panelH - 8);
+      }
       setPos({ top, left });
     };
     place();
@@ -258,19 +650,22 @@ function FloatPanel({ open, anchorRef, onClose, width = 256, children }: { open:
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     return () => { window.cancelAnimationFrame(raf); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
-  }, [open, anchorRef, width]);
+  }, [open, anchorRef, width, maxHeightVh, center]);
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (anchorRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      // 点击其它浮层时不关闭，支持分析面板内再开设置浮层
+      if (target instanceof Element && target.closest('[data-float-panel]')) return;
       onClose();
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open, anchorRef, onClose]);
   if (!open) return null;
-  return createPortal(<div ref={panelRef} role="dialog" className="fixed z-[80] max-h-[min(70vh,42rem)] overflow-x-auto overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 shadow-xl" style={{ top: pos.top, left: pos.left, width: Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 32 : width) }}>{children}</div>, document.body);
+  const maxHeight = `min(${maxHeightVh}vh, ${maxHeightVh === 90 ? '90vh' : '42rem'})`;
+  return createPortal(<div ref={panelRef} data-float-panel role="dialog" className="fixed overflow-x-auto overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 shadow-xl" style={{ top: pos.top, left: pos.left, zIndex, width: Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 32 : width), maxHeight: typeof window !== 'undefined' ? `${maxHeightVh}vh` : maxHeight }}>{children}</div>, document.body);
 }
 function Editable({ label, value, min, max, step, suffix = '', onChange }: EditableProps) {
   const [open, setOpen] = useState(false);
@@ -296,7 +691,7 @@ function SelectEditable({ label, value, options, onChange }: { label: string; va
 const saveEvent = () => window.dispatchEvent(new Event('money-manage-save'));
 
 function formatExpensePayment(expense: Expense) {
-  if (expense.mode === 'fixed') return money(expense.amount);
+  if (expense.mode === 'fixed' || expense.mode === 'one_time') return money(expense.amount);
   if (expense.mode === 'percentage') return `${expense.rate || 0}% 收入`;
   const principal = Math.max(0, (expense.total || 0) - (expense.downPayment || 0));
   const rate = (expense.interest || 0) / 1200;
@@ -306,7 +701,7 @@ function formatExpensePayment(expense: Expense) {
   return `${money(paymentAmount)} / 月`;
 }
 function formatExpenseMode(mode: Expense['mode']) {
-  return mode === 'installment' ? '分期' : mode === 'percentage' ? '按比例' : '固定金额';
+  return mode === 'installment' ? '分期' : mode === 'percentage' ? '按比例' : mode === 'one_time' ? '一次性' : '固定金额';
 }
 function formatExpenseInstallment(expense: Expense) {
   if (expense.mode !== 'installment') return '—';
@@ -358,10 +753,10 @@ function InstallmentSettingsPanel({ expense, onChange }: { expense: Expense; onC
     <label className="block text-xs text-slate-500">年化利率（%）<input className="field-input mt-1" type="number" min="0" max="100" step="0.1" value={expense.interest || 0} onChange={(event) => onChange({ interest: clamp(Number(event.target.value), 0, 100) })} /></label>
   </div>;
 }
-function ClickField({ display, panel, width = 280 }: { display: string; panel: ReactNode; width?: number }) {
+function ClickField({ display, panel, width = 280, wrap = false }: { display: string; panel: ReactNode; width?: number; wrap?: boolean }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  return <div className="relative inline-block max-w-full"><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑浮层" className="field-click max-w-full truncate text-left">{display}</button><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={width}>{panel}</FloatPanel></div>;
+  return <div className="relative inline-block max-w-full"><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑浮层" className={`field-click max-w-full text-left ${wrap ? 'field-click-wrap' : 'truncate'}`}>{display}</button><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={width}>{panel}</FloatPanel></div>;
 }
 
 function Metric({ label, value, detail, negative = false }: { label: string; value: string; detail: string; negative?: boolean }) { return <div className="relative block"><span className="flex items-center justify-between text-sm text-slate-600"><span className="flex items-center gap-1">{label}<InfoTip>{detail}</InfoTip></span><span className={`field-readonly ${negative ? 'text-red-500' : ''}`}>{value}</span></span></div>; }

@@ -1,8 +1,15 @@
 {
   "schemaVersion": 1,
-  "revision": 0,
-  "updatedAt": "1970-01-01T00:00:00.000Z",
+  "revision": 1,
+  "updatedAt": "2026-07-19T17:08:52.742Z",
   "profile": {},
   "snapshots": [],
-  "scenarios": []
+  "scenarios": [
+    {
+      "id": "x",
+      "name": "test",
+      "type": "comparison",
+      "overrides": []
+    }
+  ]
 }
