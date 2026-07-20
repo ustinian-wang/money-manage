@@ -1,0 +1,56 @@
+app/page.tsx
+  s_889292ef40f0f2::t_a43bb9d5d889b6 227
+  s_889292ef40f0f2::t_f3d8f5bccd508a 233
+  s_889292ef40f0f2::t_b994cb9e937932 235,313-359,361,364
+  s_889292ef40f0f2::t_a01aa6a5d3d998 66-74,88-98,234
+  s_889292ef40f0f2::t_07540326bdf199 99-101
+  s_889292ef40f0f2::t_e8d3da8862b460 232
+  s_889292ef40f0f2::t_dc1c3c29f24dd7 196,202,236
+  s_889292ef40f0f2::t_695b9ae8dd25fe 369
+  s_889292ef40f0f2::t_9efff0acacfe75 283,288,294
+  s_889292ef40f0f2::t_8e347090909dc4 372-380,382
+  s_889292ef40f0f2::t_ce75d241baff41 217-220,222-223,228-229
+  s_889292ef40f0f2::t_96f67978f3d641 197,199
+domain/social-security/retirement.ts
+  s_6af0778c6110cd::t_2a2a077815a0d0 2-11,49-59,72-75,78-85
+  s_6af0778c6110cd::t_0cb9a664d5a737 1,12-48,60-71,76-77
+types/retirement.ts
+  s_6af0778c6110cd::t_2a2a077815a0d0 1-9,11-20,22-28,39
+  s_6af0778c6110cd::t_0cb9a664d5a737 10,21,29-38
+package.json
+  s_6af0778c6110cd::t_263db8b9c0b93b 10
+  s_6af0778c6110cd::t_9d829a16efc6b6 13-17
+ecosystem.config.cjs
+  s_6af0778c6110cd::t_9d829a16efc6b6 1-27
+domain/social-security/retirement.test.ts
+  s_6af0778c6110cd::t_0adf5f2bc5e56e 10-11,14-29,32
+  s_6af0778c6110cd::t_1bbf0d38daa252 31
+  s_6af0778c6110cd::t_3b396264b6f7a4 3
+  s_6af0778c6110cd::t_2a2a077815a0d0 1-2,4-9,12-13,30,33-39
+server.js
+  s_889292ef40f0f2::t_462c2b40d39bc1 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "bb717123b0c303e744bced6ab0c7a3a7b89561f3",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_889292ef40f0f2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a14fc627-a39f-4e17-bce0-beaa1f15079c",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
