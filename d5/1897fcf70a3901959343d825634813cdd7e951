@@ -1,0 +1,37 @@
+app/page.tsx
+  s_6af0778c6110cd::t_1ab3d5414bc04d 264-266
+  s_6af0778c6110cd::t_8446fa6fd26402 224-225,229
+  s_6af0778c6110cd::t_079b2fb23f4515 32,61,72,74,107,114
+  s_6af0778c6110cd::t_e2e9a3869787e3 208,254-257
+  s_6af0778c6110cd::t_b95115c067b74a 25,92,222,228,263
+  s_6af0778c6110cd::t_5cf17d79b99ca9 27
+  s_6af0778c6110cd::t_dd9d7101884bf6 11,24,38,64,83
+  s_6af0778c6110cd::t_263db8b9c0b93b 197-198
+  s_6af0778c6110cd::t_b71df462445f3b 26,204-207,209,258,261,267
+  s_6af0778c6110cd::t_b6aeec528df91a 4
+  s_6af0778c6110cd::t_bbab9ae6ba01e3 187,223,259-260,262
+  s_6af0778c6110cd::t_c0bf716b4bb633 3,215,221,226-227
+  s_6af0778c6110cd::t_8e64ce841e7875 214,217,219-220
+  s_6af0778c6110cd::t_f1bd95a11894db 230-236
+app/globals.css
+  s_6af0778c6110cd::t_932a773d585cb3 5-8,10-15
+  s_6af0778c6110cd::t_32ebf8008f54f6 9
+  s_6af0778c6110cd::t_263db8b9c0b93b 24,32
+  s_6af0778c6110cd::t_29df0972c654a8 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d51897fcf70a3901959343d825634813cdd7e951",
+  "prompts": {},
+  "sessions": {
+    "s_6af0778c6110cd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7a8b-e83d-7061-88a3-f18f0963a8e8",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
