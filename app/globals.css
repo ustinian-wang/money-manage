@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep absolute editors inside the viewport without taking layout space. */
+.absolute.z-30,
+.absolute.z-40,
+.absolute.z-50,
+.absolute.z-\[60\] {
+  max-width: calc(100vw - 2rem);
+  max-height: min(70vh, 42rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 :root { color-scheme: light; }
 * { box-sizing: border-box; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -10,6 +21,7 @@ button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
 .section-label { border-top: 1px solid #edf1ee; color: #52605b; font-size: .75rem; font-weight: 700; margin-top: .5rem; padding-top: 1.25rem; }
 .field span { color: #52605b; display: block; font-size: .8rem; margin-bottom: .45rem; }
+.field span, .section-label { line-height: 1.4; }
 .field input, .field select { background: #f6f8f5; border: 1px solid #e3eae5; border-radius: .75rem; color: #17212b; padding: .6rem .7rem; width: 100%; }
 .money-slider { accent-color: #f07f62; cursor: grab; display: block; height: 1.25rem; width: 100%; }
 .money-slider:active { cursor: grabbing; }
@@ -17,6 +29,7 @@ button, input, select { font: inherit; }
 .percent-position input { background: #f8faf9; border: 1px solid #e3eae5; border-radius: .55rem; color: #52605b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; padding: .35rem .25rem; text-align: right; width: 3.7rem; }
 .field-input { background: #f6f8f5; border: 1px solid #e3eae5; border-radius: .75rem; color: #17212b; min-width: 0; padding: .65rem .75rem; width: 100%; }
 .field-input:focus, .field input:focus, .field select:focus, .percent-position input:focus { border-color: #f07f62; box-shadow: 0 0 0 3px rgba(240, 127, 98, .14); outline: none; }
+.field input::placeholder { color: #a1ada8; }
 .forecast-bar { min-width: 2px; transition: height .18s ease; }
 .snapshot-row { align-items: center; background: #f8faf9; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: .75rem 1rem; }
 .table-wrap, .local-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
@@ -33,7 +46,7 @@ th, td { border-bottom: 1px solid #edf1ee; padding: .7rem .5rem; text-align: lef
 th { color: #84918d; font-weight: 600; }
 td { color: #52605b; }
 .expense-list { max-height: 42rem; overflow-y: auto; overscroll-behavior: contain; padding-right: .25rem; }
-.expense-item { min-width: 0; overflow: hidden; }
+.expense-item { min-width: 0; overflow: visible; }
 @media (max-width: 640px) {
   .expense-list { max-height: 32rem; }
   header { align-items: flex-start; gap: .75rem; }
