@@ -1,0 +1,19 @@
+README.md
+  s_d85a2895e7ff95::t_214c97a0897441 1,3,5,7,9-11,13-17,21-24,27,29,31,33-63,66-68,70,72-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "6395f6a64562ba319fc90fb1f3fa48385d4722ae",
+  "prompts": {},
+  "sessions": {
+    "s_d85a2895e7ff95": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "970fd7fc-5437-4f4d-a4a0-9b29110886f5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
