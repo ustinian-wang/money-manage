@@ -52,3 +52,30 @@ td { color: #52605b; }
   header { align-items: flex-start; gap: .75rem; }
   header > span { max-width: 11rem; text-align: right; }
 }
+
+/* 可点击编辑字段的文字视觉提示 */
+.field-click {
+  cursor: pointer;
+  border-radius: 0.45rem;
+  border-bottom: 1.5px dashed #f07f62;
+  color: #d9654a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0.2rem 0.4rem;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, border-bottom-style .15s ease;
+}
+.field-click:hover,
+.field-click:focus-visible {
+  background: rgba(240, 127, 98, 0.1);
+  border-bottom-style: solid;
+  color: #c4533a;
+  outline: none;
+}
+.field-readonly {
+  border-radius: 0.45rem;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+}
