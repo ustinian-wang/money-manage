@@ -1,0 +1,32 @@
+app/page.tsx
+  s_889292ef40f0f2::t_2aca9278fa3201 41,210
+  s_889292ef40f0f2::t_d9a409b42d4739 214
+  s_889292ef40f0f2::t_eef12ee545cdf5 211
+  s_889292ef40f0f2::t_8ddbf586af074c 4-5,42-43,209,218-252,255,265,270,295,303,308
+  s_889292ef40f0f2::t_aafef8521b2029 179-180,183,201,203-205
+  s_889292ef40f0f2::t_0f6e8dd1992e6e 261,266,272,296,299-300,304,311
+  s_889292ef40f0f2::t_bf35c299855b08 212
+  s_889292ef40f0f2::t_97669ea1d81487 268,271
+  s_889292ef40f0f2::t_2ba89bad79a8a2 177
+  s_889292ef40f0f2::t_f122e84bd04540 200,202
+  s_889292ef40f0f2::t_128d53912a5c01 213,286-294,297-298
+  s_889292ef40f0f2::t_668f49c231fc5b 276-278,284
+app/globals.css
+  s_889292ef40f0f2::t_0f6e8dd1992e6e 55-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "5ce3479774b45d69bcbf69e7257c4ee4b3a5a458",
+  "prompts": {},
+  "sessions": {
+    "s_889292ef40f0f2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a14fc627-a39f-4e17-bce0-beaa1f15079c",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
