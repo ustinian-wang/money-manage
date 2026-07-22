@@ -1,0 +1,31 @@
+app/sequentialImpact.test.ts
+  s_a64e6efa427d7d::t_605665c1be173e 11
+  s_a64e6efa427d7d::t_8543a9ba98144d 69-88
+  s_a64e6efa427d7d::t_0b22cf733d437b 1,4-6,15-32,36-38,40-45,102-103
+  s_a64e6efa427d7d::t_1b160eaae57b34 89-90,92,96-101
+  s_a64e6efa427d7d::t_2348e2a05cac07 52-68
+  s_a64e6efa427d7d::t_6b09f2ee62aa74 2-3,7-10,13-14,33-35,39,46-51,91,93-95
+  s_a64e6efa427d7d::t_860b654014d6d0 12
+app/sequentialImpact.ts
+  s_a64e6efa427d7d::t_d88d58703ded9c 138-225
+  s_a64e6efa427d7d::t_79c7eb67237d4c 3,18-20,22-27,50,61-66,72,76-137,226-227,252,254
+  s_a64e6efa427d7d::t_57ea061caea88c 1-2,4-7,9-10,12-17,21,28-49,51-60,67-71,73-75,228-229,253,255
+  s_a64e6efa427d7d::t_ccb15b819b39b5 8,11
+  s_a64e6efa427d7d::t_05efedd1e81cac 230-251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "111d8a4c812eef8a5748c5c9603fddfa344a3fea",
+  "prompts": {},
+  "sessions": {
+    "s_a64e6efa427d7d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "901dd894-5c43-4c08-9082-a19b6a6823fb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
