@@ -1,0 +1,29 @@
+app/expenseSpan.test.ts
+  s_a64e6efa427d7d::t_cbec9bf3a4b861 1-24,35-56,66-91
+  s_a64e6efa427d7d::t_ff368794fd0709 57-65
+  s_a64e6efa427d7d::t_9193974acb008d 25-34
+app/expenseSpan.ts
+  s_a64e6efa427d7d::t_1588d8c20b22d4 97,114,117-122,125-131
+  s_a64e6efa427d7d::t_4aabbdfda39fca 22-25,27-28
+  s_a64e6efa427d7d::t_0a219eef78702e 1-4,6-21,26,29-75,81-82,84-94,98,101-113,115-116,123-124,132-203,205-246
+  s_a64e6efa427d7d::t_1dec1c0b15cf17 204
+  s_a64e6efa427d7d::t_8c22b3bc23c948 5
+  s_a64e6efa427d7d::t_1409eb389f6cf7 76-80,83,99-100
+  s_a64e6efa427d7d::t_41cbca4d74507c 95-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4a0039acd501b26adca0223daf6ffeb5d6f33fd8",
+  "prompts": {},
+  "sessions": {
+    "s_a64e6efa427d7d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "901dd894-5c43-4c08-9082-a19b6a6823fb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
