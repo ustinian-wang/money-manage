@@ -1,0 +1,21 @@
+app/cashFlowRatios.ts
+  s_f568483924d1dd::t_b369dbeb58a349 1-31
+app/cashFlowRatios.test.ts
+  s_f568483924d1dd::t_d73d6dbc611b5d 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "cf97d30d96dec7a17133df87b12694497a4f3528",
+  "prompts": {},
+  "sessions": {
+    "s_f568483924d1dd": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9d5ca0c0-1999-4bce-b4ba-52f90981738d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
