@@ -1,0 +1,23 @@
+app/installmentPayment.ts
+  s_f568483924d1dd::t_ccff11345e2690 1,21-27,29-30,32,35,37-41,46-68
+  s_f568483924d1dd::t_bc8684c623517b 2-20,28,31,33-34,36,42-45,69
+app/installmentPayment.test.ts
+  s_f568483924d1dd::t_9dd511aa9d9866 2,6-12,33-61
+  s_f568483924d1dd::t_fc004d0fec0819 1,3-5,13-32,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9edf21c2b73c210cb3e13c9472c134108ba8e003",
+  "prompts": {},
+  "sessions": {
+    "s_f568483924d1dd": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9d5ca0c0-1999-4bce-b4ba-52f90981738d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
