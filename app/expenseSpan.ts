@@ -125,7 +125,7 @@ export function resolveExpenseSpan(
   return { start, end, kind, termMonths: spanMonths, openEnded: false };
 }
 
-/** 相对锚点把日期映射到年下标（0..maxYear），用于资产/健康年图 */
+/** 相对锚点把日期映射到年下标（0..maxYear），用于资产年图 */
 export function yearIndexFromAnchor(date: string, anchorDate = todayDateKey(), maxYear = 30): number {
   const months = calendarMonthsBetween(anchorDate.slice(0, 10), date.slice(0, 10));
   return Math.max(0, Math.min(maxYear, Math.round(months / 12)));
