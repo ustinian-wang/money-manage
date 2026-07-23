@@ -1,0 +1,66 @@
+app/installmentPayment.test.ts
+  s_14b9b81673d284::t_121f416b0ea300 2
+  s_e079f534af42d0::t_40bb3e7081a482 9
+  s_390b6fd799267b::t_7e3cd107141348 13,15,18-26,85-99
+  s_e079f534af42d0::t_a00b8871685a62 145-153,170-176
+  s_884266eb801e8b::t_0e7a0395dc8753 37-72
+  s_884266eb801e8b::t_5315ae4a7d8b29 154,156-169
+  s_cc8038e7b17b88::t_53c13fb58a263b 3,14,27-36,73-84
+  s_390b6fd799267b::t_6e3a23553432a8 100
+  s_884266eb801e8b::t_6c48e0611a8c93 155
+app/installmentPayment.ts
+  s_390b6fd799267b::t_813b407945b069 15-16,28,31-36,65-66,73-76
+  s_e079f534af42d0::t_ac90650efff142 124-140,142-148,151-155,157,160-229
+  s_884266eb801e8b::t_182f48b096edc1 141,149-150,156,158-159
+  s_14b9b81673d284::t_1b09faed21291d 1
+  s_cc8038e7b17b88::t_232fc20ee53f48 14,17-27,29-30,37-40,42-52,64
+  s_884266eb801e8b::t_36648deb1e1e9a 41,53-63,67-70,72,77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "cb4baaf27f4f91a79a61754c75683dfbc126e9b9",
+  "prompts": {},
+  "sessions": {
+    "s_14b9b81673d284": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a3866867-c252-46f8-a4ff-0bafcff2607e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_390b6fd799267b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "04681fdc-b3a8-4910-b8fa-f76664f54916",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_884266eb801e8b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55491a6a-c353-4fd0-a65a-3a127af23be3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_cc8038e7b17b88": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f7cbca1-b53a-4bf1-b7dc-178fc5625e28",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_e079f534af42d0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9454ed7f-ac4b-40c0-92be-e9d9c64c6d85",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
