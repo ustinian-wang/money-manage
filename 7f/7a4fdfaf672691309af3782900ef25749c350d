@@ -1,0 +1,22 @@
+app/expenseSpan.ts
+  s_14b9b81673d284::t_546fef00ada2ed 128
+README.md
+  s_14b9b81673d284::t_6f59d708791beb 3
+  s_14b9b81673d284::t_9e9db2a06f81f7 54,57,59,62-63,66,70,98,112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "7f7a4fdfaf672691309af3782900ef25749c350d",
+  "prompts": {},
+  "sessions": {
+    "s_14b9b81673d284": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a3866867-c252-46f8-a4ff-0bafcff2607e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
