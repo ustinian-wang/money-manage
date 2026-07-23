@@ -29,3 +29,8 @@ export function roundPct(value: number, digits = 1): number {
   const factor = 10 ** digits;
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
+
+/** 剩余可支配收入占比 = 100 − 支出合计占比（允许负值，表示超支压力） */
+export function remainDisposableSharePct(expensePct: number): number {
+  return roundPct(100 - expensePct);
+}
