@@ -10,14 +10,20 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf:bucket": "echo 'KV already configured in wrangler.jsonc; to use R2 later: enable R2 in Dashboard then wrangler r2 bucket create money-manage-data'",
     "pm2:build": "npm run build",
     "pm2:start": "npm run pm2:build && pm2 start ecosystem.config.cjs",
     "pm2:restart": "npm run pm2:build && pm2 restart money-manage --update-env",
     "pm2:stop": "pm2 stop money-manage",
     "pm2:logs": "pm2 logs money-manage",
-    "test": "node --experimental-strip-types --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts app/installmentPayment.test.ts app/cashFlowRatios.test.ts app/sequentialImpact.test.ts app/expenseSpan.test.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts lib/persistence/*.test.ts app/installmentPayment.test.ts app/cashFlowRatios.test.ts app/sequentialImpact.test.ts app/expenseSpan.test.ts"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.6.5",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
     "next": "^15.2.4",
@@ -31,6 +37,7 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wrangler": "^4.28.0"
   }
 }

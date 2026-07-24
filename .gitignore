@@ -1,6 +1,9 @@
 node_modules
 .next/
+.open-next/
 dist/
 *.tsbuildinfo
 data/backups
 logs/
+.dev.vars
+.wrangler/

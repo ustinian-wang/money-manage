@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "money-manage",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "money-manage"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "MONEY_DATA",
+      "id": "b4e6ac1dcc8c45ed819d99679997976e",
+      "preview_id": "06fc14804e1d46c4b86d91f28a93d1b8"
+    }
+  ]
+}
