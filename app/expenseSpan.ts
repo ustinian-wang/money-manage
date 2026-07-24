@@ -2,7 +2,7 @@
  * 支出时间区间：每笔都有开始/结束；短区间在时间轴上渲染为点或短线。
  */
 
-import { calendarMonthsBetween } from './installmentPayment.ts';
+import { calendarMonthsBetween } from './installmentPayment';
 
 export type SpanMode = 'fixed' | 'percentage' | 'installment' | 'one_time';
 

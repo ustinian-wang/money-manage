@@ -3,13 +3,13 @@
  * 每项固定颜色；时态图用堆叠 delta 面积（互不重叠），结余带垫高到最终前缀累计。
  */
 
-import { calendarMonthsBetween } from './installmentPayment.ts';
+import { calendarMonthsBetween } from './installmentPayment';
 import {
   monthToDate,
   resolveExpenseSpan,
   todayMonthKey,
   type SpanExpense,
-} from './expenseSpan.ts';
+} from './expenseSpan';
 
 export type ImpactItem = { id: string; name: string };
 
