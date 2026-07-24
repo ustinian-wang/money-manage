@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readState, writeState } from '../../../lib/persistence/fileStore';
 
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     const state = await readState();
