@@ -1,0 +1,20 @@
+README.md
+  s_9350341edeb380::t_afe72c1b065d66 104-106,108-119
+  s_9350341edeb380::t_e4c1254ffc8235 107,120-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "01b282162306dd394edb129c2584489dc8a30302",
+  "prompts": {},
+  "sessions": {
+    "s_9350341edeb380": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e0d65fa8-69f9-49b3-9002-eb80cb9bd2c5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
