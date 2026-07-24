@@ -22,6 +22,7 @@ body {
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
+body.sheet-open { overflow: hidden; touch-action: none; }
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
 .section-label { border-top: 1px solid #edf1ee; color: #52605b; font-size: .75rem; font-weight: 700; margin-top: .5rem; padding-top: 1.25rem; }
@@ -42,20 +43,99 @@ button, input, select { font: inherit; }
 main, section, aside, article, .space-y-6, .min-w-0 { min-width: 0; }
 .retirement-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; border: 1px solid #e3eae5; border-radius: .9rem; background: #f8faf9; color: #52605b; padding: .75rem 1rem; font-size: .78rem; }
 .chart-box { width: 100%; height: 260px; }
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 33, 43, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.sheet-handle {
+  width: 2.5rem;
+  height: 0.28rem;
+  margin: 0.55rem auto 0.15rem;
+  border-radius: 999px;
+  background: #d1d9d4;
+}
+.touch-btn {
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-nav-chip {
+  flex: 1 1 0;
+  min-height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid #e3eae5;
+  background: #fff;
+  color: #52605b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+}
+.mobile-nav-chip:active { background: #f1f5f2; }
 @media (min-width: 640px) {
   .chart-box { height: 400px; }
 }
 @media (max-width: 640px) {
+  /* iOS：输入框字号 <16 会强制缩放页面 */
+  .field-input, .field input, .field select, input, select, textarea {
+    font-size: 16px !important;
+  }
   .table-wrap { margin-inline: 0; }
   table { min-width: 540px; }
-  .money-slider { min-width: 0; }
-  .section-card { border-radius: 1.25rem; padding: 1rem; }
-  .page-pad { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .money-slider { min-width: 0; height: 1.75rem; }
+  .section-card { border-radius: 1.1rem; padding: 0.9rem; box-shadow: 0 8px 24px rgba(23, 33, 43, 0.06); }
+  .page-pad { padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
   .chart-year-labels { font-size: 0.75rem; }
   .cell-wrap { max-width: 10rem; }
   .expense-list { max-height: 32rem; }
-  header { align-items: flex-start; gap: .75rem; }
-  header > span { max-width: 11rem; text-align: right; }
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(246, 248, 245, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding-top: max(0.4rem, env(safe-area-inset-top));
+    border-bottom: 1px solid #e8eeea;
+  }
+  .field-click {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.85rem;
+    border: 1px solid rgba(240, 127, 98, 0.35);
+    border-bottom-width: 1px;
+    border-radius: 0.65rem;
+    background: #fff;
+  }
+  .field-row-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+  .field-row-mobile > span:first-child { color: #84918d; font-size: 0.72rem; font-weight: 600; }
+  .expense-card {
+    border: 1px solid #e3eae5;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.9rem;
+    box-shadow: 0 4px 14px rgba(23, 33, 43, 0.04);
+  }
+  .expense-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #edf1ee;
+  }
+  .section-label { padding-top: 0.9rem; margin-top: 0.35rem; }
 }
 table { border-collapse: collapse; min-width: 580px; width: 100%; }
 th, td { border-bottom: 1px solid #edf1ee; padding: .7rem .5rem; text-align: left; font-size: .8rem; white-space: nowrap; }
