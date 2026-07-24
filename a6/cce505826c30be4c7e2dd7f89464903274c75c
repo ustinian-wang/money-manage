@@ -1,0 +1,21 @@
+app/sequentialImpact.ts
+  s_9350341edeb380::t_33858ff243db0e 6,12
+app/expenseSpan.ts
+  s_9350341edeb380::t_1872590e1cedb0 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a6cce505826c30be4c7e2dd7f89464903274c75c",
+  "prompts": {},
+  "sessions": {
+    "s_9350341edeb380": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e0d65fa8-69f9-49b3-9002-eb80cb9bd2c5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
