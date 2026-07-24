@@ -1,0 +1,22 @@
+app/page.tsx
+  s_9350341edeb380::t_7f5fb3dc27547f 674
+  s_9350341edeb380::t_4fc55aef070772 650-651
+  s_9350341edeb380::t_d82fe801f02a10 673
+  s_9350341edeb380::t_3221c0a346d1d0 227-234,497,505,508-509,513,522,543-546,577,621,629,632-633,637,646,652-672,798,994-995
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "033316499abd8817b462e353c5dc1df42c701b0f",
+  "prompts": {},
+  "sessions": {
+    "s_9350341edeb380": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e0d65fa8-69f9-49b3-9002-eb80cb9bd2c5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
