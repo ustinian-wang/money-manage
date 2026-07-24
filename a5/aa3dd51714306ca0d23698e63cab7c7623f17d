@@ -1,0 +1,30 @@
+lib/persistence/fileStore.ts
+  s_9350341edeb380::t_b2822a32bbe2a8 2-3,10-13,16,20-50,57-58,71-73,86-87
+  s_9350341edeb380::t_9aaa9750572f2c 1,4,7-8,14-15,17-19,51-56,59-70,74-85,88-97,102-104,113-115,128-130,135,137-140
+  s_9350341edeb380::t_2d36745b03c0b1 118-125
+app/api/backups/route.ts
+  s_9350341edeb380::t_8a760417f6c59c 4
+app/api/scenarios/route.ts
+  s_9350341edeb380::t_e160ab45f03d74 4
+lib/persistence/fileStore.test.ts
+  s_9350341edeb380::t_e66a5542c8d215 9
+  s_9350341edeb380::t_f414fdb3e3c507 1-8,10-38
+app/api/profile/route.ts
+  s_9350341edeb380::t_f2079171801b98 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a5aa3dd51714306ca0d23698e63cab7c7623f17d",
+  "prompts": {},
+  "sessions": {
+    "s_9350341edeb380": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e0d65fa8-69f9-49b3-9002-eb80cb9bd2c5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
