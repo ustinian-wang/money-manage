@@ -16,7 +16,12 @@
 :root { color-scheme: light; }
 * { box-sizing: border-box; }
 html, body { max-width: 100%; overflow-x: hidden; }
-body { margin: 0; background: #f6f8f5; font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+body {
+  margin: 0;
+  background: #f6f8f5;
+  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
 .section-label { border-top: 1px solid #edf1ee; color: #52605b; font-size: .75rem; font-weight: 700; margin-top: .5rem; padding-top: 1.25rem; }
@@ -36,10 +41,21 @@ button, input, select { font: inherit; }
 .local-scroll { overflow-y: auto; }
 main, section, aside, article, .space-y-6, .min-w-0 { min-width: 0; }
 .retirement-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; border: 1px solid #e3eae5; border-radius: .9rem; background: #f8faf9; color: #52605b; padding: .75rem 1rem; font-size: .78rem; }
+.chart-box { width: 100%; height: 260px; }
+@media (min-width: 640px) {
+  .chart-box { height: 400px; }
+}
 @media (max-width: 640px) {
-  .table-wrap { margin-inline: -.25rem; }
+  .table-wrap { margin-inline: 0; }
   table { min-width: 540px; }
   .money-slider { min-width: 0; }
+  .section-card { border-radius: 1.25rem; padding: 1rem; }
+  .page-pad { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .chart-year-labels { font-size: 0.75rem; }
+  .cell-wrap { max-width: 10rem; }
+  .expense-list { max-height: 32rem; }
+  header { align-items: flex-start; gap: .75rem; }
+  header > span { max-width: 11rem; text-align: right; }
 }
 table { border-collapse: collapse; min-width: 580px; width: 100%; }
 th, td { border-bottom: 1px solid #edf1ee; padding: .7rem .5rem; text-align: left; font-size: .8rem; white-space: nowrap; }
@@ -47,10 +63,11 @@ th { color: #84918d; font-weight: 600; }
 td { color: #52605b; }
 .expense-list { max-height: 42rem; overflow-y: auto; overscroll-behavior: contain; padding-right: .25rem; }
 .expense-item { min-width: 0; overflow: visible; }
-@media (max-width: 640px) {
-  .expense-list { max-height: 32rem; }
-  header { align-items: flex-start; gap: .75rem; }
-  header > span { max-width: 11rem; text-align: right; }
+.expense-card {
+  border: 1px solid #edf1ee;
+  border-radius: 1rem;
+  background: #f8faf9;
+  padding: 0.85rem 0.9rem;
 }
 
 /* 可点击编辑字段的文字视觉提示 */
@@ -64,6 +81,7 @@ td { color: #52605b; }
   line-height: 1.4;
   padding: 0.2rem 0.4rem;
   transition: background-color .15s ease, border-color .15s ease, color .15s ease, border-bottom-style .15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 .field-click:hover,
 .field-click:focus-visible {
