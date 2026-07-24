@@ -1,0 +1,28 @@
+app/layout.tsx
+  s_9350341edeb380::t_b2c343a5a382f2 1,9-13
+  s_9350341edeb380::t_e33d01a8d3efb5 14-15
+app/page.tsx
+  s_9350341edeb380::t_dcf63d76940b24 1016,1019-1020,1023-1028,1030,1032
+  s_9350341edeb380::t_ebfe69afa464ef 1082,1084-1086,1093
+  s_9350341edeb380::t_fdf6f90a4bd843 641
+  s_9350341edeb380::t_44f683077d20e0 225,228-232,239-240,243,251-278,282-307
+  s_9350341edeb380::t_edd8746167be45 58-80
+app/globals.css
+  s_9350341edeb380::t_64f4b1e7b7537a 19-24,44-47,49,52-58,66-70,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c9f243215429a901477ea4d7a18bbba5c63a4d9d",
+  "prompts": {},
+  "sessions": {
+    "s_9350341edeb380": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e0d65fa8-69f9-49b3-9002-eb80cb9bd2c5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
