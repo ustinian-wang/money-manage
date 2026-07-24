@@ -101,9 +101,25 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 ## 数据与隐私
 
-- **浏览器**：主数据在 `localStorage`，不经过服务端账号体系
-- **仓库内**：可能有 `data/`（含备份）、`logs/` 等本地文件；`.gitignore` 已忽略 `data/backups`、`logs/`。个人财务 JSON / 日志 **不要提交**
-- 清浏览器存储即清空本机画像；换设备需自行迁移
+- **浏览器**：`localStorage` 作即时缓存；改参后防抖同步到服务端
+- **服务端文本库**：对象 key / 文件 `financial-profile.json`（另存 `backups/*.json`）
+  - 本地 Node：`data/` 目录
+  - Cloudflare：Workers KV binding `MONEY_DATA`（JSON 文本键；R2 需 Dashboard 开通后可再切 10GB 桶）
+- 仓库内可能有 `data/`、`logs/`；`.gitignore` 已忽略备份与日志。个人财务 JSON **不要提交**
+
+---
+
+## 部署到 Cloudflare
+
+```bash
+npm install
+wrangler login
+npm run deploy       # OpenNext 构建并发布到 Workers
+```
+
+本地用 Workers 运行时预览：`npm run preview`（含 KV 本地模拟）。日常开发仍可用 `npm run dev`（经 `initOpenNextCloudflareForDev` 注入 bindings）。
+
+若要改用 R2（约 10GB）：在 [R2 Overview](https://dash.cloudflare.com/?to=/:account/r2) 开通后创建桶，把 `wrangler.jsonc` 的 `kv_namespaces` 换成 `r2_buckets`（binding 仍用 `MONEY_DATA`）。
 
 ---
 
