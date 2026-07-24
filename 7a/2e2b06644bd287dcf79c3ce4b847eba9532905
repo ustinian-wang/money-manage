@@ -1,0 +1,19 @@
+app/page.tsx
+  s_8640f53bd20d2d::t_ace80ec30f3f03 345-346,348,351,360-361,363,365-373,377-449,580
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7a2e2b06644bd287dcf79c3ce4b847eba9532905",
+  "prompts": {},
+  "sessions": {
+    "s_8640f53bd20d2d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d5ba0f8e-0408-4772-9e79-f8777a81ea3e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
