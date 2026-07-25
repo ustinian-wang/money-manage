@@ -1,0 +1,38 @@
+README.md
+  s_45c1ca02febb1e::t_16e1fd8d24b9bb 42
+  s_1df6567878f3f3::t_b9b86841c46078 41
+  s_45c1ca02febb1e::t_7436575fe73d76 61
+  s_4c4431cfe8117a::t_aea91aed84b9a0 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d8366fc018474cea95a66e82406825330945f00f",
+  "prompts": {},
+  "sessions": {
+    "s_1df6567878f3f3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "91a4cb22-119b-4881-8623-0f8638d68147",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_45c1ca02febb1e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e02ef5ee-ae90-4957-8c15-65a06384e6b9",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_4c4431cfe8117a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "37b6bf3b-6424-472e-a180-2995425d01b6",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
