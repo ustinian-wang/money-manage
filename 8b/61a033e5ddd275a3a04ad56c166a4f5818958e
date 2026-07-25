@@ -1,0 +1,66 @@
+package.json
+  s_57e4487f6b09a2::t_38fa73fd7d189c 23
+  s_18376cbe9b5db6::t_69efdbda70f768 24
+app/cashFlowRatios.test.ts
+  s_3a3fc156ae2d50::t_29aae22922a0b3 6
+app/expenseSpan.test.ts
+  s_3a3fc156ae2d50::t_a2cf8bf3ceb4fc 12
+app/installmentPayment.test.ts
+  s_3a3fc156ae2d50::t_c507c89988d464 16
+app/sequentialImpact.test.ts
+  s_3a3fc156ae2d50::t_de7d29c22f587e 23
+domain/installment/calculator.test.ts
+  s_3a3fc156ae2d50::t_844e3ece6cf6c6 3
+domain/snapshot/index.test.ts
+  s_3a3fc156ae2d50::t_742705b9770379 12-13
+domain/social-security/index.ts
+  s_3a3fc156ae2d50::t_fd670afc10ea3f 1
+domain/social-security/retirement.test.ts
+  s_3a3fc156ae2d50::t_f3b0e62b7154a0 3
+domain/tax/index.ts
+  s_3a3fc156ae2d50::t_2c8ca7c667eb6b 1
+lib/persistence/fileStore.ts
+  s_3a3fc156ae2d50::t_1f00e0ee715e7a 6-7
+tests/ts-ext-resolve.mjs
+  s_d739b933dbd6f0::t_3bac507a828d40 1-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8b61a033e5ddd275a3a04ad56c166a4f5818958e",
+  "prompts": {},
+  "sessions": {
+    "s_18376cbe9b5db6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a11e51c5-8cab-4ac3-b19d-b51df6c06ccb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3a3fc156ae2d50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "35a7202c-fa59-47a6-aaf3-bf4f09a3632e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_d739b933dbd6f0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "802cdf29-6bf7-4a8d-9373-1e138e55f5b6",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
