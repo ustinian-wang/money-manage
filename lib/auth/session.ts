@@ -7,14 +7,11 @@ import {
     SESSION_TTL_SEC,
     destroySession,
     getSessionUser,
+    readSessionToken,
     type PublicUser,
 } from './store';
 
-export function readSessionToken(request: Request): string | null {
-    const header = request.headers.get('cookie') || '';
-    const match = header.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
-    return match ? decodeURIComponent(match[1]!) : null;
-}
+export { readSessionToken };
 
 export async function requireUser(request: Request): Promise<
     { user: PublicUser; token: string } | { error: NextResponse }

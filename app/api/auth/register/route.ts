@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     }
     const result = await registerUser({
         username: String(body.username || ''),
-        email: String(body.email || ''),
+        email: body.email ? String(body.email) : '',
         password: String(body.password || ''),
     });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });

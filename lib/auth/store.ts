@@ -1,15 +1,19 @@
 /**
  * 用户 / 会话：存 KV（或本地 data/）文本键
- * keys: user:{id} · idx:username:{name} · idx:email:{email} · session:{token}
+ * keys: user:{id} · idx:username:{name} · idx:email:{email}（可选）· session:{token}
+ * 账号/密码：仅最长长度；邮箱产品面不要求，存库可空
  */
-import { hashPassword, randomToken, verifyPassword, type PasswordRecord } from './crypto.ts';
+import { hashPassword, randomToken, verifyPassword, type PasswordRecord } from './crypto';
 
 export const SESSION_COOKIE = 'mm_session';
 export const SESSION_TTL_SEC = 60 * 60 * 24 * 30; // 30 天
+export const USERNAME_MAX = 32;
+export const PASSWORD_MAX = 72;
 
 export type PublicUser = {
     id: string;
     username: string;
+    /** 兼容旧数据；新注册可为空串 */
     email: string;
 };
 
@@ -133,26 +137,30 @@ export function normalizeEmail(raw: string): string {
     return raw.trim().toLowerCase();
 }
 
-/** 用户名 3–32：字母数字下划线；或合法邮箱作登录名 */
+/** 账号：必填 + 最长 USERNAME_MAX；无最短、无字符集限制 */
 export function validateUsername(username: string): string | null {
-    if (username.length < 3 || username.length > 32) return '用户名长度需 3–32 位';
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) return '用户名仅允许字母、数字、下划线';
+    if (!username) return '请输入账号';
+    if (username.length > USERNAME_MAX) return `账号最长 ${USERNAME_MAX} 位`;
     return null;
 }
 
+/** 邮箱可选：有值才校验格式（兼容旧账号；产品面不要求） */
 export function validateEmail(email: string): string | null {
-    if (email.length < 5 || email.length > 120) return '邮箱长度不合法';
+    if (!email) return null;
+    if (email.length > 120) return '邮箱过长';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return '邮箱格式不正确';
     return null;
 }
 
+/** 密码：必填 + 最长 PASSWORD_MAX；无最短长度 */
 export function validatePassword(password: string): string | null {
-    if (password.length < 8 || password.length > 72) return '密码长度需 8–72 位';
+    if (!password) return '请输入密码';
+    if (password.length > PASSWORD_MAX) return `密码最长 ${PASSWORD_MAX} 位`;
     return null;
 }
 
 function toPublic(user: UserRecord): PublicUser {
-    return { id: user.id, username: user.username, email: user.email };
+    return { id: user.id, username: user.username, email: user.email || '' };
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
@@ -172,6 +180,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
 }
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+    if (!email) return null;
     const id = await readText(emailIndexKey(email));
     if (!id) return null;
     return findUserById(id.trim());
@@ -179,11 +188,11 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 
 export async function registerUser(input: {
     username: string;
-    email: string;
+    email?: string;
     password: string;
 }): Promise<{ ok: true; user: PublicUser } | { ok: false; error: string; status: number }> {
     const username = normalizeUsername(input.username);
-    const email = normalizeEmail(input.email);
+    const email = input.email ? normalizeEmail(input.email) : '';
     const usernameErr = validateUsername(username);
     if (usernameErr) return { ok: false, error: usernameErr, status: 400 };
     const emailErr = validateEmail(email);
@@ -191,8 +200,8 @@ export async function registerUser(input: {
     const passwordErr = validatePassword(input.password);
     if (passwordErr) return { ok: false, error: passwordErr, status: 400 };
 
-    if (await findUserByUsername(username)) return { ok: false, error: '用户名已被占用', status: 409 };
-    if (await findUserByEmail(email)) return { ok: false, error: '邮箱已被占用', status: 409 };
+    if (await findUserByUsername(username)) return { ok: false, error: '账号已被占用', status: 409 };
+    if (email && (await findUserByEmail(email))) return { ok: false, error: '邮箱已被占用', status: 409 };
 
     const id = randomToken(16);
     const user: UserRecord = {
@@ -204,7 +213,7 @@ export async function registerUser(input: {
     };
     await writeText(userKey(id), `${JSON.stringify(user)}\n`);
     await writeText(usernameIndexKey(username), id);
-    await writeText(emailIndexKey(email), id);
+    if (email) await writeText(emailIndexKey(email), id);
     return { ok: true, user: toPublic(user) };
 }
 
@@ -214,10 +223,11 @@ export async function authenticateUser(
 ): Promise<{ ok: true; user: PublicUser } | { ok: false; error: string; status: number }> {
     const trimmed = login.trim();
     if (!trimmed || !password) return { ok: false, error: '请输入账号与密码', status: 400 };
-    const byEmail = trimmed.includes('@');
-    const user = byEmail
-        ? await findUserByEmail(normalizeEmail(trimmed))
-        : await findUserByUsername(normalizeUsername(trimmed));
+    // 优先按账号查；含 @ 时再尝试旧邮箱索引（兼容）
+    let user = await findUserByUsername(normalizeUsername(trimmed));
+    if (!user && trimmed.includes('@')) {
+        user = await findUserByEmail(normalizeEmail(trimmed));
+    }
     if (!user) return { ok: false, error: '账号或密码错误', status: 401 };
     const ok = await verifyPassword(password, user.password);
     if (!ok) return { ok: false, error: '账号或密码错误', status: 401 };
@@ -257,6 +267,13 @@ export async function getSessionUser(token: string | undefined | null): Promise<
 export async function destroySession(token: string | undefined | null): Promise<void> {
     if (!token) return;
     await deleteText(sessionKey(token));
+}
+
+/** 从 Request Cookie 头解析会话 token（无 Next 依赖，便于单测） */
+export function readSessionToken(request: Request): string | null {
+    const header = request.headers.get('cookie') || '';
+    const match = header.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
+    return match ? decodeURIComponent(match[1]!) : null;
 }
 
 /** 简易暴力防护：按 key 计数，超限拒绝（KV TTL / 本地旁路） */
