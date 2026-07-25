@@ -1,0 +1,60 @@
+app/AuthBar.tsx
+  s_bd72537ea04e33::t_d53955df626799 236
+  s_57e4487f6b09a2::t_f96094432bf080 45
+  s_57e4487f6b09a2::t_05984f1cecfb1d 251,262-270
+  s_a57c9a3fae9c06::t_611d2084f10bbd 132
+  s_2e258d657ed87e::t_404a5959667316 24,49,92,136-148,152-156,158,173-174,190,202,216-217,219-220,230-234,241-243,245-246,280
+  s_57e4487f6b09a2::t_5b9d01ecdbe82f 30,33-34
+  s_a57c9a3fae9c06::t_64d8066908d3f1 10,47-48,133-135,157,160-172,176-188,192-201,205-213,235,237-240,273-278
+  s_57e4487f6b09a2::t_993e2363d257bd 4,6-7,9,13,20-21,23,25-29,31-32,37-44,46,50,58-65,91,114,149-151,218,221-229,244,247,254-261,271,286-289
+  s_2e258d657ed87e::t_9aacf3d673d0eb 5,15-16,54,70-73,79,94,117,159,175,189,191,203-204,214-215
+  s_3a3fc156ae2d50::t_98b5f1d58670ff 14,66,248-250,290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "38369eee3c24a47856e30b15f9d52929e53c4124",
+  "prompts": {},
+  "sessions": {
+    "s_2e258d657ed87e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "14799c86-602a-4a48-ba45-70db7c367615",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3a3fc156ae2d50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "35a7202c-fa59-47a6-aaf3-bf4f09a3632e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a57c9a3fae9c06": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fa803182-bb88-4523-9874-5bbc0ba58703",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_bd72537ea04e33": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bc1c1869-6344-494f-8ff7-635b5c75d80e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
