@@ -1,0 +1,53 @@
+app/AuthBar.tsx
+  s_250e54c9bc4175::t_e624b44d49c5b7 1-139
+lib/persistence/fileStore.test.ts
+  s_250e54c9bc4175::t_7dfd67d24b2c8b 2-3,38
+  s_250e54c9bc4175::t_f20606bef3fa8d 6,9,11-23,25-27,29-32,34-37,39-40
+lib/auth/crypto.test.ts
+  s_250e54c9bc4175::t_9a216de5c726c1 1,4-5,8,17
+  s_250e54c9bc4175::t_a1db33612b2a56 6-7,10-16
+  s_250e54c9bc4175::t_f60e96afe33abf 2-3,9
+app/api/auth/register/route.ts
+  s_250e54c9bc4175::t_579d308ade4bfe 1,4-27
+  s_250e54c9bc4175::t_c2c329be535e7e 2-3
+package.json
+  s_250e54c9bc4175::t_2c24c923caba4b 23
+app/api/backups/route.ts
+  s_250e54c9bc4175::t_998e1955768bf0 2,7-11
+app/api/auth/logout/route.ts
+  s_250e54c9bc4175::t_6b38f96d6c6ed9 1-8
+app/api/auth/login/route.ts
+  s_250e54c9bc4175::t_48669e931cf41d 1-26
+lib/auth/session.ts
+  s_250e54c9bc4175::t_2bf9a13f7cd034 1-57
+app/api/auth/me/route.ts
+  s_250e54c9bc4175::t_cb1555aeb08683 1-11
+app/api/profile/route.ts
+  s_250e54c9bc4175::t_afb1e50dd7638c 2,7-10,14-15,20
+lib/auth/store.ts
+  s_250e54c9bc4175::t_671462b8875e76 5
+  s_250e54c9bc4175::t_72ffffe792c05d 1-4,6-277
+lib/auth/crypto.ts
+  s_250e54c9bc4175::t_bb07f157ee5eb7 1-61
+app/api/scenarios/route.ts
+  s_250e54c9bc4175::t_b6b66fedbd1a97 2,7-10,15-16,18,24
+lib/persistence/fileStore.ts
+  s_250e54c9bc4175::t_61bc90d7d6cf8b 6-7
+  s_250e54c9bc4175::t_a89d2a1a9e030e 2-4,9-19,110,112,120-121,139-140,144-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8f21e91a77e5e9502795a788067ec79882aa11f7",
+  "prompts": {},
+  "sessions": {
+    "s_250e54c9bc4175": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b951e0c2-8562-4c7e-a670-aa803d555106",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
