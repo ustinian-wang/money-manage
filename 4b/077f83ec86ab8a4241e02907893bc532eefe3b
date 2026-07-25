@@ -1,0 +1,32 @@
+lib/demoDefaults.test.ts
+  s_33d38406ca7990::t_755b38e61e87a8 1-28
+lib/demoDefaults.ts
+  s_33d38406ca7990::t_231b09e89821b5 1-30
+lib/sectionNav.ts
+  s_33d38406ca7990::t_6e9971e6eb58e7 1-49
+lib/sectionNav.test.ts
+  s_33d38406ca7990::t_541309473b05af 29-39
+  s_33d38406ca7990::t_c1b5b990edf42d 1-28,40-47
+lib/claimGate.ts
+  s_33d38406ca7990::t_4993b2cbbc4fc7 1-59
+lib/claimGate.test.ts
+  s_33d38406ca7990::t_90ac808308703c 1-52
+package.json
+  s_33d38406ca7990::t_cc8fa806cd157b 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "4b077f83ec86ab8a4241e02907893bc532eefe3b",
+  "prompts": {},
+  "sessions": {
+    "s_33d38406ca7990": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4d82f142-2fc8-4bc8-a776-d74616be6b4c",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
