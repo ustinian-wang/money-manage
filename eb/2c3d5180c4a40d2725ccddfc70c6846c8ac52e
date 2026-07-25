@@ -1,0 +1,32 @@
+tests/mobile-smoke.md
+  s_18376cbe9b5db6::t_44e3c36f60a26f 1-20,25-35,37-39,42
+  s_57e4487f6b09a2::t_323f4dee15f388 21-24,36,40-41
+tests/mobile-smoke.mjs
+  s_57e4487f6b09a2::t_ae5eae80dc66d3 31-32,35,37
+  s_18376cbe9b5db6::t_5fc0c51df9f0f2 64,70
+  s_18376cbe9b5db6::t_e2bcce59a0ec77 1-30,33-34,36,38-63,65-69,71-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "eb2c3d5180c4a40d2725ccddfc70c6846c8ac52e",
+  "prompts": {},
+  "sessions": {
+    "s_18376cbe9b5db6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a11e51c5-8cab-4ac3-b19d-b51df6c06ccb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
