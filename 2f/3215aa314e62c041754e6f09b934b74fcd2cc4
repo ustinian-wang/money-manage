@@ -1,0 +1,37 @@
+app/page.tsx
+  s_963b4a3914f150::t_747fff88f433a5 477-483,496-501
+  s_963b4a3914f150::t_593bec00778566 476,484-495
+  s_963b4a3914f150::t_ab4e3bd0ca8d3e 403-406
+  s_963b4a3914f150::t_70251975a54e22 14
+  s_1ae759ddfac957::t_afdb949810cd8b 346-353
+  s_963b4a3914f150::t_68cf265fe41d3c 407
+  s_963b4a3914f150::t_79c13afbf125a4 1130-1132,1279
+app/globals.css
+  s_963b4a3914f150::t_f068cc0de5cef4 149-162,175-176
+  s_963b4a3914f150::t_d1ed4671bc6b31 335-339
+  s_963b4a3914f150::t_cfec003465f4e7 340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2f3215aa314e62c041754e6f09b934b74fcd2cc4",
+  "prompts": {},
+  "sessions": {
+    "s_1ae759ddfac957": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8270641d-b3a9-4628-80b9-a4eaf30876fc",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_963b4a3914f150": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "61d6459d-bad2-4f59-8980-9b290f4bea97",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
