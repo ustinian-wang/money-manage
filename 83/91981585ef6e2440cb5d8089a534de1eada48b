@@ -1,0 +1,42 @@
+docs/prd-mobile-ux.md
+  s_57e4487f6b09a2::t_6a97a71f628d62 8-9,11,15-20,23-28,40-42,46-51
+README.md
+  s_2e258d657ed87e::t_3248d1b9c1d29a 123
+  s_57e4487f6b09a2::t_f38c181017ff8b 114,116-118
+  s_e8b1b5e4d5639d::t_9b4f0aceb78b8d 7-8
+  s_57e4487f6b09a2::t_7ebe878307860a 76-84
+  s_2e258d657ed87e::t_775e8777fcff16 132-135
+  s_57e4487f6b09a2::t_ca0c7d99defaba 158-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8391981585ef6e2440cb5d8089a534de1eada48b",
+  "prompts": {},
+  "sessions": {
+    "s_2e258d657ed87e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "14799c86-602a-4a48-ba45-70db7c367615",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_e8b1b5e4d5639d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "42295d77-9e12-4928-80bf-fe64345416f7",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
