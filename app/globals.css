@@ -41,7 +41,8 @@ button, input, select { font: inherit; }
 .snapshot-row { align-items: center; background: #f8faf9; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: .75rem 1rem; }
 .table-wrap, .local-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
 .local-scroll { overflow-y: auto; }
-main, section, aside, article, .space-y-6, .min-w-0 { min-width: 0; }
+/* grid/flex 子项默认 min-width:auto 会被长文案/canvas 撑破 375 */
+main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; }
 .retirement-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; border: 1px solid #e3eae5; border-radius: .9rem; background: #f8faf9; color: #52605b; padding: .75rem 1rem; font-size: .78rem; }
 /* 固定高度，避免 ReactECharts 在 height:100% 时落到 0×0 */
 .chart-box {
@@ -158,8 +159,21 @@ html.kb-open .auth-gate-root {
   .table-wrap { margin-inline: 0; }
   table { min-width: 540px; }
   .money-slider { min-width: 0; height: 1.75rem; }
-  .section-card { border-radius: 1.1rem; padding: 0.9rem; box-shadow: 0 8px 24px rgba(23, 33, 43, 0.06); }
+  .section-card { border-radius: 1.1rem; padding: 0.9rem; box-shadow: 0 8px 24px rgba(23, 33, 43, 0.06); overflow-x: clip; }
   .page-pad { padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
+  /* 移动单列：隐式 auto 轨会被长 field-row 撑破 375；强制 minmax(0,1fr) */
+  main > section.page-pad.grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  main > section.page-pad.grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .section-card .relative.block,
+  .section-card .mt-3.grid {
+    min-width: 0;
+    max-width: 100%;
+  }
   .chart-year-labels { font-size: 0.75rem; }
   .cell-wrap { max-width: 10rem; }
   .expense-list { max-height: 32rem; }
@@ -190,6 +204,10 @@ html.kb-open .auth-gate-root {
     justify-content: space-between;
     gap: 0.75rem;
     min-height: 2.85rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     padding: 0.55rem 0.75rem;
     border-radius: 0.85rem;
     background: #f8faf9;
@@ -206,10 +224,36 @@ html.kb-open .auth-gate-root {
   .field-row-mobile .field-click,
   .field-row-mobile .field-readonly {
     flex: 0 1 auto;
+    min-width: 0; /* truncate/换行需要，否则长金额撑破 375 */
     max-width: 58%;
     justify-content: flex-end;
     text-align: right;
     align-self: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .field-row-mobile .field-click.field-click-wrap {
+    white-space: normal;
+    text-overflow: unset;
+  }
+  .expense-card-amount {
+    min-width: 0;
+    max-width: 52%;
+  }
+  .expense-card-amount .field-click {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .linked-field-group {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .linked-field-group .field-input {
+    min-width: 0;
   }
   .field-click {
     display: inline-flex;
@@ -228,6 +272,7 @@ html.kb-open .auth-gate-root {
     background: #fff;
     padding: 0.85rem 0.9rem;
     box-shadow: 0 4px 14px rgba(23, 33, 43, 0.04);
+    scroll-margin-top: 6.5rem; /* 对齐 sticky 顶栏，新增后滚入可见区 */
   }
   .expense-card-head {
     display: flex;
