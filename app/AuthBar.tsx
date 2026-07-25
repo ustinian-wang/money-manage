@@ -8,17 +8,19 @@
  */
 import { FormEvent, FocusEvent, useEffect, useState } from 'react';
 import { scrollFocusedFieldIntoView, useVisualViewport } from '../lib/useVisualViewport';
+import { parseClaimMode, type ClaimMode } from '../lib/claimGate';
 
 export type AuthUser = { id: string; username: string; email: string };
 export type AuthMode = 'login' | 'register';
+export type AuthMeta = { from: AuthMode; claimMode?: ClaimMode };
 
 const USERNAME_MAX = 32;
 const PASSWORD_MAX = 72;
 
 type Props = {
     user: AuthUser | null;
-    /** from：用于空账号绑定时区分「注册认领」与「登录二次确认」 */
-    onAuthed: (user: AuthUser, meta: { from: AuthMode }) => void;
+    /** from：空账号绑定时区分注册认领 / 登录确认；注册含 claimMode */
+    onAuthed: (user: AuthUser, meta: AuthMeta) => void;
     onLogout: () => void;
     /** bar=顶栏；gate=全屏门禁（可选） */
     variant?: 'bar' | 'gate';
@@ -32,6 +34,8 @@ type Props = {
     showLoggedInControls?: boolean;
     /** 访客：只显示「注册保存」（登录放「更多」），移动端顶栏用 */
     registerOnly?: boolean;
+    /** 注册前展示将认领的摘要行（P0-1） */
+    claimSummaryLines?: string[];
 };
 
 export default function AuthBar({
@@ -43,6 +47,7 @@ export default function AuthBar({
     onOpenRequestConsumed,
     showLoggedInControls = true,
     registerOnly = false,
+    claimSummaryLines = [],
 }: Props) {
     // 同步 --vv-height / --kb-inset，供门禁与 auth sheet CSS 使用
     useVisualViewport();
@@ -54,6 +59,8 @@ export default function AuthBar({
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    // 注册：默认认领当前数据；可改「清空示例后再注册」
+    const [claimMode, setClaimMode] = useState<ClaimMode>('keep');
 
     // 父组件「注册保存」等：打开对应模式表单
     useEffect(() => {
@@ -88,7 +95,10 @@ export default function AuthBar({
                 return;
             }
             if (data.user) {
-                onAuthed(data.user as AuthUser, { from: mode });
+                onAuthed(data.user as AuthUser, {
+                    from: mode,
+                    ...(mode === 'register' ? { claimMode: parseClaimMode(claimMode) } : {}),
+                });
                 if (variant === 'bar') setOpen(false);
                 setPassword('');
                 setConfirm('');
@@ -147,12 +157,12 @@ export default function AuthBar({
             </div>
             <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
                 {mode === 'register'
-                    ? '注册后会把当前页面上的访客/示例数据认领到你的账号并同步云端。'
+                    ? '注册前请确认：认领当前数据，或清空示例后再开空账号。'
                     : '登录后读取你的云端数据；若账号为空，可选择绑定当前访客草稿。'}
             </p>
             <div className="mt-3 flex gap-2 text-xs">
                 <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
-                <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); }}>注册</button>
+                <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); setClaimMode('keep'); }}>注册</button>
             </div>
             <form className="mt-4 space-y-3" onSubmit={(event) => void submit(event)} onFocusCapture={onFormFocusCapture}>
                 {mode === 'login' ? (
@@ -213,9 +223,44 @@ export default function AuthBar({
                         />
                     </label>
                 )}
+                {mode === 'register' && (
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+                        <p className="text-[11px] font-semibold text-slate-600">将写入账号的摘要</p>
+                        {claimSummaryLines.length > 0 ? (
+                            <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug text-slate-500">
+                                {claimSummaryLines.map((line) => <li key={line}>{line}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="mt-1 text-[11px] text-slate-400">当前页面数据</p>
+                        )}
+                        <fieldset className="mt-2 space-y-1.5 border-0 p-0">
+                            <legend className="sr-only">认领方式</legend>
+                            <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
+                                <input
+                                    type="radio"
+                                    className="mt-0.5 accent-[#f07f62]"
+                                    name="claimMode"
+                                    checked={claimMode === 'keep'}
+                                    onChange={() => setClaimMode('keep')}
+                                />
+                                <span>用当前数据认领（含示例/你改过的）</span>
+                            </label>
+                            <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
+                                <input
+                                    type="radio"
+                                    className="mt-0.5 accent-[#f07f62]"
+                                    name="claimMode"
+                                    checked={claimMode === 'clear'}
+                                    onChange={() => setClaimMode('clear')}
+                                />
+                                <span>清空示例后再注册（空账号起步）</span>
+                            </label>
+                        </fieldset>
+                    </div>
+                )}
                 {error && <p className="text-xs text-red-600">{error}</p>}
                 <button type="submit" disabled={busy} className="touch-btn w-full rounded-xl bg-[#17212b] py-3 text-sm font-semibold text-white disabled:opacity-60">
-                    {busy ? '处理中…' : mode === 'login' ? '登录' : '注册并认领数据'}
+                    {busy ? '处理中…' : mode === 'login' ? '登录' : (claimMode === 'clear' ? '注册并开空账号' : '注册并认领数据')}
                 </button>
             </form>
             {variant === 'gate' && (
