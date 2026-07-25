@@ -1,0 +1,22 @@
+app/page.tsx
+  s_938457678a7ad9::t_9f317bc368b3ba 1130,1135-1136,1138,1141-1142,1144
+  s_938457678a7ad9::t_0f081172553df3 1140
+tests/mobile-smoke.md
+  s_938457678a7ad9::t_4f673633673dc8 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2cf4e1ab0402e19cf73b3a6e73b110642a469b63",
+  "prompts": {},
+  "sessions": {
+    "s_938457678a7ad9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9fad2602-4271-4c14-b462-9f7398e60700",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
