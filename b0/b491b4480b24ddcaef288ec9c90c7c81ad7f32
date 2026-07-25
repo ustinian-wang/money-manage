@@ -1,0 +1,42 @@
+README.md
+  s_250e54c9bc4175::t_a126ce64e94fbe 72,74
+  s_250e54c9bc4175::t_d68bbbab446927 145-146,154-156,158
+  s_250e54c9bc4175::t_446279a806567f 104-111,116-123
+  s_250e54c9bc4175::t_bfda8f325dcd65 124-126
+docs/prd-mobile-ux.md
+  s_93a7f572e99b43::t_e7250d4fe2ea9a 1,3-4,6,24,26,28-33,35-42
+  s_da9a61f83c7715::t_892151d7d68adf 2,5,7,10,25,27
+  s_250e54c9bc4175::t_5f7e46c4babdfb 8-9,11-23,34,43-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b0b491b4480b24ddcaef288ec9c90c7c81ad7f32",
+  "prompts": {},
+  "sessions": {
+    "s_250e54c9bc4175": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b951e0c2-8562-4c7e-a670-aa803d555106",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_93a7f572e99b43": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "51f793e6-72ea-4698-8585-24e22efac5ad",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_da9a61f83c7715": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3941026e-ee6a-4c1f-b15e-3536a1b63db5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
