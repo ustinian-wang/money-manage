@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios.ts';
+import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
 
 test('无分期时 DTI 为 0，支出率与储蓄率互补约 100%', () => {
   const r = cashFlowRatios({ debt: 0, otherExpenses: 4000, income: 10000 });

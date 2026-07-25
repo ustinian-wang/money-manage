@@ -20,7 +20,7 @@ import {
   savingsFillTo100Series,
   SAVINGS_COLOR,
   toStackedLayersColored,
-} from './sequentialImpact.ts';
+} from './sequentialImpact';
 
 describe('buildPrefixExpenses 前缀支出', () => {
   const all = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];

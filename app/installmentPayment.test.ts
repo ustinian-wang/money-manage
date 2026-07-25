@@ -13,7 +13,7 @@ import {
   installmentTermMonths,
   migrateInstallmentTerms,
   normalizeInstallmentTermMonths,
-} from './installmentPayment.ts';
+} from './installmentPayment';
 
 // term≤40 且无息粗算月供>2万 → 视作年；否则按月（避免 36 期车贷被 ×12）
 test('normalize：房贷误填 30 年 → 360 月', () => {

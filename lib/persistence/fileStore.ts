@@ -3,8 +3,8 @@
  * 键：user:{id}/financial-profile.json · user:{id}/backups/...
  * 本地 data/ 同路径；Cloudflare KV/R2 同名文本键
  */
-import { emptyState, normalizeState } from './types.ts';
-import type { PersistedState } from './types.ts';
+import { emptyState, normalizeState } from './types';
+import type { PersistedState } from './types';
 
 export const STATE_FILE = 'financial-profile.json';
 export const BACKUP_DIR = 'backups/';

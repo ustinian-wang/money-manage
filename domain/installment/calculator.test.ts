@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildRepaymentSchedule, calculateCombinedLoan, calculatePayment, calculateConsumption } from './calculator.ts';
+import { buildRepaymentSchedule, calculateCombinedLoan, calculatePayment, calculateConsumption } from './calculator';
 
 const plan = (overrides = {}) => ({ id: 'p1', type: 'general' as const, name: '普通分期', principal: 10000, annualRate: 0, term: 10, ...overrides });
 

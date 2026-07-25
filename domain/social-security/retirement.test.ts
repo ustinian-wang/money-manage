@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildRetirementTimeline, calculateRetirement, GUANGZHOU_SOCIAL_RULE_2026, RETIREMENT_RULES } from './retirement.ts';
+import { buildRetirementTimeline, calculateRetirement, GUANGZHOU_SOCIAL_RULE_2026, RETIREMENT_RULES } from './retirement';
 
 test('retirement planning is opt-in and uses the 2026 Guangzhou rule base', () => {
     const result = calculateRetirement({ enabled: true, birthDate: '1990-06-01', identity: 'male', insuranceStartDate: '2020-01-01', plannedContributionYears: 20, contributionBase: 1000, ruleVersion: GUANGZHOU_SOCIAL_RULE_2026.ruleVersion, city: 'guangzhou' });

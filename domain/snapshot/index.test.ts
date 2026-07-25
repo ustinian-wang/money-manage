@@ -9,8 +9,8 @@ import {
     getSnapshotsForSimulation,
     resolveSimulationWindow,
     validateSnapshotSave,
-} from './index.ts';
-import type { FinancialSnapshot, SnapshotState } from '../../types/snapshot.ts';
+} from './index';
+import type { FinancialSnapshot, SnapshotState } from '../../types/snapshot';
 
 const state: SnapshotState = {
     grossMonthlySalary: 20000, otherMonthlyIncome: 0, parentSupportMonthly: 3000,

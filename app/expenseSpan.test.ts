@@ -9,7 +9,7 @@ import {
   isActiveInMonth,
   maxTermBeforeRetirement,
   resolveExpenseSpan,
-} from './expenseSpan.ts';
+} from './expenseSpan';
 
 describe('resolveExpenseSpan', () => {
   it('一次性默认同月且为 point', () => {
