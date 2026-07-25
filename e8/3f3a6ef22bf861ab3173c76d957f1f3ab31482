@@ -1,0 +1,23 @@
+docs/prd-mobile-ux.md
+  s_c96e2cebc1f948::t_aeeb8edeae8f48 11-14
+docs/first-visit-audit.md
+  s_c96e2cebc1f948::t_da03e1341a3176 1-88
+README.md
+  s_c96e2cebc1f948::t_7dcf75f09abd78 11-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e83f3a6ef22bf861ab3173c76d957f1f3ab31482",
+  "prompts": {},
+  "sessions": {
+    "s_c96e2cebc1f948": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "57fd7556-98be-4607-af8e-56d5b4440100",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
