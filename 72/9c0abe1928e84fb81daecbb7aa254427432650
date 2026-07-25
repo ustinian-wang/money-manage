@@ -1,0 +1,83 @@
+app/page.tsx
+  s_1579bf875d423b::t_ed7843b64778fa 1025
+  s_1579bf875d423b::t_166ec9e2c3745c 1995,1998-1999,2002
+  s_a8aea65206ce2a::t_8f1c73d2066d68 1509-1512
+  s_a8aea65206ce2a::t_b68c10e4152310 1583-1586
+  s_a8aea65206ce2a::t_5c3acb410c8fa6 12
+  s_1579bf875d423b::t_f510de880676fe 1918-1921
+  s_a8aea65206ce2a::t_2bd51de1ba30b5 11
+  s_0bc6a2f4e1cc64::t_9dfff5075f0aee 761-762,765
+  s_8bf1a6af043d44::t_8d993d57c9e20e 723,739-740
+  s_a8aea65206ce2a::t_afd85a2481e2df 1568
+  s_8bf1a6af043d44::t_78532885a5eb95 46-50
+  s_91ba1b1ecd2ed8::t_cbe87775878107 546-557
+  s_8bf1a6af043d44::t_da4105dc34fc8d 774-775
+  s_1579bf875d423b::t_279ce2428c3462 1825-1917,1922-1928
+  s_a8aea65206ce2a::t_1eb24d87c470fc 1460,1470,1475-1476,1478,1482-1483,1486,1488-1497,1500-1502,1504-1508
+  s_0ed7f6dc6ee618::t_bf6b15ef7642fa 37,579-580,763-764
+  s_a8aea65206ce2a::t_6a69fd796bafec 3
+  s_91ba1b1ecd2ed8::t_086827a9e8407d 1026
+  s_0bc6a2f4e1cc64::t_71677c66bff9b0 577-578,581-582
+  s_a8aea65206ce2a::t_29f59c7479b560 1599,1606-1609,1624
+  s_a8aea65206ce2a::t_6470de358c4dca 1636-1639,1641-1666,1668-1720
+  s_a8aea65206ce2a::t_74a3671c38ca68 79,83-113,116,120-137,143,152,158-164,166,173
+  s_a8aea65206ce2a::t_e8e3eebc6e65d5 766,1735-1798
+  s_a8aea65206ce2a::t_43ec800ed827ef 1799
+  s_a8aea65206ce2a::t_53b7a8dfd59fb6 1053-1054
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "729c0abe1928e84fb81daecbb7aa254427432650",
+  "prompts": {},
+  "sessions": {
+    "s_0bc6a2f4e1cc64": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "59730613-a640-4d94-9e64-14fc68244392",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_0ed7f6dc6ee618": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c8af6a24-ca2b-4825-ab8d-d08f30527382",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_1579bf875d423b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "300d0d64-8c51-4610-8db8-e20add04a944",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_8bf1a6af043d44": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "60126d46-d5f9-4bd3-a93e-7adda0b27600",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_91ba1b1ecd2ed8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26a6bc83-454c-4984-b70d-2713a3652269",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a8aea65206ce2a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ce1d954c-f561-420b-b743-b69d8888a53f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
