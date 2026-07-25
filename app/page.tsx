@@ -693,10 +693,12 @@ export default function HomePage() {
     }
   }, [hydrated, incomeViewMode, takeHomeIncome, result.detailNet]);
 
-  const addExpense = () => {
-    const id = uid();
-    setExpenses((items) => [...items, { id, name: '新支出', category: '其他', mode: 'fixed', amount: 0, startDate: todayDateKey() }]);
-    // 等 React commit；桌面 tr（md 隐藏）与移动 card 双锚点，取有布局盒的；nearest 在列表底常不滚
+  // 面板确认后才入表；取消/关闭不落库
+  const confirmAddExpense = (expense: Expense) => {
+    const id = expense.id;
+    setExpenses((items) => [...items, expense]);
+    window.dispatchEvent(new Event('money-manage-save'));
+    // 等 React commit；桌面 tr（md 隐藏）与移动 card 双锚点，取有布局盒的
     window.setTimeout(() => {
       const nodes = document.querySelectorAll<HTMLElement>(`[data-expense-anchor="${id}"]`);
       const el = Array.from(nodes).find((n) => n.getClientRects().length > 0) || nodes[0];
@@ -1182,8 +1184,8 @@ export default function HomePage() {
     </nav>
     </div>
     <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
-      <div className="min-w-0 space-y-2"><section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="财务参数" tip={"收入、资产、应急资金、退休四组。\n点字段打开浮层，改完即生效并自动保存。"} /></div><div className="section-label flex flex-wrap items-center gap-2">收入信息<select aria-label="收入录入方式" className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700" value={incomeViewMode} onChange={(event) => setIncomeViewModeSafe(event.target.value as IncomeViewMode)}><option value="detail">关心五险一金</option><option value="takehome">只看到手</option></select></div>{incomeViewMode === 'takehome' ? (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="月可支配收入" value={takeHomeIncome ?? result.net} min={0} max={200000} step={1} onChange={(value) => { setTakeHomeIncome(value); }} /><Breakdown label="说明" value="简便模式" detail={"结余与资产预测直接用你填的月可支配收入。\n无需税前工资与五险一金；可切回详细口径。"} /></div>) : (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={200000} step={1} onChange={setSalary} /><Editable label="五险基数" value={effectiveInsuranceBase} min={0} max={200000} step={1} onChange={setContributionBase} /><Editable label="公积金基数" value={effectiveHousingFundBase} min={0} max={200000} step={1} onChange={setHousingFundBase} /><SocialBreakdown salary={salary} rows={result.socialRows} total={result.social} socialEnabled={socialEnabled} onSocialEnabledChange={(value) => { setSocialEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }} insuranceBase={effectiveInsuranceBase} housingFundBase={effectiveHousingFundBase} insuranceFollowSalary={contributionBase == null} housingFollowSalary={housingFundBase == null} onInsuranceFollowSalary={() => { setContributionBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFollowSalary={() => { setHousingFundBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onInsuranceBaseChange={(value) => { setContributionBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFundBaseChange={(value) => { setHousingFundBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 − 五险一金 − 本月个税" /></div>)}<div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><AssetLinkedEditor totalAssets={totalAssets} cash={cash} invest={invest} investRatio={investRatio} onTotal={updateTotalAssets} onCash={updateCash} onInvestAmount={updateInvestByAmount} onInvestRatio={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} /></div><div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={emergencyOpen} onClick={() => setEmergencyOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setEmergencyOpen((current) => !current); } }}><span className="flex-1">应急资金</span><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={emergencyOpen} onClick={(event) => { event.stopPropagation(); setEmergencyOpen((current) => !current); }}><span>{emergencyOpen ? '收起' : '展开'}</span><span aria-hidden="true">{emergencyOpen ? '∧' : '∨'}</span></button></div>{emergencyOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入 − 本月全部支出" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail={ADJUSTED_AVAILABLE_ASSETS_TIP} /></div>}<div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={retirementOpen} onClick={() => setRetirementOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRetirementOpen((current) => !current); } }}><span className="flex-1">退休与社保</span><input type="checkbox" className="ml-2 h-3.5 w-3.5 shrink-0 accent-[#f07f62]" checked={retirement.enabled} onClick={(event) => event.stopPropagation()} onChange={(event) => updateRetirement({ enabled: event.target.checked })} title="启用退休与社保规划" aria-label="启用退休与社保规划" /><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={retirementOpen} onClick={(event) => { event.stopPropagation(); setRetirementOpen((current) => !current); }}><span>{retirementOpen ? '收起' : '展开'}</span><span aria-hidden="true">{retirementOpen ? '∧' : '∨'}</span></button></div>{retirementOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><Editable label="广州 2026 基数" value={retirement.base} min={0} max={200000} step={1} onChange={(value) => updateRetirement({ base: value })} /><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div>}</section>
-      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"><SectionTitle title="支出管理" tip={"「分析」可勾选多笔支出。\n曲线按勾选顺序堆叠边际影响。"} /><button type="button" onClick={addExpense} className="touch-btn w-full rounded-xl bg-[#f07f62] px-4 text-sm font-semibold text-white hover:bg-[#df6e51] sm:w-auto">+ 新增支出</button></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option><option value="one_time">一次性</option></select></label>} /></td><td><ClickField display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' || expense.mode === 'one_time' ? <div className="grid gap-3">{expense.mode === 'one_time' && <label className="block text-xs text-slate-500">发生时间（默认当月）<input className="field-input mt-1" type="date" value={(expense.startDate || defaultOneTimeDate()).slice(0, 10)} onChange={(event) => { updateExpense(expense.id, { startDate: event.target.value || defaultOneTimeDate(), endDate: event.target.value || defaultOneTimeDate() }); saveEvent(); }} /></label>}<label className="block text-xs text-slate-500">{expense.mode === 'one_time' ? '金额' : '每月金额'}<SoftNumberInput min={0} step={100} value={expense.amount} onCommit={(n) => { updateExpense(expense.id, { amount: n }); saveEvent(); }} /></label></div> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<SoftNumberInput min={0} max={100} step={1} value={expense.rate || 0} onCommit={(n) => { updateExpense(expense.id, { rate: n }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由右侧分期信息计算得出</p>} /></td><td className="cell-wrap"><ClickField display={formatExpenseInstallment(expense)} width={360} wrap density="panel" panel={expense.mode === 'installment' ? <InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /> : <p className="text-xs text-slate-500">仅分期类型可设置</p>} /></td><td><div className="flex items-center gap-2"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
+      <div className="min-w-0 space-y-2"><section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="财务参数" tip={"收入、资产、应急资金、退休四组。\n点字段打开浮层，改完即生效并自动保存。"} /></div><div className="section-label flex flex-wrap items-center gap-2">收入信息<select aria-label="收入录入方式" className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700" value={incomeViewMode} onChange={(event) => setIncomeViewModeSafe(event.target.value as IncomeViewMode)}><option value="detail">关心五险一金</option><option value="takehome">只看到手</option></select></div>{incomeViewMode === 'takehome' ? (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="月可支配收入" value={takeHomeIncome ?? result.net} min={0} max={200000} step={1} onChange={(value) => { setTakeHomeIncome(value); }} /><Breakdown label="说明" value="简便模式" detail={"结余与资产预测直接用你填的月可支配收入。\n无需税前工资与五险一金；可切回详细口径。"} /></div>) : (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={200000} step={1} onChange={setSalary} /><Editable label="五险基数" value={effectiveInsuranceBase} min={0} max={200000} step={1} onChange={setContributionBase} /><Editable label="公积金基数" value={effectiveHousingFundBase} min={0} max={200000} step={1} onChange={setHousingFundBase} /><SocialBreakdown salary={salary} rows={result.socialRows} total={result.social} socialEnabled={socialEnabled} onSocialEnabledChange={(value) => { setSocialEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }} insuranceBase={effectiveInsuranceBase} housingFundBase={effectiveHousingFundBase} insuranceFollowSalary={contributionBase == null} housingFollowSalary={housingFundBase == null} onInsuranceFollowSalary={() => { setContributionBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFollowSalary={() => { setHousingFundBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onInsuranceBaseChange={(value) => { setContributionBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFundBaseChange={(value) => { setHousingFundBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 − 五险一金 − 本月个税" /></div>)}<div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><AssetLinkedEditor totalAssets={totalAssets} cash={cash} invest={invest} investRatio={investRatio} onTotal={updateTotalAssets} onCash={updateCash} onInvestAmount={updateInvestByAmount} onInvestRatio={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} /></div><div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={emergencyOpen} onClick={() => setEmergencyOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setEmergencyOpen((current) => !current); } }}><span className="flex-1">应急资金</span><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={emergencyOpen} onClick={(event) => { event.stopPropagation(); setEmergencyOpen((current) => !current); }}><span>{emergencyOpen ? '收起' : '展开'}</span><span aria-hidden="true">{emergencyOpen ? '∧' : '∨'}</span></button></div>{emergencyOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入 − 本月全部支出" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail={ADJUSTED_AVAILABLE_ASSETS_TIP} /></div>}<div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={retirementOpen} onClick={() => setRetirementOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRetirementOpen((current) => !current); } }}><span className="flex-1">退休与社保</span><label className="ml-2 inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600" onClick={(event) => event.stopPropagation()} title="开启后参与退休日推算；分期可勾选「须在退休前还清」"><input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={retirement.enabled} onChange={(event) => updateRetirement({ enabled: event.target.checked })} aria-label="启用退休与社保规划" /><span>启用规划</span></label><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={retirementOpen} onClick={(event) => { event.stopPropagation(); setRetirementOpen((current) => !current); }}><span>{retirementOpen ? '收起' : '展开'}</span><span aria-hidden="true">{retirementOpen ? '∧' : '∨'}</span></button></div>{retirementOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><Editable label="广州 2026 基数" value={retirement.base} min={0} max={200000} step={1} onChange={(value) => updateRetirement({ base: value })} /><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div>}</section>
+      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"><SectionTitle title="支出管理" tip={"表格上仅可改名称、分类。\n类型 / 金额 / 分期等请点「编辑」；新增需确认后入表。\n「分析」可勾选多笔支出并堆叠边际影响。"} /><ExpenseAddButton onConfirm={confirmAddExpense} retirementDate={retirement.enabled ? retirementDate : undefined} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
 <div className="mt-4 space-y-3 md:hidden">{expenses.map((expense) => (
           <div key={expense.id} data-expense-anchor={expense.id} className="expense-card space-y-2">
             <div className="expense-card-head">
@@ -1191,21 +1193,27 @@ export default function HomePage() {
                 <ClickField label="名称" display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} />
               </div>
               <div className="expense-card-amount min-w-0 shrink">
-                <ClickField label="金额 / 月付" display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' || expense.mode === 'one_time' ? <div className="grid gap-3">{expense.mode === 'one_time' && <label className="block text-xs text-slate-500">发生时间（默认当月）<input className="field-input mt-1" type="date" value={(expense.startDate || defaultOneTimeDate()).slice(0, 10)} onChange={(event) => { updateExpense(expense.id, { startDate: event.target.value || defaultOneTimeDate(), endDate: event.target.value || defaultOneTimeDate() }); saveEvent(); }} /></label>}<label className="block text-xs text-slate-500">{expense.mode === 'one_time' ? '金额' : '每月金额'}<SoftNumberInput min={0} step={100} value={expense.amount} onCommit={(n) => { updateExpense(expense.id, { amount: n }); saveEvent(); }} /></label></div> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<SoftNumberInput min={0} max={100} step={1} value={expense.rate || 0} onCommit={(n) => { updateExpense(expense.id, { rate: n }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由分期信息计算</p>} />
+                <div className="text-right">
+                  <p className="text-[11px] text-slate-400">金额 / 月付</p>
+                  <p className="font-mono text-sm font-semibold tabular-nums text-slate-700">{formatExpensePayment(expense)}</p>
+                </div>
               </div>
             </div>
             <div className="expense-card-meta">
-              <ClickField label="类型" display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option><option value="one_time">一次性</option></select></label>} className="expense-meta-chip" />
+              <span className="expense-meta-chip text-xs text-slate-600">{formatExpenseMode(expense.mode)}</span>
               <ClickField label="分类" display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} className="expense-meta-chip" />
             </div>
             {expense.mode === 'installment' && (
               <div className="field-row-mobile">
                 <span>分期信息</span>
-                <ClickField label="分期信息" display={formatExpenseInstallment(expense)} width={360} wrap density="panel" panel={<InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} />} />
+                <span className="text-sm text-slate-500">{formatExpenseInstallment(expense)}</span>
               </div>
             )}
             <div className="expense-card-actions">
-              <div className="flex-1"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /></div>
+              <div className="flex flex-1 gap-2">
+                <ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} />
+                <div className="flex-1"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /></div>
+              </div>
               <button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="touch-btn rounded-xl border border-red-100 px-3 text-xs font-semibold text-red-500">删除</button>
             </div>
           </div>
@@ -1228,6 +1236,166 @@ export default function HomePage() {
     </main>;
 }
 
+
+/** 支出编辑入口：打开设置面板，改参立即写回并自动保存 */
+function ExpenseSettingsFields({
+  value,
+  onChange,
+  retirementDate,
+}: {
+  value: Expense;
+  onChange: (patch: Partial<Expense>) => void;
+  retirementDate?: string;
+}) {
+  return (
+    <div className="grid gap-3">
+      <label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={value.name} onChange={(event) => onChange({ name: event.target.value })} /></label>
+      <label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={value.category} onChange={(event) => onChange({ category: event.target.value })} /></label>
+      <label className="block text-xs text-slate-500">类型
+        <select className="field-input mt-1" value={value.mode} onChange={(event) => onChange({ mode: event.target.value as Expense['mode'] })}>
+          <option value="fixed">固定金额</option>
+          <option value="percentage">按比例</option>
+          <option value="installment">分期</option>
+          <option value="one_time">一次性</option>
+        </select>
+      </label>
+      <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <p>当前月付</p>
+        <p className="mt-1 font-mono text-sm font-semibold text-[#c4533a]">{formatExpensePayment(value)}</p>
+      </div>
+      {(value.mode === 'fixed' || value.mode === 'one_time') && (
+        <>
+          <label className="block text-xs text-slate-500">{value.mode === 'one_time' ? '发生时间（默认当月）' : '开始时间'}<input className="field-input mt-1" type="date" value={(value.startDate || (value.mode === 'one_time' ? defaultOneTimeDate() : todayDateKey())).slice(0, 10)} onChange={(event) => onChange({ startDate: event.target.value || (value.mode === 'one_time' ? defaultOneTimeDate() : todayDateKey()), endDate: value.mode === 'one_time' ? (event.target.value || defaultOneTimeDate()) : value.endDate })} /></label>
+          <label className="block text-xs text-slate-500">{value.mode === 'one_time' ? '金额' : '每月金额'}<SoftNumberInput min={0} step={100} value={value.amount} onCommit={(n) => onChange({ amount: n })} /></label>
+        </>
+      )}
+      {value.mode === 'percentage' && (
+        <>
+          <label className="block text-xs text-slate-500">开始时间<input className="field-input mt-1" type="date" value={(value.startDate || todayDateKey()).slice(0, 10)} onChange={(event) => onChange({ startDate: event.target.value })} /></label>
+          <label className="block text-xs text-slate-500">收入比例（%）<SoftNumberInput min={0} max={100} step={1} value={value.rate || 0} onCommit={(n) => onChange({ rate: n })} /></label>
+        </>
+      )}
+      {value.mode === 'installment' && (
+        <InstallmentSettingsPanel expense={value} onChange={onChange} retirementDate={retirementDate} />
+      )}
+    </div>
+  );
+}
+
+function ExpenseEditButton({
+  expense,
+  onChange,
+  retirementDate,
+}: {
+  expense: Expense;
+  onChange: (patch: Partial<Expense>) => void;
+  retirementDate?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="relative inline-block">
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="touch-btn shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a] sm:border-0 sm:bg-transparent sm:px-1 sm:text-[#d9654a] sm:hover:underline"
+        title="打开支出设置面板"
+      >
+        编辑
+      </button>
+      {open && (
+        <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={420} maxHeightVh={85} center headerTitle="编辑支出" mode="auto" density="panel">
+          <p className="text-xs text-slate-400">类型、金额、分期等在此修改；即时生效并自动保存。名称/分类也可在表格直接改。</p>
+          <div className="mt-3">
+            <ExpenseSettingsFields value={expense} onChange={onChange} retirementDate={retirementDate} />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button type="button" onClick={() => setOpen(false)} className="rounded-xl bg-[#17212b] px-4 py-2 text-xs font-semibold text-white hover:bg-[#2a3644]">完成</button>
+          </div>
+        </FloatPanel>
+      )}
+    </div>
+  );
+}
+
+function ExpenseAddButton({
+  onConfirm,
+  retirementDate,
+}: {
+  onConfirm: (expense: Expense) => void;
+  retirementDate?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Expense | null>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const openPanel = () => {
+    setDraft({
+      id: 'draft-new',
+      name: '新支出',
+      category: '其他',
+      mode: 'fixed',
+      amount: 0,
+      startDate: todayDateKey(),
+    });
+    setOpen(true);
+  };
+  const closePanel = () => {
+    setOpen(false);
+    setDraft(null);
+  };
+  const patchDraft = (patch: Partial<Expense>) => setDraft((current) => {
+    if (!current) return current;
+    const next = { ...current, ...patch };
+    if (next.mode === 'one_time') {
+      if (!next.startDate) next.startDate = defaultOneTimeDate();
+      next.endDate = next.startDate;
+    } else if (!next.startDate) {
+      next.startDate = todayDateKey();
+    }
+    if (next.mode === 'installment') {
+      const start = next.startDate || todayDateKey();
+      next.term = clampInstallmentTerm(start, next.term || 36, Boolean(next.followRetirement), retirementDate);
+      const span = resolveExpenseSpan(next, { retirementDate });
+      next.endDate = span.end;
+    }
+    return next;
+  });
+  const confirm = () => {
+    if (!draft) return;
+    onConfirm({
+      ...draft,
+      id: uid(),
+      name: (draft.name || '').trim() || '新支出',
+      category: (draft.category || '').trim() || '其他',
+    });
+    closePanel();
+  };
+  return (
+    <div className="relative inline-block w-full sm:w-auto">
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => (open ? closePanel() : openPanel())}
+        className="touch-btn w-full rounded-xl bg-[#f07f62] px-4 text-sm font-semibold text-white hover:bg-[#df6e51] sm:w-auto"
+      >
+        + 新增支出
+      </button>
+      {open && draft && (
+        <FloatPanel open={open} anchorRef={anchorRef} onClose={closePanel} width={420} maxHeightVh={85} center headerTitle="新增支出" mode="auto" density="panel">
+          <p className="text-xs text-slate-400">填写后点「确认添加」才会写入列表；关闭或取消不保存。</p>
+          <div className="mt-3">
+            <ExpenseSettingsFields value={draft} onChange={patchDraft} retirementDate={retirementDate} />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={closePanel} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:border-slate-300">取消</button>
+            <button type="button" onClick={confirm} className="rounded-xl bg-[#f07f62] px-4 py-2 text-xs font-semibold text-white hover:bg-[#df6e51]">确认添加</button>
+          </div>
+        </FloatPanel>
+      )}
+    </div>
+  );
+}
 
 function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate }: { expense: Expense; financeInput: FinanceInput; reinvest: ReinvestSetting; retirementDate?: string }) {
   const [open, setOpen] = useState(false);
@@ -1411,7 +1579,7 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
         <FloatPanel open={open} anchorRef={anchorRef} onClose={closeAnalyze} width={920} maxHeightVh={90} center draggable headerTitle="消费影响分析" mode="auto" density="panel">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-700">{draft.name || expense.name || '未命名'}</p>
-            <p className="mt-1 text-xs text-slate-400">在下方勾选要纳入对比的支出；曲线按勾选顺序堆叠边际增量。当前行草稿不写回。</p>
+            <p className="mt-1 text-xs text-slate-400">勾选 = 纳入下方曲线对比（按勾选顺序堆叠边际增量）。当前行草稿不写回。</p>
           </div>
 
           <div className="mt-3 rounded-2xl border border-slate-200 bg-[#f8faf9] px-3 py-3">
@@ -1444,7 +1612,7 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
                       onChange={() => toggleCompareId(item.id)}
                     />
                     <i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: swatch, opacity: checked ? 1 : 0.35 }} />
-                    <span>{item.name || '未命名'}{isPrimary ? '（本行）' : ''}</span>
+                    <span>纳入：{item.name || '未命名'}{isPrimary ? '（本行）' : ''}</span>
                   </label>
                 );
               })}
@@ -1461,7 +1629,7 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
                   onChange={() => setIncludeInvestShare((current) => !current)}
                 />
                 <i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: INVEST_SHARE_COLOR, opacity: includeInvestShare ? 1 : 0.35 }} />
-                <span>{INVEST_SHARE_NAME}（剩余×{Number.isInteger(chartInvestRate) ? chartInvestRate : chartInvestRate.toFixed(1)}%）</span>
+                <span>在图中拆出{INVEST_SHARE_NAME}（剩余×{Number.isInteger(chartInvestRate) ? chartInvestRate : chartInvestRate.toFixed(1)}%）</span>
               </label>
             </div>
             <p className="mt-2 text-[11px] text-slate-500">
@@ -1495,37 +1663,9 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
             {settingsOpen && (
               <div className="mt-3 border-t border-slate-200 pt-3">
                 <p className="text-[11px] text-slate-400">仅影响本行草稿，不改已保存支出。</p>
-                <div className="mt-3 grid gap-3">
-                  <label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={draft.name} onChange={(event) => patchDraft({ name: event.target.value })} /></label>
-                  <label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={draft.category} onChange={(event) => patchDraft({ category: event.target.value })} /></label>
-                  <label className="block text-xs text-slate-500">类型
-                    <select className="field-input mt-1" value={draft.mode} onChange={(event) => patchDraft({ mode: event.target.value as Expense['mode'] })}>
-                      <option value="fixed">固定金额</option>
-                      <option value="percentage">按比例</option>
-                      <option value="installment">分期</option>
-                      <option value="one_time">一次性</option>
-                    </select>
-                  </label>
-                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                    <p>测算月付</p>
-                    <p className="mt-1 font-mono text-sm font-semibold text-[#c4533a]">{formatExpensePayment(draft)}</p>
-                  </div>
-                  {(draft.mode === 'fixed' || draft.mode === 'one_time') && (
-                    <>
-                      <label className="block text-xs text-slate-500">{draft.mode === 'one_time' ? '发生时间（默认当月）' : '开始时间'}<input className="field-input mt-1" type="date" value={(draft.startDate || (draft.mode === 'one_time' ? defaultOneTimeDate() : todayDateKey())).slice(0, 10)} onChange={(event) => patchDraft({ startDate: event.target.value || (draft.mode === 'one_time' ? defaultOneTimeDate() : todayDateKey()), endDate: draft.mode === 'one_time' ? (event.target.value || defaultOneTimeDate()) : draft.endDate })} /></label>
-                      <label className="block text-xs text-slate-500">{draft.mode === 'one_time' ? '金额' : '每月金额'}<SoftNumberInput min={0} step={100} value={draft.amount} onCommit={(n) => patchDraft({ amount: n })} /></label>
-                    </>
-                  )}
-                  {draft.mode === 'percentage' && (
-                    <>
-                      <label className="block text-xs text-slate-500">开始时间<input className="field-input mt-1" type="date" value={(draft.startDate || todayDateKey()).slice(0, 10)} onChange={(event) => patchDraft({ startDate: event.target.value })} /></label>
-                      <label className="block text-xs text-slate-500">收入比例（%）<SoftNumberInput min={0} max={100} step={1} value={draft.rate || 0} onCommit={(n) => patchDraft({ rate: n })} /></label>
-                    </>
-                  )}
-                  {draft.mode === 'installment' && (
-                    <InstallmentSettingsPanel expense={draft} onChange={patchDraft} retirementDate={retirementDate} />
-                  )}
-                  <button type="button" onClick={() => setDraft(cloneExpenseDraft(expense))} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#f07f62] hover:text-[#d9654a]">重置为已保存</button>
+                <div className="mt-3">
+                  <ExpenseSettingsFields value={draft} onChange={patchDraft} retirementDate={retirementDate} />
+                  <button type="button" onClick={() => setDraft(cloneExpenseDraft(expense))} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#f07f62] hover:text-[#d9654a]">重置为已保存</button>
                 </div>
               </div>
             )}
@@ -2278,7 +2418,7 @@ function InstallmentSettingsPanel({ expense, onChange, retirementDate }: { expen
     <label className="block text-xs text-slate-500">开始时间（默认当月）<input className="field-input mt-1" type="date" value={startDate.slice(0, 10)} onChange={(event) => patchStart(event.target.value)} /></label>
     <label className="flex items-center gap-2 text-xs text-slate-600">
       <input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={followRetirement} onChange={(event) => patchFollowRetirement(event.target.checked)} />
-      须在退休前还清（自动截断最长还款期）
+      勾选后须在退休前还清（自动截断最长还款期）
     </label>
     {followRetirement && (
       <p className="text-[11px] text-slate-500">
@@ -2368,7 +2508,7 @@ function SocialBreakdown({
         <label className="mt-3 flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
           <input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={socialEnabled} onChange={(event) => onSocialEnabledChange(event.target.checked)} />
           <span className="font-medium">缴纳五险一金</span>
-          {!socialEnabled && <span className="text-xs text-slate-400">关闭后个人/企业均为 0，个税无社保扣减</span>}
+          <span className="text-xs text-slate-400">{socialEnabled ? '勾选后按费率扣个人/企业社保，并抵减个税' : '未勾选：个人/企业均为 0，个税无社保扣减'}</span>
         </label>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
@@ -2429,5 +2569,5 @@ function TaxBreakdown({ salary, social, tax, deductions, onRentChange, onElderly
   const anchorRef = useRef<HTMLButtonElement>(null);
   const taxable = Math.max(0, salary - social - deductions.reduce((sum, row) => sum + row.actual, 0));
   const bracket = taxable <= 3000 ? taxBrackets[0] : taxable <= 12000 ? taxBrackets[1] : taxable <= 25000 ? taxBrackets[2] : taxBrackets[3];
-  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span className="flex items-center gap-1">本月预估个税<InfoTip>按税前工资、个人五险一金与已勾选专项附加扣除估算。</InfoTip></span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击查看明细" className="field-click self-start sm:self-auto">-{money(tax)}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={620} headerTitle="个税明细"><div className="flex items-center justify-between"><h3 className="font-semibold">本月个税估算明细</h3><button type="button" onClick={() => setOpen(false)} className="text-xs text-slate-400">关闭</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" checked={deductions.find((row) => row.name === "住房租金")?.enabled ?? false} onChange={(event) => onRentChange(event.target.checked)} />住房租金</span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "住房租金")?.standard ?? 0)} / 月</span></label><label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" checked={deductions.find((row) => row.name === "赡养老人")?.enabled ?? false} onChange={(event) => onElderlyChange(event.target.checked)} />赡养老人</span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "赡养老人")?.standard ?? 0)} / 月</span></label></div><div className="mt-4 space-y-2 text-sm"><div className="flex justify-between"><span>税前工资</span><strong>{money(salary)}</strong></div><div className="flex justify-between"><span>个人五险一金</span><strong>-{money(social)}</strong></div>{deductions.map((row) => <div key={row.name} className="flex justify-between"><span>{row.name}</span><strong>-{money(row.actual)}</strong></div>)}<div className="flex justify-between border-t border-slate-100 pt-2"><span>应纳税所得额</span><strong>{money(taxable)}</strong></div><div className="flex justify-between"><span>当前区间：税率 / 速算扣除数</span><strong>{bracket.rate}% / {money(bracket.quick)}</strong></div><div className="flex justify-between border-t border-slate-100 pt-2 font-semibold"><span>本月预估个税</span><strong className="text-red-500">-{money(tax)}</strong></div></div><div className="mt-5"><h4 className="text-sm font-semibold">不同区间纳税明细</h4><div className="table-wrap mt-2"><table><thead><tr><th>月应纳税所得额</th><th>税率</th><th>速算扣除数</th><th>当前状态</th></tr></thead><tbody>{taxBrackets.map((item) => <tr key={item.range} className={item.range === bracket.range ? 'bg-emerald-50 font-semibold' : ''}><td>{item.range}</td><td>{item.rate}%</td><td>{money(item.quick)}</td><td>{item.range === bracket.range ? '当前区间' : '可选区间'}</td></tr>)}</tbody></table></div></div></FloatPanel></div>;
+  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span className="flex items-center gap-1">本月预估个税<InfoTip>按税前工资、个人五险一金与已勾选专项附加扣除估算。</InfoTip></span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击查看明细" className="field-click self-start sm:self-auto">-{money(tax)}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={620} headerTitle="个税明细"><div className="flex items-center justify-between"><h3 className="font-semibold">本月个税估算明细</h3><button type="button" onClick={() => setOpen(false)} className="text-xs text-slate-400">关闭</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "住房租金")?.enabled ?? false} onChange={(event) => onRentChange(event.target.checked)} /><span>住房租金<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "住房租金")?.standard ?? 0)} / 月</span></label><label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "赡养老人")?.enabled ?? false} onChange={(event) => onElderlyChange(event.target.checked)} /><span>赡养老人<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "赡养老人")?.standard ?? 0)} / 月</span></label></div><div className="mt-4 space-y-2 text-sm"><div className="flex justify-between"><span>税前工资</span><strong>{money(salary)}</strong></div><div className="flex justify-between"><span>个人五险一金</span><strong>-{money(social)}</strong></div>{deductions.map((row) => <div key={row.name} className="flex justify-between"><span>{row.name}</span><strong>-{money(row.actual)}</strong></div>)}<div className="flex justify-between border-t border-slate-100 pt-2"><span>应纳税所得额</span><strong>{money(taxable)}</strong></div><div className="flex justify-between"><span>当前区间：税率 / 速算扣除数</span><strong>{bracket.rate}% / {money(bracket.quick)}</strong></div><div className="flex justify-between border-t border-slate-100 pt-2 font-semibold"><span>本月预估个税</span><strong className="text-red-500">-{money(tax)}</strong></div></div><div className="mt-5"><h4 className="text-sm font-semibold">不同区间纳税明细</h4><div className="table-wrap mt-2"><table><thead><tr><th>月应纳税所得额</th><th>税率</th><th>速算扣除数</th><th>当前状态</th></tr></thead><tbody>{taxBrackets.map((item) => <tr key={item.range} className={item.range === bracket.range ? 'bg-emerald-50 font-semibold' : ''}><td>{item.range}</td><td>{item.rate}%</td><td>{money(item.quick)}</td><td>{item.range === bracket.range ? '当前区间' : '可选区间'}</td></tr>)}</tbody></table></div></div></FloatPanel></div>;
 }
