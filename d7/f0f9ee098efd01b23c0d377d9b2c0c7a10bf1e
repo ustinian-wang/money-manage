@@ -1,0 +1,65 @@
+app/page.tsx
+  s_0464a26e374fe8::t_3b19cf27356a39 758
+  s_250e54c9bc4175::t_86aa391566ce6a 8
+  s_c159df322dacec::t_0e7597ea22bbfb 1458,1461,1464-1465
+  s_c159df322dacec::t_d8b55c54d33098 771-772
+  s_93a7f572e99b43::t_433b6bc88e06f7 787
+  s_93a7f572e99b43::t_cfc17dd481274b 1116-1150
+  s_c159df322dacec::t_9fb5177ae27c64 762-768,770,774-779
+  s_0464a26e374fe8::t_b7874d221be4e0 1085
+  s_250e54c9bc4175::t_611069c3b4e1b4 260
+  s_250e54c9bc4175::t_7969dd69196373 323,325-329,331-345,360-393,398,415
+  s_c159df322dacec::t_aa184760e038b9 749,751-754,756,1151
+  s_0464a26e374fe8::t_98817828a43b95 800-810
+  s_0464a26e374fe8::t_fa3840915e66e4 51-59
+  s_c159df322dacec::t_445ec2e15c41aa 1332,1337,1343
+  s_93a7f572e99b43::t_a6ee16668adf10 1108
+  s_0464a26e374fe8::t_0e2a8a193e5113 965,967
+  s_c159df322dacec::t_9b999d3a6f6c25 263-289
+  s_0464a26e374fe8::t_50e4a5976195ae 252-253
+  s_0464a26e374fe8::t_2d70b39c853832 750
+  s_0464a26e374fe8::t_a9dd4f4aad74c3 1043
+  s_93a7f572e99b43::t_0401ec2e1451f6 786
+  s_0464a26e374fe8::t_772a2c0badb4b9 956
+  s_c159df322dacec::t_7ed17b2fb6332b 1152-1154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d7f0f9ee098efd01b23c0d377d9b2c0c7a10bf1e",
+  "prompts": {},
+  "sessions": {
+    "s_0464a26e374fe8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "560174be-4622-4e37-9510-7dcfd8908341",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_250e54c9bc4175": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b951e0c2-8562-4c7e-a670-aa803d555106",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_93a7f572e99b43": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "51f793e6-72ea-4698-8585-24e22efac5ad",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c159df322dacec": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3855825a-55d1-4a55-8636-d3ee2d75193f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
