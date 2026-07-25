@@ -1,0 +1,24 @@
+app/globals.css
+  s_20431b92aebe4f::t_9cd77c2bbdc968 162,164-171
+  s_20431b92aebe4f::t_01b61b1819c65c 207-210
+  s_20431b92aebe4f::t_02b1819d3d0c27 227,232-256
+  s_20431b92aebe4f::t_28bcb5aabef176 275
+  s_20431b92aebe4f::t_9563d3a322bd10 44-45
+  s_20431b92aebe4f::t_231eecafec9297 172-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "36d350d944b667135cb9fc1106bc89e5e4dd9ffb",
+  "prompts": {},
+  "sessions": {
+    "s_20431b92aebe4f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "205cb456-40c9-4cfc-badc-7d60146f99f3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
