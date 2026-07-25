@@ -1,0 +1,46 @@
+domain/installment/index.test.ts
+  s_18376cbe9b5db6::t_c81e0a79b32e21 121-122
+  s_3a3fc156ae2d50::t_baf1933128aa53 12-13
+domain/tax/index.test.ts
+  s_18376cbe9b5db6::t_3e29d970e57681 1-6,9-10,20-26,29-43,46,57-66
+domain/tax/deduction-catalog.test.ts
+  s_18376cbe9b5db6::t_edbdd15710a6d7 1-28
+domain/installment/validation.test.ts
+  s_18376cbe9b5db6::t_ea42b6ca7c5a7a 1-61
+domain/expense/index.test.ts
+  s_18376cbe9b5db6::t_c3007fb5133f02 1-5,10-61,64,66-82,86-88,91,93-101,103-110,117-120,123,125-132,134-137,139-141,144-151
+  s_3a3fc156ae2d50::t_9f1e74974029fc 152
+lib/persistence/types.test.ts
+  s_18376cbe9b5db6::t_5078f64d180bec 1-32
+domain/social-security/index.test.ts
+  s_18376cbe9b5db6::t_67f0c4cda97289 1-5,8-9,15-19,22,24-25
+  s_3a3fc156ae2d50::t_25be4b2bab5dc7 26
+lib/scenario/applyOverrides.test.ts
+  s_18376cbe9b5db6::t_72089b9f923b92 1-47
+lib/persistence/fileStore.test.ts
+  s_3a3fc156ae2d50::t_1845fd16fc129e 9,42-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "bffa8dbcc694855fa7691e505f3632ade8f41c51",
+  "prompts": {},
+  "sessions": {
+    "s_18376cbe9b5db6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a11e51c5-8cab-4ac3-b19d-b51df6c06ccb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3a3fc156ae2d50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "35a7202c-fa59-47a6-aaf3-bf4f09a3632e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
