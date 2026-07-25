@@ -146,6 +146,20 @@ html.kb-open .auth-gate-root {
   border-color: #17212b;
   color: #fff;
 }
+/* 顶栏 chrome：向下滚收起；chips 留在 sticky 内 */
+.sticky-chrome {
+  max-height: 14rem;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+}
+.mobile-sticky-top.is-header-collapsed .sticky-chrome {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  pointer-events: none;
+}
 /* 桌面：顶栏+chips 轻吸顶，scroll spy 可见；chip 不拉满整行 */
 @media (min-width: 640px) {
   .mobile-sticky-top {
@@ -158,6 +172,8 @@ html.kb-open .auth-gate-root {
     border-bottom: 1px solid #e8eeea;
   }
   .scroll-mt-24 { scroll-margin-top: 5.5rem; }
+  /* 收起后仅 chips：取略保守的留白 */
+  main.is-header-collapsed .scroll-mt-24 { scroll-margin-top: 3.5rem; }
   .mobile-section-nav .mobile-nav-chip {
     flex: 0 1 auto;
     min-width: 4.75rem;
@@ -315,6 +331,12 @@ html.kb-open .auth-gate-root {
     padding: 0.85rem 0.9rem;
     box-shadow: 0 4px 14px rgba(23, 33, 43, 0.04);
     scroll-margin-top: 6.5rem; /* 对齐 sticky 顶栏，新增后滚入可见区 */
+  }
+  /* 收起 chrome 后 sticky 仅 chips：收窄锚点留白；补上安全区 */
+  main.is-header-collapsed .expense-card { scroll-margin-top: 4.25rem; }
+  main.is-header-collapsed .scroll-mt-24 { scroll-margin-top: 4.5rem; }
+  .mobile-sticky-top.is-header-collapsed .mobile-section-nav {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
   }
   .expense-card-head {
     display: flex;

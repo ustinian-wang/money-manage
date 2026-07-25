@@ -11,7 +11,7 @@ import { useIsMobile } from '../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../lib/useVisualViewport';
 import { FLOAT_MARGIN, placeCenteredInViewport, placeNearAnchor, placeSheetAtBottom, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
 import { buildClaimSummaryLines, emptyClaimProfilePatch, parseClaimMode } from '../lib/claimGate';
-import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
+import { decideHeaderCollapsed, pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
@@ -343,13 +343,14 @@ function forecastExpenseShareByMonth(
 
 
 export default function HomePage() {
-  const [salary, setSalary] = useState(16667);
-  const [cash, setCash] = useState(LIGHT_DEMO_ASSETS.cash);
-  const [emergencyMonths, setEmergencyMonths] = useState(0);
-  const [totalAssets, setTotalAssets] = useState(LIGHT_DEMO_ASSETS.totalAssets);
-  const [invest, setInvest] = useState(LIGHT_DEMO_ASSETS.invest);
-  const [investRatio, setInvestRatio] = useState(LIGHT_DEMO_ASSETS.investRatio);
-  const [returnRate, setReturnRate] = useState(3.2);
+  // ponytail: 显式 number，避免 LIGHT_DEMO_ASSETS as const / 字面量把 setter 收窄成字面量类型导致 build 失败
+  const [salary, setSalary] = useState<number>(16667);
+  const [cash, setCash] = useState<number>(LIGHT_DEMO_ASSETS.cash);
+  const [emergencyMonths, setEmergencyMonths] = useState<number>(0);
+  const [totalAssets, setTotalAssets] = useState<number>(LIGHT_DEMO_ASSETS.totalAssets);
+  const [invest, setInvest] = useState<number>(LIGHT_DEMO_ASSETS.invest);
+  const [investRatio, setInvestRatio] = useState<number>(LIGHT_DEMO_ASSETS.investRatio);
+  const [returnRate, setReturnRate] = useState<number>(3.2);
   const [reinvestMode, setReinvestMode] = useState<ReinvestMode>(DEFAULT_REINVEST.mode);
   const [reinvestRate, setReinvestRate] = useState(DEFAULT_REINVEST.rate);
   const [reinvestAmount, setReinvestAmount] = useState(DEFAULT_REINVEST.amount);
@@ -399,6 +400,11 @@ export default function HomePage() {
   const SECTION_IDS = ['sec-params', 'sec-expenses', 'sec-charts'] as const;
   const [activeSection, setActiveSection] = useState('sec-params');
   const stickyTopRef = useRef<HTMLDivElement | null>(null);
+  // 向下滚收起顶栏 chrome，向上滚展开；chips 始终 sticky
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const headerCollapsedRef = useRef(false);
+  const lastScrollYRef = useRef(0);
+  const lastHeaderSwitchMsRef = useRef(0);
   // 点击 chip 后短暂锁高亮，避免 smooth scroll 途中 IO 抢回旧区
   const spyLockUntilRef = useRef(0);
   const scrollToSection = (id: string) => {
@@ -466,6 +472,32 @@ export default function HomePage() {
       window.removeEventListener('scroll', applySpy);
     };
   }, [isNarrow, hydrated]);
+
+  // 顶栏 chrome 随滚收起/展开；像素阈值 + 最短切换间隔抑抖
+  useEffect(() => {
+    if (!hydrated) return;
+    lastScrollYRef.current = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastScrollYRef.current;
+      lastScrollYRef.current = y;
+      const decision = decideHeaderCollapsed({
+        collapsed: headerCollapsedRef.current,
+        deltaY: delta,
+        scrollY: y,
+        nowMs: Date.now(),
+        lastSwitchMs: lastHeaderSwitchMsRef.current,
+      });
+      if (!decision.switched) return;
+      lastHeaderSwitchMsRef.current = Date.now();
+      headerCollapsedRef.current = decision.collapsed;
+      setHeaderCollapsed(decision.collapsed);
+      if (decision.collapsed) setHeaderMoreOpen(false);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [hydrated]);
 
   const applyProfileData = (data: Record<string, unknown>) => {
       if (data.salary) setSalary(Number(data.salary)); if (data.cash !== undefined) setCash(Number(data.cash));
@@ -1095,8 +1127,9 @@ export default function HomePage() {
     );
   }
   // 访客与登录均可进主应用；未登录用示例/本机草稿
-  return <main className="min-h-screen bg-[#f6f8f5] text-[#17212b] pb-[env(safe-area-inset-bottom,0px)]">
-    <div className="mobile-sticky-top" ref={stickyTopRef}>
+  return <main className={`min-h-screen bg-[#f6f8f5] text-[#17212b] pb-[env(safe-area-inset-bottom,0px)]${headerCollapsed ? ' is-header-collapsed' : ''}`}>
+    <div className={`mobile-sticky-top${headerCollapsed ? ' is-header-collapsed' : ''}`} ref={stickyTopRef}>
+    <div className="sticky-chrome" aria-hidden={headerCollapsed || undefined}>
     <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div>
@@ -1243,6 +1276,7 @@ export default function HomePage() {
         <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的 · 注册后可认领</p>
       </div>
     )}
+    </div>
     <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:max-w-md sm:justify-start lg:max-w-[1920px]" aria-label="页面分区">
       <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-params' ? 'true' : undefined} onClick={() => scrollToSection('sec-params')}>参数</button>
       <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-expenses' ? 'true' : undefined} onClick={() => scrollToSection('sec-expenses')}>支出</button>
