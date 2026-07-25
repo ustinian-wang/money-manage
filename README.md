@@ -8,6 +8,8 @@
 
 > 个税 / 五险一金为月度估算，结果仅供个人规划参考，不是完整 CFP / 投顾模型。
 
+文档：[移动端 UX P0](docs/prd-mobile-ux.md) · [新用户首访审计](docs/first-visit-audit.md)（待跟进）
+
 ---
 
 ## 技术栈与运行
