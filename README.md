@@ -69,9 +69,9 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 顶栏「快照设置」：按生效日期记录未来 **税前工资** 节点；保存前若疑似击穿会确认。
 
-### 5. 本地自动保存
+### 5. 本地自动保存与云同步
 
-改参后约 120ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）。刷新后自动回填。
+改参后约 400ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）。**已登录**时同时 PUT `/api/profile` 到本人云端；未登录只留本地试玩。
 
 ---
 
@@ -101,11 +101,26 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 ## 数据与隐私
 
-- **浏览器**：`localStorage` 作即时缓存；改参后防抖同步到服务端
-- **服务端文本库**：对象 key / 文件 `financial-profile.json`（另存 `backups/*.json`）
-  - 本地 Node：`data/` 目录
-  - Cloudflare：Workers KV binding `MONEY_DATA`（JSON 文本键；R2 需 Dashboard 开通后可再切 10GB 桶）
+- **多用户**：注册 / 登录后，服务端只读写当前会话用户的数据（HttpOnly cookie `mm_session`）
+- **未登录试玩**：仅浏览器 `localStorage`（键 `money-manage-profile`）；`/api/profile` 等返回 401，不落云端
+- **首次登录绑定**：账号云端为空时，自动把当前本地试玩数据写入该用户
+- **服务端键**：
+  - `user:{id}` / `idx:username:*` / `idx:email:*` / `session:{token}`
+  - `user:{id}/financial-profile.json` 与 `user:{id}/backups/*.json`
+  - 本地 Node：落在 `data/` 同名路径；Cloudflare：Workers KV `MONEY_DATA`
+- 密码：PBKDF2-SHA256，不明文。无邮箱验证、无找回密码（已知局限）
 - 仓库内可能有 `data/`、`logs/`；`.gitignore` 已忽略备份与日志。个人财务 JSON **不要提交**
+
+---
+
+## 账号规则（速查）
+
+| 字段 | 规则 |
+| --- | --- |
+| 用户名 | 3–32 位，`[A-Za-z0-9_]`，全局唯一 |
+| 邮箱 | 合法邮箱格式，全局唯一 |
+| 密码 | 8–72 位 |
+| 登录名 | 用户名或邮箱均可 |
 
 ---
 
@@ -127,6 +142,8 @@ npm run deploy       # OpenNext 构建并发布到 Workers
 
 - 剩余可支配占比曲线分母固定为当前可支配收入，**未**随快照工资节点重算净收入
 - 个税、社保、退休为简化估算，**非**完整理财规划师模型
+- 鉴权：无邮箱验证、无找回密码；登录/注册仅有基础按 IP 频率限制
+- 登出后内存中仍可能短暂保留刚才的数字，刷新后回退本地试玩草稿（云端需重新登录）
 
 ---
 
@@ -134,8 +151,11 @@ npm run deploy       # OpenNext 构建并发布到 Workers
 
 ```text
 app/page.tsx          # 主 UI + 现场计算口径
+app/AuthBar.tsx       # 登录 / 注册 / 登出
+app/api/auth/*        # 注册、登录、登出、me
+lib/auth/             # PBKDF2、会话、用户存 KV/data
 domain/               # 税 / 社保 / 分期 / 支出等领域逻辑与测试
-lib/persistence/      # 另一套持久化辅助（与页面 localStorage 并存演进）
+lib/persistence/      # 按 userId 隔离的 profile 读写
 data/                 # 本地数据（勿提交隐私）
 tests/                # 集成向单测
 ```
