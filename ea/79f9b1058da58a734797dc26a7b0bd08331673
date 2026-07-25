@@ -1,0 +1,29 @@
+app/globals.css
+  s_8640f53bd20d2d::t_366def39e407a9 268-278
+app/page.tsx
+  s_4f5c70531429d5::t_14b8c0bfef960a 1188,1220-1222,1242,1247,1252,1254-1271,1273-1294,1296-1301,1304,1307,1310,1313,1332,1334-1363,1369,1375-1393,1395,1466-1482,1485,1886,1903-1904,2090-2094,2378-2379,2381-2383,2385-2386,2519-2521,2523-2536,2539,2552-2578
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ea79f9b1058da58a734797dc26a7b0bd08331673",
+  "prompts": {},
+  "sessions": {
+    "s_4f5c70531429d5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "93b8bdf5-2f89-4b9c-8961-67100d2db464",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_8640f53bd20d2d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d5ba0f8e-0408-4772-9e79-f8777a81ea3e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
