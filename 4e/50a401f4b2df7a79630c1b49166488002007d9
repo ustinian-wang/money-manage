@@ -1,0 +1,23 @@
+domain/reinvest/index.ts
+  s_45c1ca02febb1e::t_b707de668026c6 1,3-99
+  s_45c1ca02febb1e::t_5fded72fa5f6fb 2
+domain/reinvest/index.test.ts
+  s_45c1ca02febb1e::t_914215cd7c5fb4 1,3-88
+  s_45c1ca02febb1e::t_d6833e008c4fed 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "4e50a401f4b2df7a79630c1b49166488002007d9",
+  "prompts": {},
+  "sessions": {
+    "s_45c1ca02febb1e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e02ef5ee-ae90-4957-8c15-65a06384e6b9",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
