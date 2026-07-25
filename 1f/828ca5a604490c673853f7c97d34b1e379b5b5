@@ -1,0 +1,44 @@
+types/social-security.ts
+  s_1df6567878f3f3::t_e90d75d1cac8f1 17,19-25,40-41,59-60
+domain/social-security/index.ts
+  s_1df6567878f3f3::t_377efe77a10c0f 34,36,47-52,56-61,66,71,73,78-86,92
+  s_0fd0c3b6f86a50::t_f18273744b0f46 27-29,33,35,37-45,87
+  s_6cded1cdca1e51::t_ea3d51fdfedd39 88-91,93-104
+  s_1df6567878f3f3::t_ac486022856065 46
+domain/social-security/index.test.ts
+  s_6cded1cdca1e51::t_c97b9020527bd1 100,102-114,116-117,119
+  s_1df6567878f3f3::t_54064828a891ac 2-3,7-15,26-32,47-48,57-99,115,118
+  s_0fd0c3b6f86a50::t_c22721b39575c6 16-25,33,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1f828ca5a604490c673853f7c97d34b1e379b5b5",
+  "prompts": {},
+  "sessions": {
+    "s_0fd0c3b6f86a50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a3110be6-e94f-41e8-99bd-85e421aa02ad",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_1df6567878f3f3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "91a4cb22-119b-4881-8623-0f8638d68147",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_6cded1cdca1e51": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ece5317b-8f74-4d7e-9c8c-79025f9b3db5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
