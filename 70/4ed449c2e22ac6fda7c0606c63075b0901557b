@@ -1,0 +1,24 @@
+lib/useVisualViewport.test.ts
+  s_a8aea65206ce2a::t_74bf1d53db49fb 2,7,24-37
+  s_a8aea65206ce2a::t_761c59755f9b71 38
+lib/useVisualViewport.ts
+  s_a8aea65206ce2a::t_bc2916fdc29389 5-7,13-27,86-129,132-167
+tests/mobile-smoke.md
+  s_a8aea65206ce2a::t_cfb30d6d38331d 38-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "704ed449c2e22ac6fda7c0606c63075b0901557b",
+  "prompts": {},
+  "sessions": {
+    "s_a8aea65206ce2a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ce1d954c-f561-420b-b743-b69d8888a53f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
