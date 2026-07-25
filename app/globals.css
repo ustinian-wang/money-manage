@@ -22,7 +22,8 @@ body {
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
-body.sheet-open { overflow: hidden; touch-action: none; }
+/* ponytail: 勿用 touch-action:none——iOS 键盘弹出后 sheet 内滚动易失效 */
+body.sheet-open { overflow: hidden; overscroll-behavior: none; }
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
 .section-label { border-top: 1px solid #edf1ee; color: #52605b; font-size: .75rem; font-weight: 700; margin-top: .5rem; padding-top: 1.25rem; }
@@ -59,6 +60,45 @@ main, section, aside, article, .space-y-6, .min-w-0 { min-width: 0; }
   background: rgba(23, 33, 43, 0.45);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+}
+/* 键盘弹出：fixed 门禁/auth sheet 贴 visualViewport（高度已=可见区，勿再叠 --kb-inset） */
+.auth-gate-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-offset-top, 0px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: var(--vv-height, 100dvh);
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+html.kb-open .auth-gate-root {
+  justify-content: flex-start;
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+.auth-sheet-root {
+  left: 0;
+  right: 0;
+  top: var(--vv-offset-top, 0px);
+  height: var(--vv-height, 100%);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+}
+[data-float-panel][data-ux='sheet'] {
+  max-width: 100vw;
+  /* place() 已按 VV 贴底；max-height 只吃可见高度，勿再加 --kb-inset padding */
+  max-height: min(92dvh, var(--vv-height, 92dvh));
 }
 .sheet-handle {
   width: 2.5rem;
@@ -280,4 +320,70 @@ td { color: #52605b; }
   line-height: 1.45;
   text-align: left;
   max-width: 100%;
+}
+
+/* 访客 demo 徽章 / 条幅 */
+.guest-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(240, 127, 98, 0.55);
+  background: #fff7f4;
+  color: #d9654a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.55rem;
+}
+.guest-demo-banner {
+  margin: 0;
+  border-radius: 0.65rem;
+  background: #fff7f4;
+  border: 1px solid rgba(240, 127, 98, 0.28);
+  color: #a34a35;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  padding: 0.35rem 0.65rem;
+}
+
+/* 顶栏「更多」菜单 */
+.header-more-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 0;
+  background: transparent;
+  color: #17212b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+}
+.header-more-item:hover,
+.header-more-item:focus-visible {
+  background: #f4f7f5;
+  outline: none;
+}
+.header-more-item-wrap {
+  display: flex;
+  width: 100%;
+}
+.header-more-item-wrap > button,
+.header-more-item-wrap > div {
+  width: 100%;
+}
+.header-more-item-wrap .touch-btn {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  box-shadow: none;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
 }

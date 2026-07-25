@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // ponytail: 不设 maximumScale=1，避免妨碍无障碍缩放；iOS 输入缩放靠 ≥16px 字号
   viewportFit: 'cover',
   themeColor: '#17212b',
 };
