@@ -4,6 +4,7 @@ node_modules
 dist/
 *.tsbuildinfo
 data/backups
+data/user:*/
 logs/
 .dev.vars
 .wrangler/
