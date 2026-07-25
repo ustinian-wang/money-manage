@@ -1,0 +1,23 @@
+README.md
+  s_a8b6f4fc67480c::t_7ead4991fe1d91 50-52,61-62
+  s_a8b6f4fc67480c::t_faf2f58c56ef1c 150-151
+  s_a8b6f4fc67480c::t_66a136e0d706f2 42
+docs/prd-mobile-ux.md
+  s_a8b6f4fc67480c::t_d546d301f96eae 43-57,67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "95fef523123edbf04033d18149851f84f3bf7dad",
+  "prompts": {},
+  "sessions": {
+    "s_a8b6f4fc67480c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e5ecf62d-c850-4a2f-9cb6-959c9cf1cae0",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
