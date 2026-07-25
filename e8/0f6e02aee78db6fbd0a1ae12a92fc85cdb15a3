@@ -1,0 +1,30 @@
+lib/auth/crypto.test.ts
+  s_18376cbe9b5db6::t_64680309e3f013 7,18-24
+  s_3a3fc156ae2d50::t_6db6e646181d1e 25
+lib/auth/crypto.ts
+  s_3a3fc156ae2d50::t_3266f895571ee9 34,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e80f6e02aee78db6fbd0a1ae12a92fc85cdb15a3",
+  "prompts": {},
+  "sessions": {
+    "s_18376cbe9b5db6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a11e51c5-8cab-4ac3-b19d-b51df6c06ccb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3a3fc156ae2d50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "35a7202c-fa59-47a6-aaf3-bf4f09a3632e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
