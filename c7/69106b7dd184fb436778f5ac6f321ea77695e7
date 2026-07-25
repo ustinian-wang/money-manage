@@ -1,0 +1,49 @@
+lib/auth/store.ts
+  s_18376cbe9b5db6::t_4e49d69e00e886 272-276
+  s_2e258d657ed87e::t_48dc03c3ca7f01 140,142-143,147,149-150,155,157-158,163,183,191,195,203-204,216,226-230
+  s_2e258d657ed87e::t_d75e351c87477d 3-4,6,10-11,16
+  s_3a3fc156ae2d50::t_7acf5eee19b04d 277-278
+app/api/auth/register/route.ts
+  s_2e258d657ed87e::t_c014bae85a39f8 20
+lib/auth/session.ts
+  s_18376cbe9b5db6::t_89671ba90ffbbb 10
+  s_3a3fc156ae2d50::t_9b9836e65ed354 14
+lib/auth/store.test.ts
+  s_18376cbe9b5db6::t_74285b1655316f 1-42,44-96
+  s_18376cbe9b5db6::t_9e2c432424ea79 43
+lib/auth/session.test.ts
+  s_18376cbe9b5db6::t_af8f90cb66c37f 1-2,4-6,8-25
+  s_18376cbe9b5db6::t_4ea387da79f03c 3,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c769106b7dd184fb436778f5ac6f321ea77695e7",
+  "prompts": {},
+  "sessions": {
+    "s_18376cbe9b5db6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a11e51c5-8cab-4ac3-b19d-b51df6c06ccb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_2e258d657ed87e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "14799c86-602a-4a48-ba45-70db7c367615",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3a3fc156ae2d50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "35a7202c-fa59-47a6-aaf3-bf4f09a3632e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
