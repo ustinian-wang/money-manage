@@ -9,8 +9,8 @@ import {
     getInstallmentTermMonths,
     resolveEffectiveTermMonths,
     withEffectiveTerm,
-} from './index.ts';
-import { termToMonths, type InstallmentConsumption, type InterestPlan } from '../../types/installment.ts';
+} from './index';
+import { termToMonths, type InstallmentConsumption, type InterestPlan } from '../../types/installment';
 
 test('converts installment terms expressed in months or years', () => {
     assert.equal(termToMonths({ value: 36, unit: 'month' }), 36);
@@ -118,7 +118,8 @@ test('shortens the effective term at an explicit end date and recalculates plans
     assert.equal(shortened.termMonths, 6);
     assert.equal(shortened.interestStructure.plans[0]?.termMonths, 6);
     assert.equal(summarizeInstallmentConsumption(shortened).schedule.length, 6);
-    assert.equal(summarizeInstallmentConsumption(shortened).monthlyPayment, 2000);
+    // 本金 10000 / 有效 6 期（零息等额本息）
+    assert.equal(summarizeInstallmentConsumption(shortened).monthlyPayment, 1666.67);
 });
 
 test('uses retirement date only when followRetirement is enabled', () => {

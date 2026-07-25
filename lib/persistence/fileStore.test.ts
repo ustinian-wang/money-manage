@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { readState, writeState, listBackups, STATE_FILE, userScopedKey } from './fileStore.ts';
+import { readState, writeState, listBackups, STATE_FILE, userScopedKey } from './fileStore';
 
 test('读写 user 作用域 profile 并递增 revision，用户间隔离', async () => {
     const userId = 'test-user-a';
@@ -38,4 +38,23 @@ test('读写 user 作用域 profile 并递增 revision，用户间隔离', async
 
     const backups = await listBackups(userId);
     assert.ok(backups.some((name) => name.includes('financial-profile-3-')));
+});
+
+test('expectedRevision 不匹配时抛 REVISION_CONFLICT', async () => {
+    const userId = 'test-user-rev';
+    const stateFile = path.join(process.cwd(), 'data', userScopedKey(userId, STATE_FILE));
+    await fs.mkdir(path.dirname(stateFile), { recursive: true });
+    await fs.writeFile(stateFile, JSON.stringify({
+        schemaVersion: 1,
+        revision: 5,
+        updatedAt: new Date(0).toISOString(),
+        profile: {},
+        snapshots: [],
+        scenarios: [],
+    }, null, 2));
+
+    await assert.rejects(
+        () => writeState(userId, { profile: { x: 1 } }, 4),
+        (err: Error & { code?: string }) => err.code === 'REVISION_CONFLICT',
+    );
 });

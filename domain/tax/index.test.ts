@@ -1,7 +1,13 @@
+/**
+ * 个税 / 工资到手：专项附加扣除、父母上交与税基分离、payroll 合并
+ * 需求：广东个税口径 · parentSupport 不进扣除
+ */
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { calculateParentSupportExpense, calculatePayrollTax, calculateTax } from './index';
 
-describe('calculateTax', () => {
-    it('returns deduction rate, base, monthly/yearly amount and estimated reduction', () => {
+describe('calculateTax 个税', () => {
+    it('返回扣除比例、税基、月/年额与估减税额', () => {
         const result = calculateTax({
             grossMonthlyIncome: 20000,
             personalSocialSecurityMonthly: 2000,
@@ -11,21 +17,33 @@ describe('calculateTax', () => {
             },
         });
         const elderly = result.deductions.find((item) => item.key === 'elderlySupport');
-        expect(elderly).toEqual(expect.objectContaining({ deductionRate: 50, deductionBaseMonthly: 2000, actualMonthlyAmount: 1000, actualAnnualAmount: 12000 }));
-        expect((elderly?.estimatedMonthlyTaxReduction || 0)).toBeGreaterThan(0);
-        expect(result.estimatedAnnualTax).toBe(result.estimatedMonthlyTax * 12);
+        assert.ok(elderly);
+        assert.equal(elderly.deductionRate, 50);
+        assert.equal(elderly.deductionBaseMonthly, 2000);
+        assert.equal(elderly.actualMonthlyAmount, 1000);
+        assert.equal(elderly.actualAnnualAmount, 12000);
+        assert.ok((elderly.estimatedMonthlyTaxReduction || 0) > 0);
+        assert.equal(result.estimatedAnnualTax, result.estimatedMonthlyTax * 12);
     });
 
-    it('keeps parent support expense separate from elderly support deduction', () => {
-        const withoutElderly = calculateTax({ grossMonthlyIncome: 20000, personalSocialSecurityMonthly: 2000, deductions: {} });
-        const withParentCashflow = calculateTax({ grossMonthlyIncome: 20000, personalSocialSecurityMonthly: 2000, deductions: {} });
-        expect(withParentCashflow.estimatedMonthlyTax).toBe(withoutElderly.estimatedMonthlyTax);
-        expect(withParentCashflow.parentSupportExcludedFromDeductions).toBe(true);
-        expect(calculateParentSupportExpense({ mode: 'fixed', fixedMonthlyAmount: 3000 }, 20000)).toBe(3000);
-        expect(calculateParentSupportExpense({ mode: 'percentage', incomePercentage: 10 }, 20000)).toBe(2000);
+    it('父母上交现金不进税前扣除', () => {
+        const withoutElderly = calculateTax({
+            grossMonthlyIncome: 20000,
+            personalSocialSecurityMonthly: 2000,
+            deductions: {},
+        });
+        const withParentCashflow = calculateTax({
+            grossMonthlyIncome: 20000,
+            personalSocialSecurityMonthly: 2000,
+            deductions: {},
+        });
+        assert.equal(withParentCashflow.estimatedMonthlyTax, withoutElderly.estimatedMonthlyTax);
+        assert.equal(withParentCashflow.parentSupportExcludedFromDeductions, true);
+        assert.equal(calculateParentSupportExpense({ mode: 'fixed', fixedMonthlyAmount: 3000 }, 20000), 3000);
+        assert.equal(calculateParentSupportExpense({ mode: 'percentage', incomePercentage: 10 }, 20000), 2000);
     });
 
-    it('builds one take-home pay result from tax and employee contributions', () => {
+    it('工资到手 = 税前 − 个人五险一金 − 个税', () => {
         const result = calculatePayrollTax({
             grossMonthlyIncome: 20000,
             personalSocialSecurityMonthly: 3100,
@@ -36,9 +54,15 @@ describe('calculateTax', () => {
                 elderlySupport: { enabled: true, monthlyAmount: 2000, allocationRate: 50 },
             },
         });
-        expect(result.personalFiveInsuranceAndHousingFund).toBe(3100);
-        expect(result.actualTakeHomePay).toBe(result.grossMonthlyIncome - 3100 - result.estimatedMonthlyTax);
-        expect(result.companySocialSecurityMonthly).toBe(5740);
-        expect(result.deductions.find((item) => item.key === 'elderlySupport')?.actualMonthlyAmount).toBe(1000);
+        assert.equal(result.personalFiveInsuranceAndHousingFund, 3100);
+        assert.equal(
+            result.actualTakeHomePay,
+            result.grossMonthlyIncome - 3100 - result.estimatedMonthlyTax,
+        );
+        assert.equal(result.companySocialSecurityMonthly, 5740);
+        assert.equal(
+            result.deductions.find((item) => item.key === 'elderlySupport')?.actualMonthlyAmount,
+            1000,
+        );
     });
 });
