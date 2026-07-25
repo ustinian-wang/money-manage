@@ -2,9 +2,27 @@
 
 import { useEffect, useState } from 'react';
 
+/** 焦点相对可视区的边距（12–16px） */
+export const FOCUS_VV_MARGIN = 14;
+
 /** 由 layout / visualViewport 推算键盘顶起 inset */
 export function calcKeyboardInset(innerHeight: number, vvHeight: number, offsetTop: number) {
   return Math.max(0, innerHeight - vvHeight - offsetTop);
+}
+
+/**
+ * 焦点元素相对 visualViewport 可见盒的滚动增量（正=向下滚 scrollTop）。
+ * elTop/elBottom、visibleTop/visibleBottom 同一坐标系（一般为 layout viewport）。
+ */
+export function calcFocusScrollDelta(
+  elTop: number,
+  elBottom: number,
+  visibleTop: number,
+  visibleBottom: number,
+): number {
+  if (elBottom > visibleBottom) return elBottom - visibleBottom;
+  if (elTop < visibleTop) return elTop - visibleTop;
+  return 0;
 }
 
 export type VisualViewportState = {
@@ -65,13 +83,86 @@ export function useVisualViewport() {
   return state;
 }
 
-/** 焦点字段滚入可视区（键盘弹出后；默认延迟对齐 iOS VKB 动画） */
-export function scrollFocusedFieldIntoView(target: EventTarget | null, delayMs = 280) {
-  if (!(target instanceof HTMLElement)) return;
-  if (!target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea')) {
+const FOCUSABLE_SEL = 'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea';
+
+export function isFocusableField(target: EventTarget | null): target is HTMLElement {
+  return target instanceof HTMLElement && target.matches(FOCUSABLE_SEL);
+}
+
+/** 在 root 内找可纵向滚动的祖先（浮层 body / auth sheet）；不锁 touch-action */
+function findScrollParent(el: HTMLElement, root: Element | null): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const style = getComputedStyle(node);
+    const oy = style.overflowY;
+    if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    if (root && node === root) break;
+    node = node.parentElement;
+  }
+  if (root instanceof HTMLElement) {
+    const body = root.querySelector<HTMLElement>('.overflow-y-auto, [data-float-scroll]');
+    if (body) return body;
+  }
+  return root instanceof HTMLElement ? root : null;
+}
+
+/** 立即：按 VV 可见底边校正焦点（优先滚浮层/auth 容器） */
+export function ensureFocusedInVisualViewportNow(
+  target: EventTarget | null,
+  margin = FOCUS_VV_MARGIN,
+) {
+  if (!isFocusableField(target) || !document.contains(target)) return;
+  const vv = window.visualViewport;
+  const viewTop = vv?.offsetTop ?? 0;
+  const viewBottom = viewTop + (vv?.height ?? window.innerHeight);
+  const visibleTop = viewTop + margin;
+  const visibleBottom = viewBottom - margin;
+  const rect = target.getBoundingClientRect();
+  const delta = calcFocusScrollDelta(rect.top, rect.bottom, visibleTop, visibleBottom);
+  if (delta === 0) return;
+
+  const shell = target.closest<HTMLElement>('[data-float-panel], .auth-sheet-root, .auth-gate-root');
+  const scroller = findScrollParent(target, shell);
+  if (scroller) {
+    scroller.scrollTop += delta;
     return;
   }
-  window.setTimeout(() => {
-    target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
-  }, delayMs);
+  // 无内部 scroller：nearest，避免 block:center 把背后页面乱滚而 fixed 浮层不动
+  target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+}
+
+let activeFocusCleanup: (() => void) | null = null;
+
+/**
+ * 焦点字段滚入 visualViewport（延迟对齐键盘动画 + VV resize/scroll 再校正）。
+ * 返回取消函数；新一次调用会取消上一次。
+ */
+export function scrollFocusedFieldIntoView(target: EventTarget | null, delayMs = 280) {
+  if (!isFocusableField(target)) return () => {};
+  activeFocusCleanup?.();
+  let cancelled = false;
+  const run = () => {
+    if (cancelled) return;
+    ensureFocusedInVisualViewportNow(target);
+  };
+  const timer = window.setTimeout(run, delayMs);
+  const vv = window.visualViewport;
+  // 键盘动画中 VV 会连续变矮：再校正一次
+  const onVv = () => {
+    if (cancelled) return;
+    window.setTimeout(run, 40);
+  };
+  vv?.addEventListener('resize', onVv);
+  vv?.addEventListener('scroll', onVv);
+  const cleanup = () => {
+    cancelled = true;
+    window.clearTimeout(timer);
+    vv?.removeEventListener('resize', onVv);
+    vv?.removeEventListener('scroll', onVv);
+    if (activeFocusCleanup === cleanup) activeFocusCleanup = null;
+  };
+  activeFocusCleanup = cleanup;
+  return cleanup;
 }

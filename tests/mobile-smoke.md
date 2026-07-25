@@ -35,6 +35,21 @@ npm run test:mobile-smoke
 
 脚本行为：请求首页 HTTP 200；可选 headless 检查 `document.body`。**不再**要求全屏门禁文案。
 
+## 键盘 / visualViewport 焦点（浮层）
+
+Browser 设备模式 **不能 100% 模拟 iOS 键盘**。可用下列方式近似验收：
+
+1. **DevTools 缩小 VV（推荐）**：Console 执行，模拟键盘顶起后再点浮层输入框：
+   ```js
+   // 模拟可视区变矮（约留上半屏）
+   document.documentElement.style.setProperty('--vv-height', '420px');
+   document.documentElement.style.setProperty('--vv-offset-top', '0px');
+   document.documentElement.classList.add('kb-open');
+   // 若页面监听 visualViewport，可在 CDP 里改 metrics；否则依赖 FloatPanel place + scroll 校正
+   ```
+2. **真机**：iOS Safari → 打开工资/资产 field 浮层或登录 sheet → 聚焦输入框；输入框应完整落在键盘上方（约 14px 边距）；浮层内部仍可手指滚动（未设 `touch-action: none`）。
+3. **代码路径**：`scrollFocusedFieldIntoView`（延迟 ~280ms）→ `ensureFocusedInVisualViewportNow`；VV `resize`/`scroll` 再校正；`FloatPanel.place` 在焦点仍在面板内时同步校正。
+
 ## 刻意不测
 
 - 完整注册→认领→图表交互（需账号，属手工回归）
