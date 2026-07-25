@@ -1,0 +1,32 @@
+lib/ux-contract.ts
+  s_93a7f572e99b43::t_77f8ca17895109 10-11,13-16
+app/globals.css
+  s_c159df322dacec::t_f873eafdde24d7 18
+  s_93a7f572e99b43::t_471cc5450acaaf 45-55
+  s_c159df322dacec::t_d3e2f7dcdfb944 90-97,99,104,106,109,113,126-127,131,136-173,177-180,189,192-215,224-225
+  s_c159df322dacec::t_ad94d8c9e2e183 98,100-103,105,107-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5552ec5c69c3b370746b3c7cbaf0746446b1ba0e",
+  "prompts": {},
+  "sessions": {
+    "s_93a7f572e99b43": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "51f793e6-72ea-4698-8585-24e22efac5ad",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c159df322dacec": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3855825a-55d1-4a55-8636-d3ee2d75193f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
