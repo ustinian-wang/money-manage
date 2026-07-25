@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hashPassword, verifyPassword } from './crypto.ts';
+import { hashPassword, randomToken, verifyPassword } from './crypto';
 
 test('同密码可校验，错密码失败，哈希非明文', async () => {
     const record = await hashPassword('SecretPass1');
@@ -14,4 +14,12 @@ test('同密码可校验，错密码失败，哈希非明文', async () => {
     assert.notEqual(record.hash, 'SecretPass1');
     assert.equal(await verifyPassword('SecretPass1', record), true);
     assert.equal(await verifyPassword('wrong-pass', record), false);
+});
+
+test('randomToken 为 URL-safe 且两次不同', () => {
+    const a = randomToken(16);
+    const b = randomToken(16);
+    assert.ok(a.length > 10);
+    assert.match(a, /^[A-Za-z0-9_-]+$/);
+    assert.notEqual(a, b);
 });
