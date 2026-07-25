@@ -39,13 +39,16 @@ npm test         # 领域单测（可选）
 | 分组 | 内容 |
 | --- | --- |
 | 收入与到卡 | 税前工资 → 五险一金 → 个税专项（租房 / 赡养老人可开关）→ **可支配收入** |
-| 资产与理财 | **现金 = 总资产 − 理财**（改任一端会联动）；理财占比、年化收益率、结余再投资比例 |
+| 资产与理财 | **现金 = 总资产 − 理财**（`LinkedFieldGroup` 等价联动）；理财占比、年化收益率、结余再投资比例 |
 | 结余与安全垫 | 应急资金月数、月度剩余、调整后可用资产（已扣分期承诺首付） |
 | 退休与社保 | 可开关；出生日期 / 身份 / 参保日 / 缴费年限；展示预计退休日与基数（当前为固定展示） |
 
 ### 2. 支出管理
 
 类型：`fixed` 固定 · `percentage` 按比例（相对可支配收入 + 理财月收益）· `installment` 分期 · `one_time` 一次性。
+
+- **新增**：默认金额 `0`；挂上 DOM 后滚到新项（`data-expense-anchor`，桌面行 / 移动卡双锚点）
+- **删除**：`ConfirmDialog`（FloatPanel field 矮卡）二次确认，**不用**裸 `window.confirm`
 
 操作列 **分析**：打开「消费影响分析」浮层。
 
@@ -55,8 +58,8 @@ npm test         # 领域单测（可选）
 
 ### 3. 资产走势与剩余可支配收入走势
 
-- **资产走势**：从当前现金 + 理财起，按月复合收益 + 结余再投资，预测约 30 年；可看月度明细
-- **剩余可支配收入走势**：约 360 个月；与占比图同口径
+- **资产走势**：从当前现金 + 理财起，按月复合收益 + 结余再投资，预测约 30 年；Y 轴用 **万元**（`moneyWan`）；可看月度明细
+- **剩余可支配收入走势 / 现金流比率**：约 360 个月；窄屏 `grid.right ≈ 68px`，避免 markLine 文案裁切
 
 剩余可支配占比（页面内）：
 
@@ -143,6 +146,8 @@ npm install
 wrangler login
 npm run deploy       # OpenNext 构建并发布到 Workers
 ```
+
+Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `https://money-manage.<account>.workers.dev`（以 `npm run deploy` 输出为准）。
 
 本地用 Workers 运行时预览：`npm run preview`（含 KV 本地模拟）。日常开发仍可用 `npm run dev`（经 `initOpenNextCloudflareForDev` 注入 bindings）。
 
