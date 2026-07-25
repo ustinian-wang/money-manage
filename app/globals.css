@@ -41,6 +41,19 @@ button, input, select { font: inherit; }
 .snapshot-row { align-items: center; background: #f8faf9; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: .75rem 1rem; }
 .table-wrap, .local-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
 .local-scroll { overflow-y: auto; }
+/* 局部滚动表：单容器横纵滚动 + thead sticky（表头/表体 scrollLeft 自然对齐） */
+.table-wrap.table-scroll {
+  max-height: min(50vh, 26rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.table-wrap.table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 0 1px 0 #edf1ee; /* collapse 下滚动时补一条底边 */
+}
 /* grid/flex 子项默认 min-width:auto 会被长文案/canvas 撑破 375 */
 main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; }
 .retirement-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; border: 1px solid #e3eae5; border-radius: .9rem; background: #f8faf9; color: #52605b; padding: .75rem 1rem; font-size: .78rem; }
