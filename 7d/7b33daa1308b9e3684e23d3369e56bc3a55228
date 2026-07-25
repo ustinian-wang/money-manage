@@ -1,0 +1,19 @@
+tests/mobile-smoke.md
+  s_938457678a7ad9::t_655b51c45e8921 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7d7b33daa1308b9e3684e23d3369e56bc3a55228",
+  "prompts": {},
+  "sessions": {
+    "s_938457678a7ad9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9fad2602-4271-4c14-b462-9f7398e60700",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
