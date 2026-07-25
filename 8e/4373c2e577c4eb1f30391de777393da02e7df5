@@ -1,0 +1,36 @@
+package.json
+  s_0bc6a2f4e1cc64::t_10534a7bc6468c 23
+lib/floatPlace.test.ts
+  s_a8aea65206ce2a::t_b1b5dbca56a04f 5-6,27-31,37-38,43-45,56-57,69-71
+  s_a8aea65206ce2a::t_be2082e78476f6 8
+  s_a8aea65206ce2a::t_87dc0ac619f94c 59-68,72
+  s_a8aea65206ce2a::t_373e30e42cdd0a 1-4,7,9-26,32-36,39-42,46-55,58,73
+lib/floatPlace.ts
+  s_a8aea65206ce2a::t_ba708d6c4adbe1 1-2,4-74,91-106,108-126
+  s_a8aea65206ce2a::t_5ea15bed32500c 75-89
+  s_a8aea65206ce2a::t_2d4e40d096d61e 3,90,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8e4373c2e577c4eb1f30391de777393da02e7df5",
+  "prompts": {},
+  "sessions": {
+    "s_0bc6a2f4e1cc64": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "59730613-a640-4d94-9e64-14fc68244392",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a8aea65206ce2a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ce1d954c-f561-420b-b743-b69d8888a53f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
