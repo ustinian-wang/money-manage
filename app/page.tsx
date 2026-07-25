@@ -5,8 +5,10 @@ import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom';
 import ReactECharts from 'echarts-for-react';
 import InstallToDesktop from './InstallToDesktop';
-import AuthBar, { type AuthUser } from './AuthBar';
+import AuthBar, { logoutSession, type AuthMode, type AuthUser } from './AuthBar';
+import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
+import { scrollFocusedFieldIntoView } from '../lib/useVisualViewport';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
 import {
@@ -67,28 +69,42 @@ const addMonths = (date: string, months: number) => { const next = new Date(`${d
 const retirementDateFor = (birthDate: string, identity: string) => { const birth = new Date(`${birthDate}T00:00:00`); if (Number.isNaN(birth.getTime())) return ''; const age = identity === 'female-worker' ? 55 : identity === 'female-cadre' ? 58 : 63; birth.setFullYear(birth.getFullYear() + age); return birth.toISOString().slice(0, 10); };
 const defaultSocialRates: Record<string, SocialRate> = { 养老保险: { personal: 8, company: 16 }, 医疗保险: { personal: 2, company: 6 }, 失业保险: { personal: 0.5, company: 0.5 }, 工伤保险: { personal: 0, company: 0.4 }, 生育保险: { personal: 0, company: 0.8 }, 住房公积金: { personal: 5, company: 5 } };
 const taxBrackets = [{ range: '不超过 3,000', rate: 3, quick: 0 }, { range: '3,000 - 12,000', rate: 10, quick: 210 }, { range: '12,000 - 25,000', rate: 20, quick: 1410 }, { range: '25,000 - 35,000', rate: 25, quick: 2660 }, { range: '35,000 - 55,000', rate: 30, quick: 4410 }, { range: '55,000 - 80,000', rate: 35, quick: 7160 }, { range: '超过 80,000', rate: 45, quick: 15160 }];
-/** PC：悬停气泡；移动：底部抽屉 —— 两套交互，不混用 */
+/** PC：悬停气泡；移动：贴锚点矮卡，不锁 body（ux tip 档） */
 const InfoTip = ({ children }: { children: ReactNode }) => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, isMobile]);
 
   if (isMobile) {
     return (
       <span className="relative inline-flex shrink-0 align-middle">
         <button
-          ref={anchorRef}
           type="button"
           aria-label="查看说明"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
-          className="touch-btn grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-xs font-semibold text-slate-500"
+          className="relative grid h-4 w-4 place-items-center rounded-full border border-slate-300 text-[10px] font-semibold leading-none text-slate-500 before:absolute before:-inset-3 before:content-[''] [-webkit-tap-highlight-color:transparent]"
         >
           i
         </button>
-        <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={360} maxHeightVh={55} headerTitle="说明" mode="sheet">
-          <p className="text-sm leading-6 text-slate-600">{children}</p>
-        </FloatPanel>
+        {open && (
+          <>
+            {/* 透明点透关闭层：不锁滚动、无 sheet 遮罩 */}
+            <button type="button" aria-label="关闭说明" className="fixed inset-0 z-[59] cursor-default bg-transparent" onClick={() => setOpen(false)} />
+            <span
+              role="tooltip"
+              className="absolute left-1/2 top-full z-[60] mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl bg-[#17212b] p-3 text-left text-xs font-normal leading-5 text-white shadow-xl"
+            >
+              {children}
+            </span>
+          </>
+        )}
       </span>
     );
   }
@@ -256,10 +272,14 @@ export default function HomePage() {
   const setElderlyShare = (_value: number) => undefined;
   const [savedAt, setSavedAt] = useState('');
   const [hydrated, setHydrated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const [serverRevision, setServerRevision] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [retirement, setRetirement] = useState(retirementDefaults);
   const isNarrow = useIsMobile();
+  // 顶栏「更多」：收纳快照 / 安装 / 已保存 / 登出·登录
+  const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
+  const [authOpenRequest, setAuthOpenRequest] = useState<AuthMode | null>(null);
   // 移动端分区 chips 高亮：IntersectionObserver 跟踪当前可视分区
   const [activeSection, setActiveSection] = useState('sec-params');
   useEffect(() => {
@@ -328,27 +348,41 @@ export default function HomePage() {
           me = data.user || null;
           if (!cancelled) setAuthUser(me);
         }
-      } catch { /* guest mode */ }
-      // 已登录：读本人服务端 profile；未登录或空库：回退 localStorage 试玩
-      if (me) {
+      } catch { /* 无会话 → 访客 */ }
+      if (!cancelled) setAuthReady(true);
+
+      // 访客：localStorage 草稿或内存默认示例数据；不打云端
+      if (!me) {
         try {
-          const response = await fetch('/api/profile');
-          if (response.ok) {
-            const state = await response.json();
-            if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
-              applyProfileData({ ...state.profile, snapshots: state.snapshots ?? state.profile.snapshots });
-              setServerRevision(Number(state.revision) || 0);
-              return;
-            }
-          }
-        } catch { /* fall through to local */ }
+          const saved = localStorage.getItem('money-manage-profile');
+          if (!cancelled && saved) applyProfileData(JSON.parse(saved));
+        } catch { /* 示例默认 */ }
+        if (!cancelled) setHydrated(true);
+        return;
       }
+
       try {
-        const saved = localStorage.getItem('money-manage-profile');
-        if (!cancelled && saved) applyProfileData(JSON.parse(saved));
-      } catch { /* retain defaults for invalid local data */ }
-      finally { if (!cancelled) setHydrated(true); }
-    })().finally(() => { if (!cancelled) setHydrated(true); });
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const state = await response.json();
+          if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
+            applyProfileData({ ...state.profile, snapshots: state.snapshots ?? state.profile.snapshots });
+            setServerRevision(Number(state.revision) || 0);
+          } else {
+            try {
+              const saved = localStorage.getItem('money-manage-profile');
+              if (!cancelled && saved) applyProfileData(JSON.parse(saved));
+            } catch { /* defaults */ }
+          }
+        }
+      } catch {
+        try {
+          const saved = localStorage.getItem('money-manage-profile');
+          if (!cancelled && saved) applyProfileData(JSON.parse(saved));
+        } catch { /* defaults */ }
+      }
+      if (!cancelled) setHydrated(true);
+    })();
     return () => { cancelled = true; };
   }, []);
 
@@ -358,9 +392,11 @@ export default function HomePage() {
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
   };
 
-  // 登录成功：账号已有数据则加载；空账号则绑定当前本地试玩数据
-  const handleAuthed = async (user: AuthUser) => {
+  // 登录/注册成功：云端有数据用云端；空账号则认领当前访客草稿（注册直接认领；登录二次确认）
+  const handleAuthed = async (user: AuthUser, meta: { from: AuthMode }) => {
     setAuthUser(user);
+    setAuthReady(true);
+    setHeaderMoreOpen(false);
     try {
       const response = await fetch('/api/profile');
       if (!response.ok) return;
@@ -371,7 +407,27 @@ export default function HomePage() {
         setServerRevision(Number(state.revision) || 0);
         return;
       }
-      const { snapshots: snap, ...rest } = profile;
+      // 空账号：优先当前内存画像（访客刚改的），再兜底 localStorage
+      let toBind = profile;
+      try {
+        const saved = localStorage.getItem('money-manage-profile');
+        if (saved) {
+          const parsed = JSON.parse(saved) as Record<string, unknown>;
+          toBind = { ...profile, ...parsed, snapshots: (parsed.snapshots as Snapshot[]) || profile.snapshots } as typeof profile;
+        }
+      } catch { /* 用内存 profile */ }
+      // 登录已有空账号：二次确认是否绑定访客草稿；注册则直接认领
+      if (meta.from === 'login') {
+        const ok = window.confirm(
+          '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。',
+        );
+        if (!ok) {
+          setHydrated(true);
+          return;
+        }
+      }
+      applyProfileData(toBind as unknown as Record<string, unknown>);
+      const { snapshots: snap, ...rest } = toBind;
       const put = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -381,16 +437,23 @@ export default function HomePage() {
         const next = await put.json();
         if (typeof next?.revision === 'number') setServerRevision(next.revision);
       }
-    } catch { /* keep local draft */ }
+    } catch { /* keep defaults */ }
+    finally { setHydrated(true); }
   };
 
+  // 登出 → 访客：保留当前内存作本机草稿，不再打云端
   const handleLogout = () => {
     setAuthUser(null);
     setServerRevision(0);
     setSavedAt('');
+    setHeaderMoreOpen(false);
+    setHydrated(true);
+    try {
+      localStorage.setItem('money-manage-profile', JSON.stringify(profile));
+    } catch { /* ignore */ }
   };
 
-  // 本地始终缓存；仅登录后防抖同步到本人服务端库
+  // 访客只写 localStorage；登录后再防抖同步云端
   useEffect(() => {
     if (!hydrated) return;
     const timer = window.setTimeout(() => {
@@ -745,9 +808,145 @@ export default function HomePage() {
     };
   }, [cashFlowForecast, visibleCashFlowLines, isNarrow]);
 
+  // 会话未就绪：简短占位，避免闪一下主界面
+  if (!authReady) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] text-[#17212b]">
+        <p className="text-sm text-slate-400">加载中…</p>
+      </main>
+    );
+  }
+  // 访客与登录均可进主应用；未登录用示例/本机草稿
   return <main className="min-h-screen bg-[#f6f8f5] text-[#17212b] pb-[env(safe-area-inset-bottom,0px)]">
     <div className="mobile-sticky-top">
-    <header className="app-header page-pad mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:static sm:px-6 lg:px-10"><div className="flex min-w-0 items-center gap-2.5"><div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div><div className="min-w-0"><p className="text-sm font-semibold leading-tight">财务管理</p><p className="hidden truncate text-[11px] leading-tight text-slate-400 sm:block">多用户 · 改参即时重算</p></div></div><div className="relative flex flex-wrap items-center gap-2"><div className="flex min-h-9 items-center gap-2 rounded-full bg-[#17212b] px-3 py-1.5 text-white"><span className="text-[11px] text-slate-300">剩余</span><strong className="text-base tabular-nums leading-none sm:text-lg">{result.remainDisposablePct}<span className="text-[11px] font-normal text-slate-400">%</span></strong></div><span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-500 sm:px-2.5 sm:text-[11px]">{savedAt ? <><span className="sm:hidden">已保存</span><span className="hidden sm:inline">{`已保存 ${savedAt}`}</span></> : <span className="hidden sm:inline">{authUser ? '双击编辑 · 自动保存' : '本地试玩 · 登录后云同步'}</span>}</span><AuthBar user={authUser} onAuthed={(user) => { void handleAuthed(user); }} onLogout={handleLogout} /><button ref={snapshotBtnRef} type="button" onClick={() => { if (showSnapshotPanel) { setShowSnapshotPanel(false); } else { setSnapshotSalary(salary); setSnapshotDate(today); setShowSnapshotPanel(true); } }} className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]">快照{snapshots.length > 0 ? ` · ${snapshots.length}` : ''}</button><InstallToDesktop />{showSnapshotPanel && <FloatPanel open={showSnapshotPanel} anchorRef={snapshotBtnRef} onClose={() => setShowSnapshotPanel(false)} width={720} headerTitle="未来快照"><div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">未来快照</h3><p className="mt-1 text-xs text-slate-400">保存前会确认负资产击穿</p></div><button type="button" onClick={() => setShowSnapshotPanel(false)} className="text-xs text-slate-400">关闭</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end"><label className="field"><span>快照名称</span><input value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} onBlur={saveEvent} /></label><DateEditable label="生效日期" value={snapshotDate} min={today} onChange={setSnapshotDate} /><label className="field"><span>变化后税前工资</span><input type="number" min="0" max="2000000" value={snapshotSalary} onChange={(event) => setSnapshotSalary(Number(event.target.value))} /></label><button type="button" onClick={addSnapshot} className="rounded-xl bg-[#17212b] px-4 py-2.5 text-sm font-semibold text-white">保存快照</button></div>{snapshotMessage && <p className="mt-3 text-sm text-emerald-700">{snapshotMessage}</p>}{snapshots.length > 0 ? <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto">{snapshots.map((snapshot, index) => { const previous = snapshots[index - 1]; const before = previous?.changes[0]?.value ?? salary; return <div key={snapshot.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm"><div><strong>{snapshot.name}</strong><span className="ml-3 text-slate-500">{snapshot.effectiveDate}</span><span className="ml-3 text-slate-600">税前工资 {money(before)} → {money(snapshot.changes[0].value)}</span>{snapshot.allowNegative && <span className="ml-3 text-amber-700">已确认允许击穿</span>}</div><button type="button" onClick={() => removeSnapshot(snapshot.id)} className="text-xs text-red-500">删除</button></div>; })}</div> : <p className="mt-4 text-sm text-slate-400">暂无快照，填写上方信息后保存。</p>}</FloatPanel>}</div></header>
+    <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight">财务管理</p>
+          <p className="hidden truncate text-[11px] leading-tight text-slate-400 sm:block">访客可体验 · 注册认领数据</p>
+        </div>
+      </div>
+      <div className="relative flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
+        <div className="flex min-h-9 shrink-0 items-center gap-2 rounded-full bg-[#17212b] px-2.5 py-1.5 text-white sm:px-3">
+          <span className="text-[11px] text-slate-300">剩余</span>
+          <strong className="text-base tabular-nums leading-none sm:text-lg">{result.remainDisposablePct}<span className="text-[11px] font-normal text-slate-400">%</span></strong>
+        </div>
+        {authUser ? (
+          <span className="max-w-[5.5rem] truncate rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 sm:max-w-[10rem]" title={authUser.username}>{authUser.username}</span>
+        ) : (
+          <span className="guest-demo-chip shrink-0" title="示例数据仅本机临时，注册后可认领到账号">访客</span>
+        )}
+        {!authUser && (
+          <AuthBar
+            user={null}
+            registerOnly={isNarrow}
+            openRequest={authOpenRequest}
+            onOpenRequestConsumed={() => setAuthOpenRequest(null)}
+            onAuthed={(user, meta) => { void handleAuthed(user, meta); }}
+            onLogout={handleLogout}
+          />
+        )}
+        <div className="relative">
+          <button
+            type="button"
+            aria-expanded={headerMoreOpen}
+            aria-haspopup="menu"
+            onClick={() => setHeaderMoreOpen((v) => !v)}
+            className="touch-btn rounded-full border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+          >
+            更多
+          </button>
+          {headerMoreOpen && (
+            <>
+              <button type="button" className="fixed inset-0 z-[60] cursor-default" aria-label="关闭菜单" onClick={() => setHeaderMoreOpen(false)} />
+              <div className="header-more-menu absolute right-0 z-[70] mt-1.5 w-52 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-lg" role="menu">
+                <p className="px-2.5 py-1.5 text-[10px] text-slate-400">
+                  {savedAt ? `已保存 ${savedAt}` : (authUser ? '改参自动同步云端' : '访客仅本机临时保存')}
+                </p>
+                <button
+                  ref={snapshotBtnRef}
+                  type="button"
+                  role="menuitem"
+                  className="header-more-item"
+                  onClick={() => {
+                    setHeaderMoreOpen(false);
+                    if (showSnapshotPanel) setShowSnapshotPanel(false);
+                    else { setSnapshotSalary(salary); setSnapshotDate(today); setShowSnapshotPanel(true); }
+                  }}
+                >
+                  快照设置{snapshots.length > 0 ? ` · ${snapshots.length}` : ''}
+                </button>
+                <div className="header-more-item-wrap"><InstallToDesktop /></div>
+                {/* 纯客户端：清 SW/Cache 后刷新，不碰草稿与登录 */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-more-item"
+                  onClick={() => { setHeaderMoreOpen(false); void restartSite(); }}
+                >
+                  重启网站
+                </button>
+                {!authUser && isNarrow && (
+                  <button type="button" role="menuitem" className="header-more-item" onClick={() => { setHeaderMoreOpen(false); setAuthOpenRequest('login'); }}>登录</button>
+                )}
+                {authUser && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="header-more-item text-red-600"
+                    onClick={() => { setHeaderMoreOpen(false); void logoutSession().then(handleLogout); }}
+                  >
+                    登出
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        {showSnapshotPanel && (
+          <FloatPanel open={showSnapshotPanel} anchorRef={snapshotBtnRef} onClose={() => setShowSnapshotPanel(false)} width={720} headerTitle="未来快照">
+            <div className="flex items-center justify-between gap-3">
+              <div><h3 className="font-semibold">未来快照</h3><p className="mt-1 text-xs text-slate-400">保存前会确认负资产击穿</p></div>
+              <button type="button" onClick={() => setShowSnapshotPanel(false)} className="text-xs text-slate-400">关闭</button>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+              <label className="field"><span>快照名称</span><input value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} onBlur={saveEvent} /></label>
+              <DateEditable label="生效日期" value={snapshotDate} min={today} onChange={setSnapshotDate} />
+              <label className="field"><span>变化后税前工资</span><input type="number" min="0" max="2000000" value={snapshotSalary} onChange={(event) => setSnapshotSalary(Number(event.target.value))} /></label>
+              <button type="button" onClick={addSnapshot} className="rounded-xl bg-[#17212b] px-4 py-2.5 text-sm font-semibold text-white">保存快照</button>
+            </div>
+            {snapshotMessage && <p className="mt-3 text-sm text-emerald-700">{snapshotMessage}</p>}
+            {snapshots.length > 0 ? (
+              <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto">
+                {snapshots.map((snapshot, index) => {
+                  const previous = snapshots[index - 1];
+                  const before = previous?.changes[0]?.value ?? salary;
+                  return (
+                    <div key={snapshot.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                      <div>
+                        <strong>{snapshot.name}</strong>
+                        <span className="ml-3 text-slate-500">{snapshot.effectiveDate}</span>
+                        <span className="ml-3 text-slate-600">税前工资 {money(before)} → {money(snapshot.changes[0].value)}</span>
+                        {snapshot.allowNegative && <span className="ml-3 text-amber-700">已确认允许击穿</span>}
+                      </div>
+                      <button type="button" onClick={() => removeSnapshot(snapshot.id)} className="text-xs text-red-500">删除</button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-slate-400">暂无快照，填写上方信息后保存。</p>
+            )}
+          </FloatPanel>
+        )}
+      </div>
+    </header>
+    {!authUser && (
+      <div className="page-pad mx-auto max-w-[1920px] px-3 pb-1 sm:px-6 lg:px-10">
+        <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 注册后可认领到你的账号</p>
+      </div>
+    )}
     <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:hidden" aria-label="页面分区">
       <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} onClick={() => document.getElementById('sec-params')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>参数</button>
       <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} onClick={() => document.getElementById('sec-expenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>支出</button>
@@ -756,7 +955,7 @@ export default function HomePage() {
     </div>
     <section className="page-pad mx-auto grid max-w-[1920px] gap-2 px-3 pb-12 pt-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
       <div className="space-y-2"><section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="财务参数" tip="按收入到卡、资产配置、结余安全垫、退休规划四组查看与调整。点击可编辑字段打开浮层；修改立即生效并自动保存。" /></div><div className="section-label">收入与到卡</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={200000} step={1} onChange={setSalary} /><SocialBreakdown rows={result.socialRows} total={result.social} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 - 五险一金 - 本月预估个税" /></div><div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="总资产" value={totalAssets} min={0} max={2000000} step={1000} onChange={updateTotalAssets} /><Editable label="现金资产" value={cash} min={0} max={totalAssets} step={1000} onChange={updateCash} /><Editable label="理财资产" value={invest} min={0} max={totalAssets} step={1000} onChange={updateInvestByAmount} /><Editable label="理财资金占比" value={investRatio} min={0} max={100} step={1} suffix="%" onChange={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><Editable label="工资结余再投资比例" value={reinvestRate} min={0} max={100} step={1} suffix="%" onChange={setReinvestRate} /></div><div className="section-label">结余与安全垫</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入扣除本月全部支出后的剩余金额" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail="已承诺首付金额已从可用资产中扣除" /></div><div className="section-label flex items-center gap-2">退休与社保<input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={retirement.enabled} onChange={(event) => updateRetirement({ enabled: event.target.checked })} title="启用退休与社保规划" aria-label="启用退休与社保规划" /></div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>广州 2026 基数</span><span className="field-readonly">{money(retirement.base)} / 月</span></span></div><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div></section>
-      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"><SectionTitle title="支出管理" tip="操作列「分析」打开浮层；可在面板内勾选多笔支出，剩余可支配/资产曲线按勾选顺序堆叠边际影响。" /><button type="button" onClick={addExpense} className="touch-btn w-full rounded-xl bg-[#f07f62] px-4 text-sm font-semibold text-white hover:bg-[#df6e51] sm:w-auto">+ 新增支出</button></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option><option value="one_time">一次性</option></select></label>} /></td><td><ClickField display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' || expense.mode === 'one_time' ? <div className="grid gap-3">{expense.mode === 'one_time' && <label className="block text-xs text-slate-500">发生时间（默认当月）<input className="field-input mt-1" type="date" value={(expense.startDate || defaultOneTimeDate()).slice(0, 10)} onChange={(event) => { updateExpense(expense.id, { startDate: event.target.value || defaultOneTimeDate(), endDate: event.target.value || defaultOneTimeDate() }); saveEvent(); }} /></label>}<label className="block text-xs text-slate-500">{expense.mode === 'one_time' ? '金额' : '每月金额'}<input className="field-input mt-1" type="number" min="0" step="100" value={expense.amount} onChange={(event) => { updateExpense(expense.id, { amount: Number(event.target.value) }); saveEvent(); }} /></label></div> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<input className="field-input mt-1" type="number" min="0" max="100" step="1" value={expense.rate || 0} onChange={(event) => { updateExpense(expense.id, { rate: Number(event.target.value) }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由右侧分期信息计算得出</p>} /></td><td className="cell-wrap"><ClickField display={formatExpenseInstallment(expense)} width={360} wrap panel={expense.mode === 'installment' ? <InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /> : <p className="text-xs text-slate-500">仅分期类型可设置</p>} /></td><td><div className="flex items-center gap-2"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvestRate={reinvestRate} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={() => removeExpense(expense.id)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
+      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"><SectionTitle title="支出管理" tip="操作列「分析」打开浮层；可在面板内勾选多笔支出，剩余可支配/资产曲线按勾选顺序堆叠边际影响。" /><button type="button" onClick={addExpense} className="touch-btn w-full rounded-xl bg-[#f07f62] px-4 text-sm font-semibold text-white hover:bg-[#df6e51] sm:w-auto">+ 新增支出</button></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={formatExpenseMode(expense.mode)} panel={<label className="block text-xs text-slate-500">类型<select className="field-input mt-1" value={expense.mode} onChange={(event) => { updateExpense(expense.id, { mode: event.target.value as Expense['mode'] }); saveEvent(); }}><option value="fixed">固定金额</option><option value="percentage">按比例</option><option value="installment">分期</option><option value="one_time">一次性</option></select></label>} /></td><td><ClickField display={formatExpensePayment(expense)} panel={expense.mode === 'fixed' || expense.mode === 'one_time' ? <div className="grid gap-3">{expense.mode === 'one_time' && <label className="block text-xs text-slate-500">发生时间（默认当月）<input className="field-input mt-1" type="date" value={(expense.startDate || defaultOneTimeDate()).slice(0, 10)} onChange={(event) => { updateExpense(expense.id, { startDate: event.target.value || defaultOneTimeDate(), endDate: event.target.value || defaultOneTimeDate() }); saveEvent(); }} /></label>}<label className="block text-xs text-slate-500">{expense.mode === 'one_time' ? '金额' : '每月金额'}<input className="field-input mt-1" type="number" min="0" step="100" value={expense.amount} onChange={(event) => { updateExpense(expense.id, { amount: Number(event.target.value) }); saveEvent(); }} /></label></div> : expense.mode === 'percentage' ? <label className="block text-xs text-slate-500">收入比例（%）<input className="field-input mt-1" type="number" min="0" max="100" step="1" value={expense.rate || 0} onChange={(event) => { updateExpense(expense.id, { rate: Number(event.target.value) }); saveEvent(); }} /></label> : <p className="text-xs text-slate-500">分期月付由右侧分期信息计算得出</p>} /></td><td className="cell-wrap"><ClickField display={formatExpenseInstallment(expense)} width={360} wrap density="panel" panel={expense.mode === 'installment' ? <InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /> : <p className="text-xs text-slate-500">仅分期类型可设置</p>} /></td><td><div className="flex items-center gap-2"><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvestRate={reinvestRate} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={() => removeExpense(expense.id)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
 <div className="mt-4 space-y-3 md:hidden">{expenses.map((expense) => (
           <div key={expense.id} className="expense-card space-y-2">
             <div className="expense-card-head">
@@ -774,7 +973,7 @@ export default function HomePage() {
             {expense.mode === 'installment' && (
               <div className="field-row-mobile">
                 <span>分期信息</span>
-                <ClickField label="分期信息" display={formatExpenseInstallment(expense)} width={360} wrap panel={<InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} />} />
+                <ClickField label="分期信息" display={formatExpenseInstallment(expense)} width={360} wrap density="panel" panel={<InstallmentSettingsPanel expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} />} />
               </div>
             )}
             <div className="expense-card-actions">
@@ -796,7 +995,6 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate, retirementD
   // 虚拟系列：把「剩余可支配」按 reinvestRate 拆成投资 + 可花费剩余
   const [includeInvestShare, setIncludeInvestShare] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<Expense>(() => cloneExpenseDraft(expense));
   // 打开时在 click 里同步深拷贝；关闭只收起设置。勿依赖 [expense] 异步 sync（首帧会陈旧）
   const openAnalyze = () => {
@@ -964,7 +1162,7 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate, retirementD
     <div className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={() => (open ? closeAnalyze() : openAnalyze())} className="touch-btn w-full rounded-xl bg-[#17212b] px-3 text-xs font-semibold text-white hover:bg-[#2a3644] sm:w-auto sm:bg-transparent sm:px-0 sm:text-[#d9654a] sm:hover:bg-transparent sm:hover:underline">分析</button>
       {open && (
-        <FloatPanel open={open} anchorRef={anchorRef} onClose={closeAnalyze} width={920} maxHeightVh={90} center draggable headerTitle="消费影响分析" mode="auto">
+        <FloatPanel open={open} anchorRef={anchorRef} onClose={closeAnalyze} width={920} maxHeightVh={90} center draggable headerTitle="消费影响分析" mode="auto" density="panel">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-700">{draft.name || expense.name || '未命名'}</p>
             <p className="mt-1 text-xs text-slate-400">在下方勾选要纳入对比的支出；曲线按勾选顺序堆叠边际增量。当前行草稿不写回。</p>
@@ -1030,28 +1228,25 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate, retirementD
             </p>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-700">本行测算参数</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {formatExpenseMode(draft.mode)} · {formatExpensePayment(draft)}
-                {draft.mode === 'installment' ? ` · ${formatExpenseInstallment(draft)}` : ''}
-              </p>
-              {dirty && <p className="mt-1 text-[11px] font-medium text-amber-700">已相对保存值调整（未写入原数据）</p>}
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-700">本行测算参数</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {formatExpenseMode(draft.mode)} · {formatExpensePayment(draft)}
+                  {draft.mode === 'installment' ? ` · ${formatExpenseInstallment(draft)}` : ''}
+                </p>
+                {dirty && <p className="mt-1 text-[11px] font-medium text-amber-700">已相对保存值调整（未写入原数据）</p>}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {dirty && <button type="button" onClick={() => setDraft(cloneExpenseDraft(expense))} className="text-[11px] font-semibold text-slate-500 hover:text-[#d9654a]">重置</button>}
+                <button type="button" onClick={() => setSettingsOpen((current) => !current)} className="rounded-xl bg-[#17212b] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2a3644]">{settingsOpen ? '收起设置' : '测算设置'}</button>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {dirty && <button type="button" onClick={() => setDraft(cloneExpenseDraft(expense))} className="text-[11px] font-semibold text-slate-500 hover:text-[#d9654a]">重置</button>}
-              <button ref={settingsBtnRef} type="button" onClick={() => setSettingsOpen((current) => !current)} className="rounded-xl bg-[#17212b] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2a3644]">测算设置</button>
-            </div>
+            {/* 同层折叠：避免父 sheet 内再开 FloatPanel */}
             {settingsOpen && (
-              <FloatPanel open={settingsOpen} anchorRef={settingsBtnRef} onClose={() => setSettingsOpen(false)} width={420} maxHeightVh={80} zIndex={90}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h4 className="font-semibold">测算设置</h4>
-                    <p className="mt-1 text-[11px] text-slate-400">仅影响本行草稿，不改已保存支出。</p>
-                  </div>
-                  <button type="button" onClick={() => setSettingsOpen(false)} className="text-xs text-slate-400">关闭</button>
-                </div>
+              <div className="mt-3 border-t border-slate-200 pt-3">
+                <p className="text-[11px] text-slate-400">仅影响本行草稿，不改已保存支出。</p>
                 <div className="mt-3 grid gap-3">
                   <label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={draft.name} onChange={(event) => patchDraft({ name: event.target.value })} /></label>
                   <label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={draft.category} onChange={(event) => patchDraft({ category: event.target.value })} /></label>
@@ -1084,7 +1279,7 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate, retirementD
                   )}
                   <button type="button" onClick={() => setDraft(cloneExpenseDraft(expense))} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#f07f62] hover:text-[#d9654a]">重置为已保存</button>
                 </div>
-              </FloatPanel>
+              </div>
             )}
           </div>
 
@@ -1113,11 +1308,15 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvestRate, retirementD
   );
 }
 
-/** 图表宿主：固定高度 + 可见/尺寸变化时 resize，避免 0×0 或跳转后空白 */
+/** 图表宿主：仅客户端挂载 ECharts + 固定高度 + 可见/尺寸变化时 resize，避免 SSR/hydration 后 0×0 */
 function ChartHost({ option, className = '' }: { option: Record<string, unknown>; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<InstanceType<typeof ReactECharts>>(null);
+  // ponytail: SSR 与首屏一致留空盒，挂载后再画，躲开 echarts DOM 水合不一致
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
+    if (!mounted) return;
     const el = wrapRef.current;
     if (!el) return;
     const resize = () => {
@@ -1136,18 +1335,20 @@ function ChartHost({ option, className = '' }: { option: Record<string, unknown>
       io.disconnect();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [mounted]);
   return (
     <div ref={wrapRef} className={`chart-box overflow-hidden rounded-2xl bg-slate-50 p-2 sm:p-3 ${className}`}>
-      <ReactECharts
-        ref={chartRef}
-        option={option}
-        style={{ height: '100%', width: '100%', minHeight: 220 }}
-        opts={{ renderer: 'canvas' }}
-        notMerge
-        lazyUpdate
-        onChartReady={(chart) => chart.resize()}
-      />
+      {mounted && (
+        <ReactECharts
+          ref={chartRef}
+          option={option}
+          style={{ height: '100%', width: '100%', minHeight: 220 }}
+          opts={{ renderer: 'canvas' }}
+          notMerge
+          lazyUpdate
+          onChartReady={(chart) => chart.resize()}
+        />
+      )}
     </div>
   );
 }
@@ -1163,6 +1364,7 @@ function FloatPanel({
   draggable = false,
   headerTitle,
   mode = 'auto',
+  density = 'panel',
   children,
 }: {
   open: boolean;
@@ -1177,10 +1379,15 @@ function FloatPanel({
   headerTitle?: string;
   /** auto=按断点；popover=PC 锚点浮层；sheet=移动底部抽屉 */
   mode?: 'auto' | 'popover' | 'sheet';
+  /** tip/field 轻量；panel 全套 sheet（仅 panel 抬升 maxHeight） */
+  density?: 'tip' | 'field' | 'panel';
   children: ReactNode;
 }) {
   const isMobile = useIsMobile();
-  const asSheet = mode === 'sheet' || (mode === 'auto' && isMobile);
+  // tip：永不 sheet；field/panel：移动 auto→底卡；仅 panel 用全套抬升
+  const asSheet = density !== 'tip' && (mode === 'sheet' || (mode === 'auto' && isMobile));
+  const liftFloor = asSheet && density === 'panel';
+  const lockBody = asSheet && density === 'panel';
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const userDraggedRef = useRef(false);
@@ -1195,45 +1402,61 @@ function FloatPanel({
     const place = () => {
       if (userDraggedRef.current) return;
       const anchor = anchorRef.current;
-      const maxH = window.innerHeight * ((asSheet ? Math.max(maxHeightVh, 72) : maxHeightVh) / 100);
+      // 键盘弹出后用 visualViewport，避免 sheet 仍按 layout 高度贴底被挡住
+      const vv = window.visualViewport;
+      const viewH = vv?.height ?? window.innerHeight;
+      const viewTop = vv?.offsetTop ?? 0;
+      const maxH = viewH * ((liftFloor ? Math.max(maxHeightVh, 72) : maxHeightVh) / 100);
       const panelH = Math.min(panelRef.current?.offsetHeight ?? 240, maxH);
-      const panelW = asSheet ? window.innerWidth : Math.min(width, window.innerWidth - 32);
+      // field：窄底卡 hug 内容，不全宽；panel：全宽 sheet
+      const panelW = asSheet && density === 'panel'
+        ? window.innerWidth
+        : Math.min(width, window.innerWidth - 16);
       let left: number;
       let top: number;
-      if (asSheet) {
+      if (asSheet && density === 'panel') {
         left = 0;
-        top = Math.max(8, window.innerHeight - panelH);
+        top = viewTop + Math.max(8, viewH - panelH);
+      } else if (asSheet && density === 'field') {
+        // 矮底卡：贴底、水平居中、宽随内容上限
+        left = Math.max(8, (window.innerWidth - panelW) / 2);
+        top = viewTop + Math.max(8, viewH - panelH - 8);
       } else if (center) {
         left = Math.max(8, (window.innerWidth - panelW) / 2);
-        top = Math.max(window.innerHeight * 0.05, (window.innerHeight - panelH) / 2);
+        top = viewTop + Math.max(viewH * 0.05, (viewH - panelH) / 2);
       } else if (anchor) {
         const rect = anchor.getBoundingClientRect();
         left = Math.min(Math.max(8, rect.left), window.innerWidth - panelW - 8);
         top = rect.bottom + 8;
-        if (top + panelH > window.innerHeight - 8) top = Math.max(8, rect.top - panelH - 8);
+        if (top + panelH > viewTop + viewH - 8) top = Math.max(viewTop + 8, rect.top - panelH - 8);
       } else {
         left = Math.max(8, (window.innerWidth - panelW) / 2);
-        top = 80;
+        top = viewTop + 80;
       }
       setPos({ top, left });
     };
-    // 仅 sheet 锁滚动；PC 浮层不锁页面
-    if (asSheet) document.body.classList.add('sheet-open');
+    // 仅 panel sheet 锁滚动；field 矮卡 / tip / PC 不锁
+    if (lockBody) document.body.classList.add('sheet-open');
     else document.body.classList.remove('sheet-open');
     place();
     const raf = window.requestAnimationFrame(() => {
       place();
       window.requestAnimationFrame(place);
     });
+    const vv = window.visualViewport;
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
+    vv?.addEventListener('resize', place);
+    vv?.addEventListener('scroll', place);
     return () => {
       window.cancelAnimationFrame(raf);
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
+      vv?.removeEventListener('resize', place);
+      vv?.removeEventListener('scroll', place);
       document.body.classList.remove('sheet-open');
     };
-  }, [open, anchorRef, width, maxHeightVh, center, asSheet]);
+  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, liftFloor, lockBody]);
 
   useEffect(() => {
     if (!open) return;
@@ -1277,11 +1500,13 @@ function FloatPanel({
   };
 
   if (!open) return null;
-  const sheetMaxVh = asSheet ? Math.max(maxHeightVh, 78) : maxHeightVh;
-  const panelWidth = asSheet
+  const sheetMaxVh = liftFloor ? Math.max(maxHeightVh, 78) : maxHeightVh;
+  const isPanelSheet = asSheet && density === 'panel';
+  const isFieldCard = asSheet && density === 'field';
+  const panelWidth = isPanelSheet
     ? (typeof window !== 'undefined' ? window.innerWidth : width)
-    : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 32 : width);
-  // PC：仅显式标题/可拖时出标题栏；移动 sheet：始终标题+关闭
+    : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width);
+  // PC：仅显式标题/可拖时出标题栏；移动 panel/field：标题+关闭
   const showHeader = asSheet || Boolean(headerTitle) || draggable;
   return createPortal(
     <>
@@ -1289,31 +1514,34 @@ function FloatPanel({
       <div
         ref={panelRef}
         data-float-panel
-        data-ux={asSheet ? 'sheet' : 'popover'}
+        data-ux={isPanelSheet ? 'sheet' : isFieldCard ? 'field-card' : 'popover'}
+        data-density={density}
         role="dialog"
-        aria-modal={asSheet ? 'true' : undefined}
-        className={`fixed flex flex-col overscroll-contain border border-slate-200 bg-white ${asSheet ? 'rounded-t-3xl rounded-b-none border-b-0 shadow-2xl' : 'rounded-2xl shadow-xl'} overflow-hidden`}
+        aria-modal={isPanelSheet ? 'true' : undefined}
+        onFocusCapture={(event) => { if (asSheet) scrollFocusedFieldIntoView(event.target); }}
+        className={`fixed flex flex-col overscroll-contain border border-slate-200 bg-white ${isPanelSheet ? 'rounded-t-3xl rounded-b-none border-b-0 shadow-2xl' : 'rounded-2xl shadow-xl'} overflow-hidden`}
         style={{
           top: pos.top,
           left: pos.left,
           zIndex,
           width: panelWidth,
-          maxHeight: `${sheetMaxVh}vh`,
+          maxHeight: asSheet ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))` : `${sheetMaxVh}vh`,
+          // place() 已按 visualViewport 贴底，勿再叠 --kb-inset
           paddingBottom: asSheet ? 'env(safe-area-inset-bottom, 0px)' : undefined,
         }}
       >
-        {asSheet && <div className="sheet-handle" aria-hidden />}
+        {isPanelSheet && <div className="sheet-handle" aria-hidden />}
         {showHeader && (
           <div
             onMouseDown={onHeaderMouseDown}
-            className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 ${draggable && !asSheet ? 'cursor-move select-none' : ''}`}
+            className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 ${isFieldCard ? 'py-2.5' : 'py-3'} ${draggable && !asSheet ? 'cursor-move select-none' : ''}`}
             title={draggable && !asSheet ? '按住拖动面板' : undefined}
           >
-            <h3 className="min-w-0 truncate text-base font-semibold text-slate-800">{headerTitle || '编辑'}</h3>
+            <h3 className={`min-w-0 truncate font-semibold text-slate-800 ${isFieldCard ? 'text-sm' : 'text-base'}`}>{headerTitle || '编辑'}</h3>
             <button type="button" onClick={onClose} className={`shrink-0 rounded-full px-3 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 ${asSheet ? 'touch-btn' : ''}`}>关闭</button>
           </div>
         )}
-        <div className={`min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain ${showHeader || asSheet ? 'p-4' : 'p-4'}`}>
+        <div className={`min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain ${isFieldCard ? 'p-3' : 'p-4'}`}>
           {children}
         </div>
       </div>
@@ -1329,18 +1557,18 @@ function Editable({ label, value, min, max, step, suffix = '', onChange }: Edita
   const position = max === min ? 0 : Math.round((value - min) / (max - min) * 100);
   const commit = (nextValue = Number(draft)) => { const next = clamp(nextValue, min, max); setDraft(String(next)); onChange(next); window.dispatchEvent(new Event('money-manage-save')); };
   const display = `${Number.isInteger(value) ? value.toLocaleString('zh-CN') : value.toFixed(1)}${suffix}`;
-  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => { setDraft(String(value)); setOpen((current) => !current); }} onDoubleClick={() => { setDraft(String(value)); setOpen(true); }} title="点击打开编辑" className="field-click self-start sm:self-auto">{display}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} headerTitle={label}><div className="flex items-center justify-between gap-3"><label className="flex-1 text-xs text-slate-500">精确值<input autoFocus type="number" min={min} max={max} step={step} value={draft} onChange={(event) => { const next = event.target.value; setDraft(next); const num = Number(next); if (Number.isFinite(num)) commit(num); }} onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }} className="field-input mt-1" /></label><span className="pt-5 font-mono text-sm text-slate-500">{suffix}</span></div><div className="mt-3 flex items-center gap-2"><input aria-label={`${label}百分比位置`} className="money-slider" type="range" min="0" max="100" step="1" value={position} onChange={(event) => commit(min + (max - min) * Number(event.target.value) / 100)} /><span className="w-12 text-right text-xs text-slate-500">{position}%</span></div></FloatPanel></div>;
+  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => { setDraft(String(value)); setOpen((current) => !current); }} onDoubleClick={() => { setDraft(String(value)); setOpen(true); }} title="点击打开编辑" className="field-click self-start sm:self-auto">{display}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} maxHeightVh={48} headerTitle={label} density="field"><div className="flex items-center justify-between gap-3"><label className="flex-1 text-xs text-slate-500">精确值<input autoFocus type="number" min={min} max={max} step={step} value={draft} onChange={(event) => { const next = event.target.value; setDraft(next); const num = Number(next); if (Number.isFinite(num)) commit(num); }} onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }} className="field-input mt-1" /></label><span className="pt-5 font-mono text-sm text-slate-500">{suffix}</span></div><div className="mt-3 flex items-center gap-2"><input aria-label={`${label}百分比位置`} className="money-slider" type="range" min="0" max="100" step="1" value={position} onChange={(event) => commit(min + (max - min) * Number(event.target.value) / 100)} /><span className="w-12 text-right text-xs text-slate-500">{position}%</span></div></FloatPanel></div>;
 }
 function DateEditable({ label, value, min, onChange }: { label: string; value: string; min?: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className="field-click self-start sm:self-auto">{value || '未设置'}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} headerTitle={label}><label className="block text-xs text-slate-500">选择日期<input autoFocus type="date" min={min} value={value} onChange={(event) => { onChange(event.target.value); window.dispatchEvent(new Event('money-manage-save')); }} className="field-input mt-2" /></label></FloatPanel></div>;
+  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className="field-click self-start sm:self-auto">{value || '未设置'}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} maxHeightVh={40} headerTitle={label} density="field"><label className="block text-xs text-slate-500">选择日期<input autoFocus type="date" min={min} value={value} onChange={(event) => { onChange(event.target.value); window.dispatchEvent(new Event('money-manage-save')); }} className="field-input mt-2" /></label></FloatPanel></div>;
 }
 function SelectEditable({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const display = options.find((item) => item.value === value)?.label ?? value;
-  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className="field-click self-start sm:self-auto">{display}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} headerTitle={label}><label className="block text-xs text-slate-500">选择<select autoFocus value={value} onChange={(event) => { onChange(event.target.value); window.dispatchEvent(new Event('money-manage-save')); }} className="field-input mt-1">{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label></FloatPanel></div>;
+  return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row"><span>{label}</span><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className="field-click self-start sm:self-auto">{display}</button></span><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} maxHeightVh={40} headerTitle={label} density="field"><label className="block text-xs text-slate-500">选择<select autoFocus value={value} onChange={(event) => { onChange(event.target.value); window.dispatchEvent(new Event('money-manage-save')); }} className="field-input mt-1">{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label></FloatPanel></div>;
 }
 const saveEvent = () => window.dispatchEvent(new Event('money-manage-save'));
 
@@ -1455,10 +1683,10 @@ function InstallmentSettingsPanel({ expense, onChange, retirementDate }: { expen
     </div>
   </div>;
 }
-function ClickField({ display, panel, width = 280, wrap = false, label, className }: { display: string; panel: ReactNode; width?: number; wrap?: boolean; label?: string; className?: string }) {
+function ClickField({ display, panel, width = 280, wrap = false, label, className, density = 'field' }: { display: string; panel: ReactNode; width?: number; wrap?: boolean; label?: string; className?: string; density?: 'tip' | 'field' | 'panel' }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  return <div className="relative inline-block max-w-full"><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className={className ?? `field-click max-w-full text-left ${wrap ? 'field-click-wrap' : 'truncate'}`}>{display}</button><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={width} headerTitle={label}>{panel}</FloatPanel></div>;
+  return <div className="relative inline-block max-w-full"><button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击打开编辑" className={className ?? `field-click max-w-full text-left ${wrap ? 'field-click-wrap' : 'truncate'}`}>{display}</button><FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={width} maxHeightVh={density === 'panel' ? 70 : 48} headerTitle={label} density={density}>{panel}</FloatPanel></div>;
 }
 
 function Metric({ label, value, detail, negative = false }: { label: string; value: string; detail: string; negative?: boolean }) { return <div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span className="flex items-center gap-1">{label}<InfoTip>{detail}</InfoTip></span><span className={`field-readonly ${negative ? 'text-red-500' : ''}`}>{value}</span></span></div>; }
