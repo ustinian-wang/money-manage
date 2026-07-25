@@ -4,6 +4,8 @@
 
 主界面：`app/page.tsx`（Next.js App Router 单页）。仓库：<https://github.com/ustinian-wang/money-manage>
 
+> **不以离线缓存为目标**：不注册 Service Worker 做页面/壳缓存；刷新即拿最新文档与资源（「保存到桌面」仅保留 manifest / iOS 引导）。
+
 > 个税 / 五险一金为月度估算，结果仅供个人规划参考，不是完整 CFP / 投顾模型。
 
 ---
@@ -71,7 +73,15 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 ### 5. 本地自动保存与云同步
 
-改参后约 400ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）。**已登录**时同时 PUT `/api/profile` 到本人云端；未登录只留本地试玩。
+- **访客（未登录）**：改参约 400ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）；**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。
+- **已登录**：同时写 localStorage，并 PUT `/api/profile` 到本人云端。
+- **注册认领**：注册成功且云端为空时，把当前内存/本机草稿写入该账号。
+- **登录空账号**：二次确认是否绑定当前访客草稿；已有云端数据则用云端。
+
+### 6. 重启网站（纯客户端）
+
+顶栏「更多 → 重启网站」：确认后 **仅** unregister Service Worker、清空 Cache Storage，再带 cache-bust 硬刷新。  
+**不会**删除 localStorage 草稿、**不会**清登录 cookie、**不会**调用后端 restart。用于部署后浏览器仍拿旧资源时自救。
 
 ---
 
@@ -101,14 +111,16 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 ## 数据与隐私
 
+- **访客可进**：打开即可用主界面（示例 / 本机草稿）；登出后回到访客，不强制全屏门禁
 - **多用户**：注册 / 登录后，服务端只读写当前会话用户的数据（HttpOnly cookie `mm_session`）
-- **未登录试玩**：仅浏览器 `localStorage`（键 `money-manage-profile`）；`/api/profile` 等返回 401，不落云端
-- **首次登录绑定**：账号云端为空时，自动把当前本地试玩数据写入该用户
+- **本地缓存**：访客与登录都会写 `localStorage`（键 `money-manage-profile`）；`/api/profile` 须登录
+- **注册认领 / 空账号绑定**：见上文「本地自动保存与云同步」；登录空账号有二次确认
+- **重启网站**：纯客户端清 SW/Cache 后刷新；不碰草稿与会话
 - **服务端键**：
   - `user:{id}` / `idx:username:*` / `idx:email:*` / `session:{token}`
   - `user:{id}/financial-profile.json` 与 `user:{id}/backups/*.json`
   - 本地 Node：落在 `data/` 同名路径；Cloudflare：Workers KV `MONEY_DATA`
-- 密码：PBKDF2-SHA256，不明文。无邮箱验证、无找回密码（已知局限）
+- 密码：PBKDF2-SHA256，不明文。无邮箱、无找回密码（已知局限）
 - 仓库内可能有 `data/`、`logs/`；`.gitignore` 已忽略备份与日志。个人财务 JSON **不要提交**
 
 ---
@@ -117,10 +129,10 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 | 字段 | 规则 |
 | --- | --- |
-| 用户名 | 3–32 位，`[A-Za-z0-9_]`，全局唯一 |
-| 邮箱 | 合法邮箱格式，全局唯一 |
-| 密码 | 8–72 位 |
-| 登录名 | 用户名或邮箱均可 |
+| 账号 | 必填，最长 **32** 位；无最短、无字符集限制；全局唯一 |
+| 密码 | 必填，最长 **72** 位；无最短长度 |
+| 邮箱 | **不要求**（旧数据可兼容；新注册不填） |
+| 登录 | 账号 + 密码 |
 
 ---
 
@@ -143,7 +155,8 @@ npm run deploy       # OpenNext 构建并发布到 Workers
 - 剩余可支配占比曲线分母固定为当前可支配收入，**未**随快照工资节点重算净收入
 - 个税、社保、退休为简化估算，**非**完整理财规划师模型
 - 鉴权：无邮箱验证、无找回密码；登录/注册仅有基础按 IP 频率限制
-- 登出后内存中仍可能短暂保留刚才的数字，刷新后回退本地试玩草稿（云端需重新登录）
+- 登出后回到访客主界面（本机草稿可继续）；云端数据需重新登录后读取
+- 「重启网站」无法强制清掉浏览器 HTTP 磁盘缓存的全部条目（依赖 SW/Cache API + 硬刷新）
 
 ---
 
