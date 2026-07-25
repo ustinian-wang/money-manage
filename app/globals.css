@@ -146,6 +146,24 @@ html.kb-open .auth-gate-root {
   border-color: #17212b;
   color: #fff;
 }
+/* 桌面：顶栏+chips 轻吸顶，scroll spy 可见；chip 不拉满整行 */
+@media (min-width: 640px) {
+  .mobile-sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(246, 248, 245, 0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e8eeea;
+  }
+  .scroll-mt-24 { scroll-margin-top: 5.5rem; }
+  .mobile-section-nav .mobile-nav-chip {
+    flex: 0 1 auto;
+    min-width: 4.75rem;
+    padding: 0.45rem 1.1rem;
+  }
+}
 .expense-meta-chip {
   display: inline-flex;
   align-items: center;
@@ -190,7 +208,7 @@ html.kb-open .auth-gate-root {
   .chart-year-labels { font-size: 0.75rem; }
   .cell-wrap { max-width: 10rem; }
   .expense-list { max-height: 32rem; }
-  /* header + 分区 chips 一并吸顶 */
+  /* header + 分区 chips 一并吸顶（移动） */
   .mobile-sticky-top {
     position: sticky;
     top: 0;
@@ -330,8 +348,8 @@ html.kb-open .auth-gate-root {
     border-top: 1px solid #edf1ee;
   }
   .section-label { padding-top: 0.9rem; margin-top: 0.35rem; }
-  /* 吸顶后分区锚点留白 */
-  .scroll-mt-24 { scroll-margin-top: 6.5rem; }
+  /* 吸顶后分区锚点留白：对齐 header+条幅+chips（实测约 10.5rem） */
+  .scroll-mt-24 { scroll-margin-top: 11rem; }
 }
 table { border-collapse: collapse; min-width: 580px; width: 100%; }
 th, td { border-bottom: 1px solid #edf1ee; padding: .7rem .5rem; text-align: left; font-size: .8rem; white-space: nowrap; }

@@ -5,11 +5,14 @@ import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom';
 import ReactECharts from 'echarts-for-react';
 import InstallToDesktop from './InstallToDesktop';
-import AuthBar, { logoutSession, type AuthMode, type AuthUser } from './AuthBar';
+import AuthBar, { logoutSession, type AuthMeta, type AuthMode, type AuthUser } from './AuthBar';
 import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../lib/useVisualViewport';
 import { FLOAT_MARGIN, placeCenteredInViewport, placeNearAnchor, placeSheetAtBottom, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
+import { buildClaimSummaryLines, emptyClaimProfilePatch, parseClaimMode } from '../lib/claimGate';
+import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
+import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
 import {
@@ -80,11 +83,8 @@ const cloneExpenseDraft = (source: Expense): Expense => {
   if (next.mode === 'one_time') next.endDate = next.startDate;
   return next;
 };
-const initialExpenses: Expense[] = [
-  { id: 'parent-support', name: '上交父母', category: '家庭支持', mode: 'fixed', amount: 3000, startDate: todayDateKey() },
-  { id: 'daily-life', name: '日常生活', category: '生活', mode: 'fixed', amount: 4200, startDate: todayDateKey() },
-  { id: 'car-installment', name: '车辆分期', category: '交通', mode: 'installment', amount: 0, total: 150000, downPayment: 45000, term: 36, interest: 4.2, repaymentMode: 'equal_principal_interest', startDate: todayDateKey(), followRetirement: false },
-];
+// P1-2：轻演示（房租+餐饮）；日期运行时补
+const initialExpenses: Expense[] = LIGHT_DEMO_EXPENSES.map((row) => ({ ...row, startDate: todayDateKey() }));
 const retirementDefaults = { enabled: false, birthDate: '1996-01-01', identity: 'male', insuranceStartDate: '2016-01-01', contributionYears: 20, base: 7380 };
 const addMonths = (date: string, months: number) => { const next = new Date(`${date || new Date().toISOString().slice(0, 10)}T00:00:00`); next.setMonth(next.getMonth() + months); return next.toISOString().slice(0, 10); };
 const retirementDateFor = (birthDate: string, identity: string) => { const birth = new Date(`${birthDate}T00:00:00`); if (Number.isNaN(birth.getTime())) return ''; const age = identity === 'female-worker' ? 55 : identity === 'female-cadre' ? 58 : 63; birth.setFullYear(birth.getFullYear() + age); return birth.toISOString().slice(0, 10); };
@@ -344,11 +344,11 @@ function forecastExpenseShareByMonth(
 
 export default function HomePage() {
   const [salary, setSalary] = useState(16667);
-  const [cash, setCash] = useState(100000);
+  const [cash, setCash] = useState(LIGHT_DEMO_ASSETS.cash);
   const [emergencyMonths, setEmergencyMonths] = useState(0);
-  const [totalAssets, setTotalAssets] = useState(500000);
-  const [invest, setInvest] = useState(120000);
-  const [investRatio, setInvestRatio] = useState(24);
+  const [totalAssets, setTotalAssets] = useState(LIGHT_DEMO_ASSETS.totalAssets);
+  const [invest, setInvest] = useState(LIGHT_DEMO_ASSETS.invest);
+  const [investRatio, setInvestRatio] = useState(LIGHT_DEMO_ASSETS.investRatio);
   const [returnRate, setReturnRate] = useState(3.2);
   const [reinvestMode, setReinvestMode] = useState<ReinvestMode>(DEFAULT_REINVEST.mode);
   const [reinvestRate, setReinvestRate] = useState(DEFAULT_REINVEST.rate);
@@ -392,11 +392,34 @@ export default function HomePage() {
   // 应急资金区块默认收起；仅本地 UI，不持久化
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const isNarrow = useIsMobile();
-  // 顶栏「更多」：收纳快照 / 安装 / 已保存 / 登出·登录
+  // 顶栏下拉菜单（原「更多」文案）：收纳快照 / 安装 / 已保存 / 登出·登录
   const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
   const [authOpenRequest, setAuthOpenRequest] = useState<AuthMode | null>(null);
-  // 移动端分区 chips 高亮：IntersectionObserver 跟踪当前可视分区
+  // 分区 chips scroll spy：滚动高亮 + 点击立即切（P1-4）；桌面/移动同逻辑
+  const SECTION_IDS = ['sec-params', 'sec-expenses', 'sec-charts'] as const;
   const [activeSection, setActiveSection] = useState('sec-params');
+  const stickyTopRef = useRef<HTMLDivElement | null>(null);
+  // 点击 chip 后短暂锁高亮，避免 smooth scroll 途中 IO 抢回旧区
+  const spyLockUntilRef = useRef(0);
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    spyLockUntilRef.current = Date.now() + 1200;
+    const el = document.getElementById(id);
+    if (!el) return;
+    // 优先 CSS scroll-margin；再按实测 sticky 高度兜底校正
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const stickyPx = stickyTopRef.current?.getBoundingClientRect().height
+      ?? (isNarrow ? 168 : 72);
+    window.requestAnimationFrame(() => {
+      const top = el.getBoundingClientRect().top;
+      if (Math.abs(top - stickyPx) > 24) {
+        window.scrollTo({
+          top: stickyAwareScrollY(top, window.scrollY, stickyPx),
+          behavior: 'smooth',
+        });
+      }
+    });
+  };
   // 列表删除二次确认（支出桌面/移动 + 快照）；复用 FloatPanel field 矮卡
   const [pendingDelete, setPendingDelete] = useState<null | { kind: 'expense' | 'snapshot'; id: string; title: string; message: string }>(null);
   const deleteAnchorRef = useRef<HTMLElement | null>(null);
@@ -405,30 +428,44 @@ export default function HomePage() {
     setPendingDelete(payload);
   };
   useEffect(() => {
-    if (!isNarrow) return;
-    const ids = ['sec-params', 'sec-expenses', 'sec-charts'];
-    const ratios = new Map<string, number>();
+    if (!hydrated) return;
+    const ids = [...SECTION_IDS];
+    const ratios: Record<string, number> = Object.fromEntries(ids.map((id) => [id, 0]));
+    const readDistances = () => {
+      const mid = window.innerHeight / 2;
+      const distances: Record<string, number> = {};
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        distances[id] = Math.abs(rect.top + rect.height / 2 - mid);
+      }
+      return distances;
+    };
+    const applySpy = () => {
+      if (Date.now() < spyLockUntilRef.current) return;
+      setActiveSection(pickActiveSection(ids, ratios, readDistances()));
+    };
+    // 移动 sticky 更高：收紧上沿；桌面仅顶栏，放宽一点
+    const rootMargin = isNarrow ? '-22% 0px -48% 0px' : '-10% 0px -55% 0px';
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        ratios.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+        ratios[entry.target.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
       }
-      let bestId = 'sec-params';
-      let bestRatio = -1;
-      for (const id of ids) {
-        const ratio = ratios.get(id) ?? 0;
-        if (ratio > bestRatio) {
-          bestRatio = ratio;
-          bestId = id;
-        }
-      }
-      if (bestRatio > 0) setActiveSection(bestId);
-    }, { rootMargin: '-18% 0px -55% 0px', threshold: [0, 0.15, 0.35, 0.55] });
+      applySpy();
+    }, { rootMargin, threshold: [0, 0.1, 0.25, 0.4, 0.55, 0.75] });
     for (const id of ids) {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     }
-    return () => observer.disconnect();
-  }, [isNarrow]);
+    // 兜底：纯滚动时 ratio 可能全 0，仍按中线最近更新
+    window.addEventListener('scroll', applySpy, { passive: true });
+    applySpy();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', applySpy);
+    };
+  }, [isNarrow, hydrated]);
 
   const applyProfileData = (data: Record<string, unknown>) => {
       if (data.salary) setSalary(Number(data.salary)); if (data.cash !== undefined) setCash(Number(data.cash));
@@ -568,8 +605,8 @@ export default function HomePage() {
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
   };
 
-  // 登录/注册成功：云端有数据用云端；空账号则认领当前访客草稿（注册直接认领；登录二次确认）
-  const handleAuthed = async (user: AuthUser, meta: { from: AuthMode }) => {
+  // 登录/注册成功：云端有数据用云端；空账号按认领方式写入（P0-1）
+  const handleAuthed = async (user: AuthUser, meta: AuthMeta) => {
     setAuthUser(user);
     setAuthReady(true);
     setHeaderMoreOpen(false);
@@ -592,8 +629,10 @@ export default function HomePage() {
           toBind = { ...profile, ...parsed, snapshots: (parsed.snapshots as Snapshot[]) || profile.snapshots } as typeof profile;
         }
       } catch { /* 用内存 profile */ }
-      // 登录已有空账号：二次确认是否绑定访客草稿；注册则直接认领
-      if (meta.from === 'login') {
+      // 注册：认领当前 or 清空示例；登录空账号仍二次确认
+      if (meta.from === 'register' && parseClaimMode(meta.claimMode) === 'clear') {
+        toBind = { ...profile, ...emptyClaimProfilePatch(), snapshots: [] } as typeof profile;
+      } else if (meta.from === 'login') {
         const ok = window.confirm(
           '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。',
         );
@@ -676,6 +715,15 @@ export default function HomePage() {
     [salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, invest, returnRate, emergencyMonths, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates],
   );
   const result = useMemo(() => computeFinanceResult(financeInput), [financeInput]);
+
+  const claimSummaryLines = useMemo(() => buildClaimSummaryLines({
+    takeHomeOrNet: takeHomeIncome ?? result.net,
+    totalAssets,
+    expenseNames: expenses.map((e) => e.name),
+    expenseMonthlyApprox: result.monthlyExpenses,
+  }), [takeHomeIncome, result.net, result.monthlyExpenses, totalAssets, expenses]);
+
+
   // 切到简便：若尚未声明到手，用详细套 detailNet 播种（不碰详细字段）
   const setIncomeViewModeSafe = (mode: IncomeViewMode) => {
     if (mode === 'takehome') {
@@ -1048,7 +1096,7 @@ export default function HomePage() {
   }
   // 访客与登录均可进主应用；未登录用示例/本机草稿
   return <main className="min-h-screen bg-[#f6f8f5] text-[#17212b] pb-[env(safe-area-inset-bottom,0px)]">
-    <div className="mobile-sticky-top">
+    <div className="mobile-sticky-top" ref={stickyTopRef}>
     <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div>
@@ -1058,10 +1106,15 @@ export default function HomePage() {
         </div>
       </div>
       <div className="relative flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
-        <div className="flex min-h-9 shrink-0 items-center gap-2 rounded-full bg-[#17212b] px-2.5 py-1.5 text-white sm:px-3">
-          <span className="text-[11px] text-slate-300">剩余</span>
+        <button
+          type="button"
+          className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#17212b] px-2.5 py-1.5 text-left text-white sm:gap-2 sm:px-3"
+          title="剩余可支配占比 = 100% − 本月支出占可支配收入比例（与走势图同口径）"
+          aria-label={`剩余可支配 ${result.remainDisposablePct}%`}
+        >
+          <span className="max-w-[4.5rem] text-[10px] leading-tight text-slate-300 sm:max-w-none sm:text-[11px]">剩余可支配</span>
           <strong className="text-base tabular-nums leading-none sm:text-lg">{result.remainDisposablePct}<span className="text-[11px] font-normal text-slate-400">%</span></strong>
-        </div>
+        </button>
         {authUser ? (
           <span className="max-w-[5.5rem] truncate rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 sm:max-w-[10rem]" title={authUser.username}>{authUser.username}</span>
         ) : (
@@ -1073,19 +1126,34 @@ export default function HomePage() {
             registerOnly={isNarrow}
             openRequest={authOpenRequest}
             onOpenRequestConsumed={() => setAuthOpenRequest(null)}
+            claimSummaryLines={claimSummaryLines}
             onAuthed={(user, meta) => { void handleAuthed(user, meta); }}
             onLogout={handleLogout}
           />
         )}
         <div className="relative">
+          {/* 下拉箭头 = 原「更多」：打开同一菜单（快照 / 安装 / 重启 / 登录·登出） */}
           <button
             type="button"
             aria-expanded={headerMoreOpen}
             aria-haspopup="menu"
+            aria-label={headerMoreOpen ? '收起菜单' : '打开菜单'}
+            title="打开菜单"
             onClick={() => setHeaderMoreOpen((v) => !v)}
-            className="touch-btn rounded-full border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+            className="touch-btn grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
           >
-            更多
+            <svg
+              className={`h-4 w-4 transition-transform ${headerMoreOpen ? 'rotate-180' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
           {headerMoreOpen && (
             <>
@@ -1174,17 +1242,17 @@ export default function HomePage() {
     </header>
     {!authUser && (
       <div className="page-pad mx-auto max-w-[1920px] px-3 pb-1 sm:px-6 lg:px-10">
-        <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 注册后可认领到你的账号</p>
+        <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的 · 注册后可认领</p>
       </div>
     )}
-    <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:hidden" aria-label="页面分区">
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} onClick={() => document.getElementById('sec-params')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>参数</button>
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} onClick={() => document.getElementById('sec-expenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>支出</button>
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-charts' ? ' is-active' : ''}`} onClick={() => document.getElementById('sec-charts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>走势</button>
+    <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:max-w-md sm:justify-start lg:max-w-[1920px]" aria-label="页面分区">
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-params' ? 'true' : undefined} onClick={() => scrollToSection('sec-params')}>参数</button>
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-expenses' ? 'true' : undefined} onClick={() => scrollToSection('sec-expenses')}>支出</button>
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-charts' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-charts' ? 'true' : undefined} onClick={() => scrollToSection('sec-charts')}>走势</button>
     </nav>
     </div>
     <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
-      <div className="min-w-0 space-y-2"><section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="财务参数" tip={"收入、资产、应急资金、退休四组。\n点字段打开浮层，改完即生效并自动保存。"} /></div><div className="section-label flex flex-wrap items-center gap-2">收入信息<select aria-label="收入录入方式" className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700" value={incomeViewMode} onChange={(event) => setIncomeViewModeSafe(event.target.value as IncomeViewMode)}><option value="detail">关心五险一金</option><option value="takehome">只看到手</option></select></div>{incomeViewMode === 'takehome' ? (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="月可支配收入" value={takeHomeIncome ?? result.net} min={0} max={200000} step={1} onChange={(value) => { setTakeHomeIncome(value); }} /><Breakdown label="说明" value="简便模式" detail={"结余与资产预测直接用你填的月可支配收入。\n无需税前工资与五险一金；可切回详细口径。"} /></div>) : (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={200000} step={1} onChange={setSalary} /><Editable label="五险基数" value={effectiveInsuranceBase} min={0} max={200000} step={1} onChange={setContributionBase} /><Editable label="公积金基数" value={effectiveHousingFundBase} min={0} max={200000} step={1} onChange={setHousingFundBase} /><SocialBreakdown salary={salary} rows={result.socialRows} total={result.social} socialEnabled={socialEnabled} onSocialEnabledChange={(value) => { setSocialEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }} insuranceBase={effectiveInsuranceBase} housingFundBase={effectiveHousingFundBase} insuranceFollowSalary={contributionBase == null} housingFollowSalary={housingFundBase == null} onInsuranceFollowSalary={() => { setContributionBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFollowSalary={() => { setHousingFundBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onInsuranceBaseChange={(value) => { setContributionBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFundBaseChange={(value) => { setHousingFundBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 − 五险一金 − 本月个税" /></div>)}<div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><AssetLinkedEditor totalAssets={totalAssets} cash={cash} invest={invest} investRatio={investRatio} onTotal={updateTotalAssets} onCash={updateCash} onInvestAmount={updateInvestByAmount} onInvestRatio={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} /></div><div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={emergencyOpen} onClick={() => setEmergencyOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setEmergencyOpen((current) => !current); } }}><span className="flex-1">应急资金</span><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={emergencyOpen} onClick={(event) => { event.stopPropagation(); setEmergencyOpen((current) => !current); }}><span>{emergencyOpen ? '收起' : '展开'}</span><span aria-hidden="true">{emergencyOpen ? '∧' : '∨'}</span></button></div>{emergencyOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入 − 本月全部支出" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail={ADJUSTED_AVAILABLE_ASSETS_TIP} /></div>}<div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={retirementOpen} onClick={() => setRetirementOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRetirementOpen((current) => !current); } }}><span className="flex-1">退休与社保</span><label className="ml-2 inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600" onClick={(event) => event.stopPropagation()} title="开启后参与退休日推算；分期可勾选「须在退休前还清」"><input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={retirement.enabled} onChange={(event) => updateRetirement({ enabled: event.target.checked })} aria-label="启用退休与社保规划" /><span>启用规划</span></label><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={retirementOpen} onClick={(event) => { event.stopPropagation(); setRetirementOpen((current) => !current); }}><span>{retirementOpen ? '收起' : '展开'}</span><span aria-hidden="true">{retirementOpen ? '∧' : '∨'}</span></button></div>{retirementOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><Editable label="广州 2026 基数" value={retirement.base} min={0} max={200000} step={1} onChange={(value) => updateRetirement({ base: value })} /><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div>}</section>
+      <div className="min-w-0 space-y-2"><section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="财务参数" tip={"收入、资产、应急资金、退休四组。\n点字段打开浮层，改完即生效并自动保存。"} /></div><div className="section-label flex flex-wrap items-center gap-2">收入信息<select aria-label="收入录入方式" className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700" value={incomeViewMode} onChange={(event) => setIncomeViewModeSafe(event.target.value as IncomeViewMode)}><option value="detail">关心五险一金</option><option value="takehome">只看到手</option></select></div>{incomeViewMode === 'takehome' ? (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><div className="min-w-0"><Editable label="实际可花金额" value={takeHomeIncome ?? result.net} min={0} max={200000} step={1} onChange={(value) => { setTakeHomeIncome(value); }} /><p className="mt-1 text-[11px] leading-snug text-slate-400">填银行卡到账 / 实际可花金额{!authUser ? <span className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-semibold text-amber-700">演示值</span> : null}</p></div><Breakdown label="说明" value="简便模式" detail={"结余与资产预测直接用你填的实际可花金额。\n无需税前工资与五险一金；可切回详细口径。"} /></div>) : (<div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="税前工资" value={salary} min={0} max={200000} step={1} onChange={setSalary} /><Editable label="五险基数" value={effectiveInsuranceBase} min={0} max={200000} step={1} onChange={setContributionBase} /><Editable label="公积金基数" value={effectiveHousingFundBase} min={0} max={200000} step={1} onChange={setHousingFundBase} /><SocialBreakdown salary={salary} rows={result.socialRows} total={result.social} socialEnabled={socialEnabled} onSocialEnabledChange={(value) => { setSocialEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }} insuranceBase={effectiveInsuranceBase} housingFundBase={effectiveHousingFundBase} insuranceFollowSalary={contributionBase == null} housingFollowSalary={housingFundBase == null} onInsuranceFollowSalary={() => { setContributionBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFollowSalary={() => { setHousingFundBase(null); window.dispatchEvent(new Event('money-manage-save')); }} onInsuranceBaseChange={(value) => { setContributionBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingFundBaseChange={(value) => { setHousingFundBase(value); window.dispatchEvent(new Event('money-manage-save')); }} onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }} /><TaxBreakdown salary={salary} social={result.social} tax={result.tax} deductions={result.deductions} onRentChange={setRentEnabled} onElderlyChange={setElderlyEnabled} /><Breakdown label="可支配收入" value={money(result.net)} detail="税前工资 − 五险一金 − 本月个税" /></div>)}<div className="section-label">资产与理财</div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><AssetLinkedEditor totalAssets={totalAssets} cash={cash} invest={invest} investRatio={investRatio} onTotal={updateTotalAssets} onCash={updateCash} onInvestAmount={updateInvestByAmount} onInvestRatio={updateInvestByRatio} /><Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" onChange={setReturnRate} /><ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} /></div><div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={emergencyOpen} onClick={() => setEmergencyOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setEmergencyOpen((current) => !current); } }}><span className="min-w-0 flex-1">应急资金{!emergencyOpen && <span className="ml-2 text-[11px] font-normal text-slate-400">{emergencyMonths} 月 · 点开看结余</span>}</span><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={emergencyOpen} onClick={(event) => { event.stopPropagation(); setEmergencyOpen((current) => !current); }}><span>{emergencyOpen ? '收起' : '展开'}</span><span aria-hidden="true">{emergencyOpen ? '∧' : '∨'}</span></button></div>{emergencyOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><Editable label="应急资金月数" value={emergencyMonths} min={0} max={36} step={0.5} suffix=" 个月" onChange={setEmergencyMonths} /><Metric label="月度剩余" value={money(result.surplus)} detail="可支配收入 − 本月全部支出" negative={result.surplus < 0} /><Metric label="调整后可用资产" value={money(result.adjustedAvailableAssets)} detail={ADJUSTED_AVAILABLE_ASSETS_TIP} /></div>}<div className="section-label flex cursor-pointer items-center gap-2" role="button" tabIndex={0} aria-expanded={retirementOpen} onClick={() => setRetirementOpen((current) => !current)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRetirementOpen((current) => !current); } }}><span className="flex-1">退休与社保</span><label className="ml-2 inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600" onClick={(event) => event.stopPropagation()} title="开启后参与退休日推算；分期可勾选「须在退休前还清」"><input type="checkbox" className="h-3.5 w-3.5 accent-[#f07f62]" checked={retirement.enabled} onChange={(event) => updateRetirement({ enabled: event.target.checked })} aria-label="启用退休与社保规划" /><span>启用规划</span></label><button type="button" className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs text-slate-400" aria-expanded={retirementOpen} onClick={(event) => { event.stopPropagation(); setRetirementOpen((current) => !current); }}><span>{retirementOpen ? '收起' : '展开'}</span><span aria-hidden="true">{retirementOpen ? '∧' : '∨'}</span></button></div>{retirementOpen && <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"><DateEditable label="出生日期" value={retirement.birthDate} onChange={(value) => updateRetirement({ birthDate: value })} /><SelectEditable label="身份" value={retirement.identity} options={[{ value: 'male', label: '男性' }, { value: 'female-worker', label: '女性职工' }, { value: 'female-cadre', label: '女性干部' }]} onChange={(value) => updateRetirement({ identity: value })} /><DateEditable label="参保开始日期" value={retirement.insuranceStartDate} onChange={(value) => updateRetirement({ insuranceStartDate: value })} /><Editable label="计划缴费年限" value={retirement.contributionYears} min={0} max={20} step={1} suffix=" 年" onChange={(value) => updateRetirement({ contributionYears: value })} /><Editable label="广州 2026 基数" value={retirement.base} min={0} max={200000} step={1} onChange={(value) => updateRetirement({ base: value })} /><div className="relative block"><span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600"><span>预计退休</span><span className="field-readonly">{retirementDate || '未设置'}</span></span></div></div>}</section>
       <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="支出管理" tip={"表格上仅可改名称、分类。\n类型 / 金额 / 分期等请点「编辑」；新增需确认后入表。\n「分析」可勾选多笔支出并堆叠边际影响。"} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><ClickField display={expense.name || '未命名'} panel={<label className="block text-xs text-slate-500">名称<input className="field-input mt-1" value={expense.name} onChange={(event) => { updateExpense(expense.id, { name: event.target.value }); saveEvent(); }} /></label>} /></td><td><ClickField display={expense.category || '未分类'} panel={<label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={expense.category} onChange={(event) => { updateExpense(expense.id, { category: event.target.value }); saveEvent(); }} /></label>} /></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
 <div className="mt-4 space-y-3 md:hidden">{expenses.map((expense) => (
           <div key={expense.id} data-expense-anchor={expense.id} className="expense-card space-y-2">
@@ -2123,9 +2191,14 @@ function ReinvestEditor({
   return (
     <div className="relative block">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
-        <span className="flex items-center gap-1">
-          闲钱投资
-          <InfoTip>{'结余中每月投入理财的部分。\n可选百分比（结余×%）或固定月额（≤当月结余）。'}</InfoTip>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex items-center gap-1">
+            结余再投入
+            <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（≤当月结余）。'}</InfoTip>
+          </span>
+          <span className="text-[11px] font-normal leading-snug text-slate-400">
+            {isPercent ? `结余的 ${Number.isInteger(setting.rate) ? setting.rate : setting.rate.toFixed(1)}% 进理财` : '每月固定额进理财'}
+          </span>
         </span>
         <button
           ref={anchorRef}
@@ -2138,7 +2211,7 @@ function ReinvestEditor({
           {display}
         </button>
       </span>
-      <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={300} maxHeightVh={52} headerTitle="闲钱投资" density="field">
+      <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={300} maxHeightVh={52} headerTitle="结余再投入" density="field">
         <label className="block text-xs text-slate-500">
           模式
           <select
@@ -2146,8 +2219,8 @@ function ReinvestEditor({
             value={setting.mode}
             onChange={(event) => switchMode(event.target.value as ReinvestMode)}
           >
-            <option value="percent">闲钱投资 · 百分比</option>
-            <option value="amount">闲钱投资 · 固定金额</option>
+            <option value="percent">结余再投入 · 百分比</option>
+            <option value="amount">结余再投入 · 固定金额</option>
           </select>
         </label>
         {isPercent ? (
@@ -2418,11 +2491,15 @@ function AssetLinkedEditor({
   return (
     <div className="relative block min-w-0 sm:col-span-2">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
-        <span className="flex items-center gap-1.5">
-          资产配置
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-[#f07f62]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#d9654a]">
-            <LinkLockIcon className="h-3 w-3" />联动
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex items-center gap-1.5">
+            资产配置
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-[#f07f62]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#d9654a]" title="现金+理财=总资产">
+              <LinkLockIcon className="h-3 w-3" />联动
+            </span>
+            <InfoTip>{'联动恒等式：现金 + 理财 = 总资产。\n改任一端，其余自动跟齐（不可解锁）。'}</InfoTip>
           </span>
+          <span className="text-[11px] font-normal leading-snug text-slate-400">点开改现金/理财</span>
         </span>
         <button
           ref={anchorRef}
@@ -2436,7 +2513,7 @@ function AssetLinkedEditor({
         </button>
       </span>
       <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={340} maxHeightVh={56} headerTitle="资产配置" density="field">
-        <p className="mb-2 text-[11px] leading-snug text-slate-500">现金 = 总资产 − 理财；改任一端同步其它（恒等式，不可解锁）。</p>
+        <p className="mb-2 text-[11px] leading-snug text-slate-500">公式：现金 + 理财 = 总资产；改任一端同步其它（恒等式，不可解锁）。</p>
         <label className="mb-2 block text-xs text-slate-500">总资产
           <SoftNumberInput min={0} max={2000000} step={1000} value={totalAssets} onCommit={onTotal} />
         </label>
