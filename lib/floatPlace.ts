@@ -1,0 +1,126 @@
+/**
+ * 浮层视口夹紧：优先 visualViewport，出界则上下翻转 / 左右夹紧。
+ * 供 InfoTip、field 矮卡、PC popover；panel sheet 用 placeSheetAtBottom。
+ */
+
+export type RectLike = { top: number; left: number; right: number; bottom: number; width: number; height: number };
+
+export type SafeInsets = { top: number; right: number; bottom: number; left: number };
+
+export type ViewportBox = { left: number; top: number; right: number; bottom: number };
+
+/** 默认安全边距（8–12px 中取 10） */
+export const FLOAT_MARGIN = 10;
+
+export const ZERO_SAFE: SafeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
+
+/** 由 visualViewport（或 layout 回退）+ margin + safe-area 得到可见夹紧盒 */
+export function viewportBounds(
+  vv: { offsetLeft: number; offsetTop: number; width: number; height: number } | null | undefined,
+  innerW: number,
+  innerH: number,
+  margin = FLOAT_MARGIN,
+  safe: SafeInsets = ZERO_SAFE,
+): ViewportBox {
+  const left0 = vv?.offsetLeft ?? 0;
+  const top0 = vv?.offsetTop ?? 0;
+  const w = vv?.width ?? innerW;
+  const h = vv?.height ?? innerH;
+  return {
+    left: left0 + margin + safe.left,
+    top: top0 + margin + safe.top,
+    right: left0 + w - margin - safe.right,
+    bottom: top0 + h - margin - safe.bottom,
+  };
+}
+
+/**
+ * 锚点下方优先；底部出界则翻到上方；左右夹紧。
+ * align=center 时水平以锚点中线对齐（InfoTip）；start 贴锚点左缘（popover）。
+ */
+export function placeNearAnchor(
+  anchor: RectLike,
+  panelW: number,
+  panelH: number,
+  vp: ViewportBox,
+  gap = 8,
+  align: 'start' | 'center' = 'start',
+): { top: number; left: number; flipped: boolean } {
+  const idealLeft = align === 'center'
+    ? anchor.left + anchor.width / 2 - panelW / 2
+    : anchor.left;
+  let left = clamp(idealLeft, vp.left, Math.max(vp.left, vp.right - panelW));
+  let top = anchor.bottom + gap;
+  let flipped = false;
+  if (top + panelH > vp.bottom) {
+    const above = anchor.top - gap - panelH;
+    // 上方能放下，或上方剩余空间更大 → 翻转
+    if (above >= vp.top || (vp.bottom - top) < (anchor.top - gap - vp.top)) {
+      top = clamp(above, vp.top, Math.max(vp.top, vp.bottom - panelH));
+      flipped = true;
+    } else {
+      top = clamp(top, vp.top, Math.max(vp.top, vp.bottom - panelH));
+    }
+  } else {
+    top = clamp(top, vp.top, Math.max(vp.top, vp.bottom - panelH));
+  }
+  left = clamp(left, vp.left, Math.max(vp.left, vp.right - panelW));
+  return { top, left, flipped };
+}
+
+/**
+ * 相对 viewport 居中；若底边被键盘/可视区挡住则上移夹紧（field 小编辑默认）。
+ */
+export function placeCenteredInViewport(
+  panelW: number,
+  panelH: number,
+  vp: ViewportBox,
+): { top: number; left: number } {
+  const left = clamp((vp.left + vp.right - panelW) / 2, vp.left, Math.max(vp.left, vp.right - panelW));
+  let top = (vp.top + vp.bottom - panelH) / 2;
+  if (top + panelH > vp.bottom) top = vp.bottom - panelH;
+  top = clamp(top, vp.top, Math.max(vp.top, vp.bottom - panelH));
+  return { top, left };
+}
+
+/**
+ * sheet 贴 visualViewport 底边；fullBleed 铺满视口宽，否则水平居中并夹紧。
+ */
+export function placeSheetAtBottom(
+  panelH: number,
+  vp: ViewportBox,
+  viewLeft: number,
+  viewWidth: number,
+  fullBleed: boolean,
+): { top: number; left: number; width: number } {
+  const width = fullBleed ? Math.max(0, viewWidth) : Math.min(viewWidth, Math.max(0, vp.right - vp.left));
+  const left = fullBleed
+    ? viewLeft
+    : clamp(viewLeft + (viewWidth - width) / 2, vp.left, Math.max(vp.left, vp.right - width));
+  const top = Math.max(vp.top, vp.bottom - panelH);
+  return { top, left, width };
+}
+
+/** 读取 env(safe-area-inset-*)；失败则全 0（ponytail: 每次 place 轻量 probe，不缓存跨页） */
+export function readSafeAreaInsets(): SafeInsets {
+  if (typeof document === 'undefined') return ZERO_SAFE;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;'
+    + 'padding-top:env(safe-area-inset-top,0px);'
+    + 'padding-right:env(safe-area-inset-right,0px);'
+    + 'padding-bottom:env(safe-area-inset-bottom,0px);'
+    + 'padding-left:env(safe-area-inset-left,0px);';
+  document.body.appendChild(el);
+  const cs = getComputedStyle(el);
+  const safe = {
+    top: parseFloat(cs.paddingTop) || 0,
+    right: parseFloat(cs.paddingRight) || 0,
+    bottom: parseFloat(cs.paddingBottom) || 0,
+    left: parseFloat(cs.paddingLeft) || 0,
+  };
+  el.remove();
+  return safe;
+}
