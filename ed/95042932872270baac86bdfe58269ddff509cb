@@ -1,0 +1,21 @@
+docs/first-visit-audit.md
+  s_542d4aa125f04b::t_eabc5140c2789f 3-4,13-14,17,21
+  s_542d4aa125f04b::t_986304f893afd4 42
+  s_542d4aa125f04b::t_b968fe53f6d72c 87-88,93-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ed95042932872270baac86bdfe58269ddff509cb",
+  "prompts": {},
+  "sessions": {
+    "s_542d4aa125f04b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4396cf0d-c6df-429d-bdd8-307125ea79b6",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
