@@ -1,0 +1,19 @@
+lib/ux-contract.ts
+  s_1579bf875d423b::t_2cc4cca6d7af5b 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "366f7865d97c6369e5734d5ead3314732cf6e21e",
+  "prompts": {},
+  "sessions": {
+    "s_1579bf875d423b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "300d0d64-8c51-4610-8db8-e20add04a944",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
