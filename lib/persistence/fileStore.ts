@@ -1,11 +1,22 @@
 /**
- * 财务状态持久化：本地 data/*.json；Cloudflare 用 KV/R2 同名「文本」键。
- * R2 免费约 10GB（需 Dashboard 开通）；未开通时用 Workers KV 存 JSON 文本。
+ * 财务状态持久化：按 userId 隔离
+ * 键：user:{id}/financial-profile.json · user:{id}/backups/...
+ * 本地 data/ 同路径；Cloudflare KV/R2 同名文本键
  */
-import { emptyState, normalizeState, PersistedState } from './types';
+import { emptyState, normalizeState } from './types.ts';
+import type { PersistedState } from './types.ts';
 
-export const STATE_KEY = 'financial-profile.json';
-export const BACKUP_PREFIX = 'backups/';
+export const STATE_FILE = 'financial-profile.json';
+export const BACKUP_DIR = 'backups/';
+
+/** @deprecated 仅兼容旧单用户键名；新读写请用 userScopedKey */
+export const STATE_KEY = STATE_FILE;
+export const BACKUP_PREFIX = BACKUP_DIR;
+export const DATA_DIR = 'data';
+
+export function userScopedKey(userId: string, relative: string): string {
+    return `user:${userId}/${relative}`;
+}
 
 type RemoteStore = {
     getText(key: string): Promise<string | null>;
@@ -27,7 +38,6 @@ async function getRemoteStore(): Promise<RemoteStore | null> {
         const binding = bag.MONEY_DATA;
         if (!binding) return null;
 
-        // R2：get 返回 R2ObjectBody；KV：get 直接返回 string
         return {
             async getText(key) {
                 const value = await binding.get(key, 'text');
@@ -97,9 +107,9 @@ async function listKeys(prefix: string): Promise<string[]> {
     }
 }
 
-export async function readState(): Promise<PersistedState> {
+export async function readState(userId: string): Promise<PersistedState> {
     try {
-        const raw = await readText(STATE_KEY);
+        const raw = await readText(userScopedKey(userId, STATE_FILE));
         if (!raw) return emptyState();
         return normalizeState(JSON.parse(raw));
     } catch (error) {
@@ -107,8 +117,8 @@ export async function readState(): Promise<PersistedState> {
     }
 }
 
-export async function writeState(input: unknown, expectedRevision?: number) {
-    const current = await readState();
+export async function writeState(userId: string, input: unknown, expectedRevision?: number) {
+    const current = await readState(userId);
     if (expectedRevision !== undefined && expectedRevision !== current.revision) {
         const error = new Error('State revision conflict') as Error & { code?: string; current?: PersistedState };
         error.code = 'REVISION_CONFLICT';
@@ -126,15 +136,12 @@ export async function writeState(input: unknown, expectedRevision?: number) {
     next.revision = current.revision + 1;
     next.updatedAt = new Date().toISOString();
     const body = `${JSON.stringify(next, null, 2)}\n`;
-    await writeText(STATE_KEY, body);
-    await writeText(`${BACKUP_PREFIX}financial-profile-${next.revision}-${Date.now()}.json`, body);
+    await writeText(userScopedKey(userId, STATE_FILE), body);
+    await writeText(userScopedKey(userId, `${BACKUP_DIR}financial-profile-${next.revision}-${Date.now()}.json`), body);
     return next;
 }
 
-export async function listBackups() {
-    return (await listKeys(BACKUP_PREFIX)).map((key) => key.slice(BACKUP_PREFIX.length));
+export async function listBackups(userId: string) {
+    const prefix = userScopedKey(userId, BACKUP_DIR);
+    return (await listKeys(prefix)).map((key) => key.slice(prefix.length));
 }
-
-export const DATA_DIR = 'data';
-export const STATE_FILE = STATE_KEY;
-export const BACKUP_DIR = BACKUP_PREFIX;
