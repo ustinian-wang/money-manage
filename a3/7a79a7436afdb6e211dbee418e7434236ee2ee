@@ -1,0 +1,37 @@
+app/InstallToDesktop.tsx
+  s_e8b1b5e4d5639d::t_d43b4ded5f41f0 46,48-53
+lib/restartSite.ts
+  s_57e4487f6b09a2::t_f5acd49f8e4a34 2-3,25,29
+  s_57e4487f6b09a2::t_92bbd6bfb3a74e 1,4-24,26-28,30-36
+lib/restartSite.test.ts
+  s_57e4487f6b09a2::t_e00f80f5f50937 1,4,9,12-13,22-23,42-47
+  s_57e4487f6b09a2::t_daefa5faf0a3bc 2-3,5-8,10-11,14-21,24-41
+public/_headers
+  s_e8b1b5e4d5639d::t_0cfead9516fa17 4-6,12
+public/sw.js
+  s_e8b1b5e4d5639d::t_a23b1555e266ec 1,3,8-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a37a79a7436afdb6e211dbee418e7434236ee2ee",
+  "prompts": {},
+  "sessions": {
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_e8b1b5e4d5639d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "42295d77-9e12-4928-80bf-fe64345416f7",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
