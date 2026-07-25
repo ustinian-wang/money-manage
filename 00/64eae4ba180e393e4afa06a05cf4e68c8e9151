@@ -1,0 +1,50 @@
+lib/ux-contract.ts
+  s_397ef751020e58::t_169f4f38138bfe 2-8,16-19
+app/layout.tsx
+  s_a57c9a3fae9c06::t_15dd414da25596 26
+app/globals.css
+  s_bd72537ea04e33::t_3acb8746a94dd1 25-26
+  s_57e4487f6b09a2::t_c32f09872b78f0 324-389
+  s_a57c9a3fae9c06::t_584dc066d75307 65,70-72,75-78,84-99,101-102
+  s_bd72537ea04e33::t_b767307af8d0ee 64,66-69,73-74,79-83,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0064eae4ba180e393e4afa06a05cf4e68c8e9151",
+  "prompts": {},
+  "sessions": {
+    "s_397ef751020e58": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "92174bbb-d59f-4b8d-837d-2715f4115941",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_57e4487f6b09a2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2eb15667-8cad-4369-8240-a9e155a7ad0f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a57c9a3fae9c06": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fa803182-bb88-4523-9874-5bbc0ba58703",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_bd72537ea04e33": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bc1c1869-6344-494f-8ff7-635b5c75d80e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
