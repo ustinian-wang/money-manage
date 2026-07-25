@@ -1,0 +1,24 @@
+lib/sectionNav.test.ts
+  s_963b4a3914f150::t_6f6046eb7d6bef 7-13
+  s_963b4a3914f150::t_93119ea0439cbb 54-73
+  s_963b4a3914f150::t_cdbd6e3f3cc7a4 74-111
+lib/sectionNav.ts
+  s_963b4a3914f150::t_30dfb5e3b238ec 50-53,57-74,106
+  s_963b4a3914f150::t_7eb167a8476a97 54-56,75-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a187797965f067dd82fed26e61f978a02f0f673e",
+  "prompts": {},
+  "sessions": {
+    "s_963b4a3914f150": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "61d6459d-bad2-4f59-8980-9b290f4bea97",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
