@@ -1,0 +1,21 @@
+app/softNumber.ts
+  s_c7fc04f888a9c8::t_8d0eebba3c906c 1-18
+app/softNumber.test.ts
+  s_c7fc04f888a9c8::t_dd1c0f737db738 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "bdd9c2cccef051cdeb7c586752c0897bf189e86d",
+  "prompts": {},
+  "sessions": {
+    "s_c7fc04f888a9c8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0075f7b3-58be-42b5-bc89-b3e2e9ebfd65",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
