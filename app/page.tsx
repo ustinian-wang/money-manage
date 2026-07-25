@@ -1115,11 +1115,6 @@ export default function HomePage() {
           <span className="max-w-[4.5rem] text-[10px] leading-tight text-slate-300 sm:max-w-none sm:text-[11px]">剩余可支配</span>
           <strong className="text-base tabular-nums leading-none sm:text-lg">{result.remainDisposablePct}<span className="text-[11px] font-normal text-slate-400">%</span></strong>
         </button>
-        {authUser ? (
-          <span className="max-w-[5.5rem] truncate rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 sm:max-w-[10rem]" title={authUser.username}>{authUser.username}</span>
-        ) : (
-          <span className="guest-demo-chip shrink-0" title="示例数据仅本机临时，注册后可认领到账号">访客</span>
-        )}
         {!authUser && (
           <AuthBar
             user={null}
@@ -1132,18 +1127,21 @@ export default function HomePage() {
           />
         )}
         <div className="relative">
-          {/* 下拉箭头 = 原「更多」：打开同一菜单（快照 / 安装 / 重启 / 登录·登出） */}
+          {/* 用户名/访客 + 箭头 = 原「更多」同一入口，整块可点 */}
           <button
             type="button"
             aria-expanded={headerMoreOpen}
             aria-haspopup="menu"
-            aria-label={headerMoreOpen ? '收起菜单' : '打开菜单'}
-            title="打开菜单"
+            aria-label={headerMoreOpen ? '收起菜单' : (authUser ? `${authUser.username}，打开菜单` : '访客，打开菜单')}
+            title={authUser ? authUser.username : '示例数据仅本机临时，注册后可认领到账号'}
             onClick={() => setHeaderMoreOpen((v) => !v)}
-            className="touch-btn grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+            className="touch-btn flex min-h-9 max-w-[9rem] items-center gap-1 rounded-full border border-slate-200 bg-white py-1 pl-2.5 pr-1.5 text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a] sm:max-w-[12rem]"
           >
+            <span className="min-w-0 truncate text-[11px] font-semibold text-slate-600">
+              {authUser ? authUser.username : '访客'}
+            </span>
             <svg
-              className={`h-4 w-4 transition-transform ${headerMoreOpen ? 'rotate-180' : ''}`}
+              className={`h-3.5 w-3.5 shrink-0 transition-transform ${headerMoreOpen ? 'rotate-180' : ''}`}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
