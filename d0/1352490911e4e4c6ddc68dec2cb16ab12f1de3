@@ -1,0 +1,107 @@
+app/globals.css
+  s_fd6c58ca5b21e4::t_50417f221213b1 44-56
+package.json
+  s_1df6567878f3f3::t_be6fa62e9f25ff 23
+lib/ux-contract.ts
+  s_d3e0deee2544e1::t_f8952ba149443b 6
+app/page.tsx
+  s_0fd0c3b6f86a50::t_2321a7a65f58d6 2325-2340
+  s_1df6567878f3f3::t_207d5c6ea09f6e 202-205
+  s_c7fc04f888a9c8::t_67acc713b65847 1942-1943,1948,1952,1954,1964
+  s_c7fc04f888a9c8::t_81aabedc6b8926 51
+  s_c7fc04f888a9c8::t_3f8be6bef75309 1516,1522
+  s_45c1ca02febb1e::t_2ac219c59bf217 444-449
+  s_1df6567878f3f3::t_4f3cb176f1b315 194-201,206-216
+  s_45c1ca02febb1e::t_6d21d72f803791 353-355
+  s_1df6567878f3f3::t_d849d4702eb395 357,359-362
+  s_1df6567878f3f3::t_c43cd58afb74b4 451,457-463,468,471
+  s_d3e0deee2544e1::t_ee72a498ad14bf 165
+  s_45c1ca02febb1e::t_1af1812b4e1c27 539-541
+  s_1df6567878f3f3::t_c2030a4503503d 269-270
+  s_1df6567878f3f3::t_5ada5240058ef1 542-563,684,1876,1879,1966
+  s_0fd0c3b6f86a50::t_f3fc53ae4093b6 358
+  s_d3e0deee2544e1::t_638daa8c16d8b8 186
+  s_c7fc04f888a9c8::t_277abd80b3e96b 1897,2191
+  s_c7fc04f888a9c8::t_a4acf5fabc9fc4 1880,1883,2349-2417,2419
+  s_c7fc04f888a9c8::t_aab954eec0b586 2288,2290-2291
+  s_1df6567878f3f3::t_2b5191922e249e 672-675,1940,2422
+  s_45c1ca02febb1e::t_8c42876379c3eb 1289
+  s_1df6567878f3f3::t_ef8f5f1eef7ac6 247-260
+  s_0fd0c3b6f86a50::t_5844cbc50945e0 453-456
+  s_45c1ca02febb1e::t_af2da6cd846ba7 29-38
+  s_6cded1cdca1e51::t_36ef0800d1cd5b 49
+  s_45c1ca02febb1e::t_c6ae203569c751 291,298
+  s_4c4431cfe8117a::t_03e7b2db7eb952 28,50,93,144,246,271,288,363-367,390-393,450,464-467,469-470,472-473,564-565,654,676-677,679-683,685-694,783,793,796,809-810,825,1144,1185-1186,1194,1208,1213-1214,1232,1236,1290-1295,1319,1398,1454,1464,1473-1475,1859-1875,1877-1878,1881-1882,1884-1896,1898-1939,1941,1965,1967,1970,2040,2056-2057,2061,2064,2083-2085,2173,2197,2202,2205,2210,2294-2295,2297,2316-2324,2341-2346,2418,2420-2421,2423-2424,2432
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d01352490911e4e4c6ddc68dec2cb16ab12f1de3",
+  "prompts": {},
+  "sessions": {
+    "s_0fd0c3b6f86a50": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a3110be6-e94f-41e8-99bd-85e421aa02ad",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_1df6567878f3f3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "91a4cb22-119b-4881-8623-0f8638d68147",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_45c1ca02febb1e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e02ef5ee-ae90-4957-8c15-65a06384e6b9",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_4c4431cfe8117a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "37b6bf3b-6424-472e-a180-2995425d01b6",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_6cded1cdca1e51": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ece5317b-8f74-4d7e-9c8c-79025f9b3db5",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c7fc04f888a9c8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0075f7b3-58be-42b5-bc89-b3e2e9ebfd65",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_d3e0deee2544e1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "927067af-ffc2-4496-b5e4-31871e237274",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_fd6c58ca5b21e4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dacba800-d0ac-4cf3-a9ff-f41b2ef4055a",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
