@@ -1,0 +1,31 @@
+lib/useVisualViewport.ts
+  s_bd72537ea04e33::t_03678e12ae543e 35-36
+  s_a57c9a3fae9c06::t_ef5dcc42324ea6 1-34,37-60,62-67,70-77
+  s_bd72537ea04e33::t_1ff73da858e62c 61,68-69
+lib/useVisualViewport.test.ts
+  s_a57c9a3fae9c06::t_c91d222e0c6b54 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "de81c7b1e43f33d1d243a8bfc40a6aca46c657a7",
+  "prompts": {},
+  "sessions": {
+    "s_a57c9a3fae9c06": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fa803182-bb88-4523-9874-5bbc0ba58703",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_bd72537ea04e33": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bc1c1869-6344-494f-8ff7-635b5c75d80e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
