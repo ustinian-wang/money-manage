@@ -43,8 +43,14 @@ export default function InstallToDesktop() {
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
 
+    // 不做 PWA 离线缓存：卸载旧 SW，避免壳/HTML 旧版；manifest 仍可用于「添加到主屏幕」
     if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+      void navigator.serviceWorker.getRegistrations().then((regs) => {
+        void Promise.all(regs.map((reg) => reg.unregister()));
+      });
+    }
+    if (typeof caches !== 'undefined') {
+      void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
     }
 
     return () => {
