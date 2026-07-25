@@ -1,0 +1,21 @@
+app/deleteConfirm.ts
+  s_0ed7f6dc6ee618::t_cde7245b576e33 1-14
+app/deleteConfirm.test.ts
+  s_0ed7f6dc6ee618::t_e4ba42f980105e 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0ed5aef3a83f086e44c14a492f1a135c4dc0d098",
+  "prompts": {},
+  "sessions": {
+    "s_0ed7f6dc6ee618": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c8af6a24-ca2b-4825-ab8d-d08f30527382",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
