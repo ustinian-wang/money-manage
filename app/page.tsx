@@ -1253,7 +1253,7 @@ function ExpenseSettingsFields({
       {value.mode === 'percentage' && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs text-slate-500">开始时间<input className="field-input mt-1" type="date" value={(value.startDate || todayDateKey()).slice(0, 10)} onChange={(event) => onChange({ startDate: event.target.value })} /></label>
-          <label className="block text-xs text-slate-500">收入比例（%）<SoftNumberInput min={0} max={100} step={1} value={value.rate || 0} onCommit={(n) => onChange({ rate: n })} /></label>
+          <label className="block text-xs text-slate-500">收入比例<SoftNumberInput min={0} max={100} step={1} suffix="%" value={value.rate || 0} onCommit={(n) => onChange({ rate: n })} /></label>
         </div>
       )}
       {value.mode === 'installment' && (
@@ -2035,9 +2035,11 @@ function ReinvestEditor({
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const isPercent = setting.mode === 'percent';
-  const display = isPercent
-    ? `${Number.isInteger(setting.rate) ? setting.rate : setting.rate.toFixed(1)}%`
-    : `${money(setting.amount)}/月`;
+  // 单位外置：展示框只含数值；% / /月 旁侧（与 Editable 一致）
+  const displayNum = isPercent
+    ? (Number.isInteger(setting.rate) ? String(setting.rate) : setting.rate.toFixed(1))
+    : formatEditableNumber(setting.amount);
+  const unit = isPercent ? '%' : '/月';
   const commit = (next: ReinvestSetting) => {
     onChange(next);
     window.dispatchEvent(new Event('money-manage-save'));
@@ -2054,19 +2056,22 @@ function ReinvestEditor({
             <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（不超过当月结余）。'}</InfoTip>
           </span>
           <span className="text-[11px] font-normal leading-snug text-slate-400">
-            {isPercent ? `结余的 ${Number.isInteger(setting.rate) ? setting.rate : setting.rate.toFixed(1)}% 进理财` : '每月固定额进理财'}
+            {isPercent ? `结余的 ${displayNum}% 进理财` : '每月固定额进理财'}
           </span>
         </span>
-        <button
-          ref={anchorRef}
-          type="button"
-          onClick={() => setOpen((current) => !current)}
-          onDoubleClick={() => setOpen(true)}
-          title="点击打开编辑"
-          className="field-click self-start sm:self-auto"
-        >
-          {display}
-        </button>
+        <span className="field-value-with-unit self-start sm:self-auto">
+          <button
+            ref={anchorRef}
+            type="button"
+            onClick={() => setOpen((current) => !current)}
+            onDoubleClick={() => setOpen(true)}
+            title="点击打开编辑"
+            className="field-click"
+          >
+            {displayNum}
+          </button>
+          <span className="field-unit">{unit}</span>
+        </span>
       </span>
       <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={300} maxHeightVh={52} headerTitle="月结余再投入" density="field">
         <label className="block text-xs text-slate-500">
@@ -2082,11 +2087,12 @@ function ReinvestEditor({
         </label>
         {isPercent ? (
           <label className="mt-3 block text-xs text-slate-500">
-            结余百分比（%）
+            结余百分比
             <SoftNumberInput
               min={0}
               max={100}
               step={1}
+              suffix="%"
               value={Number.isInteger(setting.rate) ? setting.rate : Number(setting.rate.toFixed(1))}
               onCommit={(n) => commit({ ...setting, rate: n })}
             />
@@ -2097,6 +2103,7 @@ function ReinvestEditor({
             <SoftNumberInput
               min={0}
               step={100}
+              suffix="/月"
               value={setting.amount}
               onCommit={(n) => commit({ ...setting, amount: n })}
             />
@@ -2340,13 +2347,14 @@ function SelectEditable({ label, value, options, onChange }: { label: string; va
 }
 const saveEvent = () => window.dispatchEvent(new Event('money-manage-save'));
 
-/** 数值输入：聚焦可空；空视同 0；blur 空/非法 → 0（再 clamp） */
+/** 数值输入：聚焦可空；空视同 0；blur 空/非法 → 0（再 clamp）；suffix 外置不进 input */
 function SoftNumberInput({
   value,
   min,
   max,
   step,
   className = 'field-input mt-1',
+  suffix = '',
   onCommit,
 }: {
   value: number;
@@ -2354,6 +2362,7 @@ function SoftNumberInput({
   max?: number;
   step?: number | string;
   className?: string;
+  suffix?: string;
   onCommit: (n: number) => void;
 }) {
   const lo = min ?? Number.NEGATIVE_INFINITY;
@@ -2368,13 +2377,17 @@ function SoftNumberInput({
     setDraft(String(next));
     onCommit(next);
   };
-  return (
+  const unit = suffix.trim();
+  const inputClass = unit
+    ? `${className.replace(/\bmt-1\b/g, '').trim()} min-w-0 flex-1`.trim()
+    : className;
+  const input = (
     <input
       type="number"
       min={min}
       max={max}
       step={step}
-      className={className}
+      className={inputClass}
       value={draft}
       onFocus={() => {
         focusedRef.current = true;
@@ -2392,6 +2405,13 @@ function SoftNumberInput({
         finish(draft);
       }}
     />
+  );
+  if (!unit) return input;
+  return (
+    <span className="field-value-with-unit mt-1 w-full justify-start">
+      {input}
+      <span className="field-unit">{unit}</span>
+    </span>
   );
 }
 
@@ -2516,8 +2536,8 @@ function AssetLinkedEditor({
             </label>
           </LinkedFieldGroup>
           <LinkedFieldGroup hint="理财金额 ↔ 占比（相对总资产）">
-            <label className="block text-xs text-slate-500">理财占比（%）
-              <SoftNumberInput min={0} max={100} step={1} value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
+            <label className="block text-xs text-slate-500">理财占比
+              <SoftNumberInput min={0} max={100} step={1} suffix="%" value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
             </label>
             <div className="flex flex-col justify-end text-xs text-slate-500">
               <span>对应理财</span>
@@ -2608,13 +2628,13 @@ function InstallmentSettingsPanel({ expense, onChange, retirementDate }: { expen
     )}
     <LinkedFieldGroup hint="首付金额 ↔ 比例（相对总价）；改一边另一边跟">
       <label className="block text-xs text-slate-500">首付金额<SoftNumberInput min={0} step={1000} value={down} onCommit={patchDownAmount} /></label>
-      <label className="block text-xs text-slate-500">首付比例（%）<SoftNumberInput min={0} max={100} step={0.1} value={downPercent} onCommit={patchDownPercent} /></label>
+      <label className="block text-xs text-slate-500">首付比例<SoftNumberInput min={0} max={100} step={0.1} suffix="%" value={downPercent} onCommit={patchDownPercent} /></label>
     </LinkedFieldGroup>
     <LinkedFieldGroup hint="年数 ↔ 期数：1 年 = 12 期；贷款计算一律用月数">
-      <label className="block text-xs text-slate-500">年数<SoftNumberInput min={0.1} max={30} step={0.1} value={years} onCommit={patchTermYears} /></label>
-      <label className="block text-xs text-slate-500">期数（月）<SoftNumberInput min={1} max={360} step={1} value={term} onCommit={patchTermMonths} /></label>
+      <label className="block text-xs text-slate-500">年数<SoftNumberInput min={0.1} max={30} step={0.1} suffix="年" value={years} onCommit={patchTermYears} /></label>
+      <label className="block text-xs text-slate-500">期数<SoftNumberInput min={1} max={360} step={1} suffix="月" value={term} onCommit={patchTermMonths} /></label>
     </LinkedFieldGroup>
-    <label className="block text-xs text-slate-500">年化利率（%）<SoftNumberInput min={0} max={100} step={0.1} value={expense.interest || 0} onCommit={(n) => onChange({ interest: n })} /></label>
+    <label className="block text-xs text-slate-500">年化利率<SoftNumberInput min={0} max={100} step={0.1} suffix="%" value={expense.interest || 0} onCommit={(n) => onChange({ interest: n })} /></label>
     {isNarrow ? (
       <div className="rounded-xl border border-slate-100 bg-slate-50">
         <button type="button" onClick={() => setFormulaOpen((current) => !current)} className="touch-btn flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-semibold text-slate-700">
@@ -2750,7 +2770,7 @@ function SocialTaxBreakdown({
                   <tr key={row.name}>
                     <td>{row.name}</td>
                     <td className="tabular-nums text-xs text-slate-500">{money(row.base ?? (row.name === HOUSING_FUND_NAME ? housingFundBase : insuranceBase))}</td>
-                    <td>{row.name === HOUSING_FUND_NAME ? <label className="inline-flex items-center gap-1"><SoftNumberInput className="field-input w-20" min={5} max={12} step={0.1} value={housingPersonal} onCommit={onHousingPersonalChange} /><span>%</span><span className="text-[10px] text-slate-400">5–12</span></label> : `${row.personal}%`}</td>
+                    <td>{row.name === HOUSING_FUND_NAME ? <label className="inline-flex items-center gap-1"><SoftNumberInput className="field-input w-20" min={5} max={12} step={0.1} suffix="%" value={housingPersonal} onCommit={onHousingPersonalChange} /><span className="text-[10px] text-slate-400">5–12</span></label> : `${row.personal}%`}</td>
                     <td>{money(row.personalAmount)}</td>
                     <td>{row.company}%</td>
                     <td>{money(row.companyAmount)}</td>
