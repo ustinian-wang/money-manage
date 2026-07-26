@@ -1,0 +1,22 @@
+docs/2026-07-26-multi-angle-review.md
+  s_5f92ffacc00d8e::t_ac3f7e252a6f57 24
+  s_5f92ffacc00d8e::t_9195e31c2b6f5c 50
+README.md
+  s_5f92ffacc00d8e::t_9195e31c2b6f5c 78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "47ef9c935b937470e00f28854578d732759c8fe2",
+  "prompts": {},
+  "sessions": {
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
