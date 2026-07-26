@@ -1,0 +1,114 @@
+app/page.tsx
+  s_f941349c63a4ac::t_8474125242689e 2591-2593,2619
+  s_aa1fe1a1104fb7::t_c59eb4f36cd456 73-74,89
+  s_96318878252cd8::t_2f0e8685ad20f9 75,81-83,86
+  s_8751f4621873f5::t_a13b68e9f403ef 747,2866,2869,2872-2875,2884-2885,2888
+  s_a5a9379e776dce::t_af960622842a58 123
+  s_8751f4621873f5::t_e9bfbf1a1afbc3 2630,2636,2642,2645,2657,2994-3054
+  s_7de63ea2a304f3::t_875945f777240c 748
+  s_f941349c63a4ac::t_d77d24700c849d 2472,2475,2478,2480-2501,2621
+  s_a5a9379e776dce::t_a53ee34f7ceb63 47-48,51-52,54,56
+  s_d2a2e1a48bbc37::t_f2563fb7aae59a 2510,2550-2560,2570,2602-2618,2620
+  s_a5a9379e776dce::t_a4abe818904605 674,677,679-685,702-704,706-709,716-719,721-725,727-739
+  s_96318878252cd8::t_6ac04c936bef1e 2301-2302,2304,2310-2323,2325-2345
+  s_a5a9379e776dce::t_136236db9edec9 314,320-321
+  s_a5a9379e776dce::t_2f471b10000e54 611
+  s_aa1fe1a1104fb7::t_a3c00c5b79867a 2388-2393
+  s_7de63ea2a304f3::t_84675831d15222 710-715,740
+  s_aa1fe1a1104fb7::t_72d4f459b66f09 2200-2201,2207,2210-2211,2223-2225,2242-2245,2247-2248,2258,2273,2286-2288
+  s_96318878252cd8::t_655f8103cb1c00 2838-2839,2860-2862,2865,2868,2870-2871,2876,2886-2887,2889-2890,2896,2900,2908-2931
+  s_a5a9379e776dce::t_b909e80ddfe4ff 700,705,720,726
+  s_feaca7580b06c1::t_28689299fcdbc7 2522-2525,2538-2541,2572
+  s_d2a2e1a48bbc37::t_6b8c6af87ddec1 124
+  s_8751f4621873f5::t_599109163883dc 76-80,84-85
+  s_a5a9379e776dce::t_b0eba6819f44a6 2518,2534,2650,2663-2689
+  s_a5a9379e776dce::t_8e967f2adbbc51 46
+  s_d2a2e1a48bbc37::t_5e2f3dc3ab29a7 125-126
+  s_a5a9379e776dce::t_256dce5d6b7b84 686
+  s_a5a9379e776dce::t_98b47cfcbb4780 698-699
+  s_a5a9379e776dce::t_10ea0362447475 701
+  s_7de63ea2a304f3::t_8b8830acffda03 749
+  s_a5a9379e776dce::t_769594abce3207 2519
+  s_feaca7580b06c1::t_36182637b37001 2526
+  s_a5a9379e776dce::t_afb03ae36f1a05 2535
+  s_feaca7580b06c1::t_eccd88975703bf 2542
+  s_d2a2e1a48bbc37::t_8cf8ad7fc0695a 2547-2549
+  s_feaca7580b06c1::t_f7ddd086952bab 2573
+  s_8751f4621873f5::t_f902434c064dad 2631-2635
+  s_8751f4621873f5::t_297e7afd8ae701 2637-2641
+  s_8751f4621873f5::t_fcc1533b8b14d3 2643-2644
+  s_a5a9379e776dce::t_f6dabe07c393d7 2690
+  s_8751f4621873f5::t_129d53d6a0875f 71,395,493,604-605,667,741-746,1211,2545,2571,2581,2587,2622-2629,2646-2649,2651-2656,2658-2662
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1b74693abb27faecdb6f99da50d05cd267689198",
+  "prompts": {},
+  "sessions": {
+    "s_7de63ea2a304f3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3b0372f3-98d6-4c04-8024-ab9f8e98aaac",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_8751f4621873f5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "868fcbaa-1860-40d4-91c9-b8cfa0bcf8de",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_96318878252cd8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3b8f16ac-42f2-4c31-91b9-646c0620181e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a5a9379e776dce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fdcb5ba0-667e-48b7-a7e9-a4c6558d8b9a",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_aa1fe1a1104fb7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "941d3999-5d3f-4001-831f-26bb0bb4f183",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_d2a2e1a48bbc37": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "910cad2a-b39f-4074-8380-f27a22cbebb4",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_f941349c63a4ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b32e3dae-9bc8-4e27-aac5-dadb14d10f8b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_feaca7580b06c1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1b3ef385-65e6-4787-85ab-08f476e3727d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
