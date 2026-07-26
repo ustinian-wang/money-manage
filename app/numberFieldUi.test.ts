@@ -1,21 +1,21 @@
 /**
- * 数值字段 UX：自由金额无 max/无 slider；百分比范围联动才有 slider
- * 需求：自由输入不限制最大值也不出滚动条；有范围且与百分比联动才出滚动条
- * 补充：free → Editable 原地 inline；rangedPercent → 仍弹层
- * 补充：展示数值与单位分离（formatEditableNumber 不含 %/个月 等）
+ * 数值字段 UX：一律原地 inline；不为 slider 弹窗
+ * 有明确 min/max → blur clamp；无 max 不设上界
+ * 展示数值与单位分离（formatEditableNumber 不含 %/个月 等）
+ * blur：空→0；非法→fallback 原值（与 Editable / softNumberCommit 对齐）
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { clampNumberField, formatEditableNumber, showsNumberSlider, usesInlineNumberEdit } from './numberFieldUi';
-import { softNumberCommit } from './softNumber';
+import { softNumberCommit, softNumberIsInvalid } from './softNumber';
 
 test('自由字段不展示滚动条', () => {
   assert.equal(showsNumberSlider('free'), false);
   assert.equal(showsNumberSlider(), false);
 });
 
-test('百分比范围联动字段展示滚动条', () => {
-  assert.equal(showsNumberSlider('rangedPercent'), true);
+test('rangedPercent 也不出滚动条（不为 slider 弹窗）', () => {
+  assert.equal(showsNumberSlider('rangedPercent'), false);
 });
 
 test('自由字段走 inline，不弹层', () => {
@@ -23,9 +23,9 @@ test('自由字段走 inline，不弹层', () => {
   assert.equal(usesInlineNumberEdit(), true);
 });
 
-test('rangedPercent 不走 inline，仍弹层+slider', () => {
-  assert.equal(usesInlineNumberEdit('rangedPercent'), false);
-  assert.equal(showsNumberSlider('rangedPercent'), true);
+test('rangedPercent 也走 inline（年化收益等只改一个数）', () => {
+  assert.equal(usesInlineNumberEdit('rangedPercent'), true);
+  assert.equal(showsNumberSlider('rangedPercent'), false);
 });
 
 test('展示数值不含单位（单位由 UI 外置）', () => {
@@ -53,10 +53,11 @@ test('百分比范围字段 clamp：受 [min,max] 约束', () => {
   assert.equal(clampNumberField(8, { min: 5, max: 12 }), 8);
 });
 
-// blur 保存路径：softNumberCommit → clampNumberField（与 Editable.onDraftBlur 对齐）
-test('blur 保存：空/非法落 0 再 clamp', () => {
+// blur 保存路径：空→0；非法→原值；合法→clamp
+test('blur 保存：空落 0 再 clamp；非法恢复原值', () => {
   assert.equal(clampNumberField(softNumberCommit(''), { min: 0 }), 0);
-  assert.equal(clampNumberField(softNumberCommit('abc'), { min: 0 }), 0);
-  assert.equal(clampNumberField(softNumberCommit('12.5'), { min: 0, max: 36 }), 12.5);
-  assert.equal(clampNumberField(softNumberCommit('99'), { min: 0, max: 36 }), 36);
+  assert.equal(softNumberIsInvalid('abc'), true);
+  assert.equal(softNumberCommit('abc', 6.5), 6.5);
+  assert.equal(clampNumberField(softNumberCommit('12.5', 0), { min: 0, max: 36 }), 12.5);
+  assert.equal(clampNumberField(softNumberCommit('99', 0), { min: 0, max: 36 }), 36);
 });
