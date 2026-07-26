@@ -73,4 +73,23 @@ describe('createProfileSyncQueue', () => {
 
     assert.deepEqual(statuses.map((status) => status.phase), ['syncing', 'failed']);
   });
+
+  it('访客 localOnly：enqueue/flush 不发起 profile PUT', async () => {
+    let putCount = 0;
+    const statuses: ProfileSyncStatus[] = [];
+    const queue = createProfileSyncQueue({
+      localOnly: true,
+      onStatus: (status) => statuses.push(status),
+      fetcher: async () => {
+        putCount += 1;
+        return Response.json({ revision: 1 });
+      },
+    });
+
+    await queue.enqueue(state(9));
+    await queue.flush();
+
+    assert.equal(putCount, 0);
+    assert.deepEqual(statuses, []);
+  });
 });

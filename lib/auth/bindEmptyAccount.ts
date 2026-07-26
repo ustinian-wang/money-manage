@@ -3,6 +3,7 @@
  * 从主页 handleAuthed 抽出，供 /login · /register 复用
  */
 import { emptyClaimProfilePatch, parseClaimMode, type ClaimMode } from '../claimGate';
+import { loadGuestDraft } from '../persistence/guestDraft';
 
 export type AuthBindMeta = { from: 'login' | 'register'; claimMode?: ClaimMode };
 
@@ -21,13 +22,7 @@ type BindOpts = {
 };
 
 function readLocalDraft(): Record<string, unknown> | null {
-  try {
-    const saved = localStorage.getItem('money-manage-profile');
-    if (!saved) return null;
-    return JSON.parse(saved) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  return loadGuestDraft();
 }
 
 /** 空账号：注册认领/清空，或登录确认后 PUT */

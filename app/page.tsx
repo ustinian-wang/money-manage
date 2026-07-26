@@ -16,6 +16,7 @@ import { FLOAT_MARGIN, placeCenteredInViewport, placeNearAnchor, placeSheetAtBot
 import { Z_INDEX } from '../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
+import { loadGuestDraft, saveGuestDraft } from '../lib/persistence/guestDraft';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
 import {
@@ -585,12 +586,10 @@ export default function HomePage() {
       } catch { /* 无会话 → 访客 */ }
       if (!cancelled) setAuthReady(true);
 
-      // 访客：localStorage 草稿或内存默认示例数据；不打云端
+      // 访客：本机草稿或内存 LIGHT_DEMO；不打云端
       if (!me) {
-        try {
-          const saved = localStorage.getItem('money-manage-profile');
-          if (!cancelled && saved) applyProfileData(JSON.parse(saved));
-        } catch { /* 示例默认 */ }
+        const saved = loadGuestDraft();
+        if (!cancelled && saved) applyProfileData(saved);
         if (!cancelled) setHydrated(true);
         return;
       }
@@ -603,17 +602,13 @@ export default function HomePage() {
           if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
             applyProfileData(state.profile as Record<string, unknown>);
           } else {
-            try {
-              const saved = localStorage.getItem('money-manage-profile');
-              if (!cancelled && saved) applyProfileData(JSON.parse(saved));
-            } catch { /* defaults */ }
+            const saved = loadGuestDraft();
+            if (!cancelled && saved) applyProfileData(saved);
           }
         }
       } catch {
-        try {
-          const saved = localStorage.getItem('money-manage-profile');
-          if (!cancelled && saved) applyProfileData(JSON.parse(saved));
-        } catch { /* defaults */ }
+        const saved = loadGuestDraft();
+        if (!cancelled && saved) applyProfileData(saved);
       }
       if (!cancelled) setHydrated(true);
     })();
@@ -660,7 +655,8 @@ export default function HomePage() {
     ...(takeHomeIncome != null ? { takeHomeIncome } : {}),
   };
   const save = () => {
-    localStorage.setItem('money-manage-profile', JSON.stringify(profile));
+    // 访客与登录均写本机；云端仅登录后 enqueue
+    saveGuestDraft(profile);
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
   };
 
@@ -673,7 +669,7 @@ export default function HomePage() {
     setHeaderMoreOpen(false);
     setHydrated(true);
     try {
-      localStorage.setItem('money-manage-profile', JSON.stringify(profile));
+      saveGuestDraft(profile);
     } catch { /* ignore */ }
   };
 

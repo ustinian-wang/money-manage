@@ -17,11 +17,15 @@ type ProfileSyncOptions = {
   initialRevision?: number;
   fetcher?: typeof fetch;
   onStatus?: (status: ProfileSyncStatus) => void;
+  /** 访客：跳过云端 PUT，仅本机草稿由调用方写 localStorage */
+  localOnly?: boolean;
 };
 
 export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
   const apiPath = options.apiPath ?? '/api/profile';
   const fetcher = options.fetcher ?? fetch;
+  // 访客态不发起云端写
+  const localOnly = options.localOnly === true;
   let revision = Math.max(0, options.initialRevision ?? 0);
   let queued: ProfileSyncState | null = null;
   let running = false;
@@ -32,6 +36,10 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
   const report = (status: ProfileSyncStatus) => options.onStatus?.(status);
 
   const drain = async () => {
+    if (localOnly) {
+      queued = null;
+      return;
+    }
     if (running) return drainPromise;
     running = true;
     try {
@@ -79,6 +87,10 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
 
   return {
     enqueue(state: ProfileSyncState) {
+      if (localOnly) {
+        queued = null;
+        return Promise.resolve();
+      }
       if (conflictBlocked) {
         queued = null;
         report({ phase: 'conflict', message: '云端数据已更新；继续将覆盖云端版本' });
@@ -89,6 +101,10 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
       return drainPromise;
     },
     flush() {
+      if (localOnly) {
+        queued = null;
+        return Promise.resolve();
+      }
       if (!running && queued) drainPromise = drain();
       return drainPromise;
     },
