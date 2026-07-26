@@ -540,6 +540,25 @@ td { color: #52605b; }
   line-height: 1.4;
   padding: 0.35rem 0.65rem;
 }
+.first-visit-check-chip {
+  flex: 1 1 0;
+  min-width: 4.5rem;
+  min-height: 2.1rem;
+  border-radius: 999px;
+  border: 1px solid #e3eae5;
+  background: #fff;
+  color: #52605b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  -webkit-tap-highlight-color: transparent;
+}
+.first-visit-check-chip:active { background: #f1f5f2; }
+.first-visit-check-chip.is-done {
+  border-color: rgba(34, 120, 90, 0.35);
+  background: #f0faf4;
+  color: #1f6b4a;
+}
 
 /* 顶栏「更多」菜单 */
 .header-more-item {

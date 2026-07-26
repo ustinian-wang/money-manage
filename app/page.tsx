@@ -17,6 +17,17 @@ import { Z_INDEX } from '../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
 import { buildDecisionSummary } from '../lib/decisionSummary';
+import {
+  FIRST_VISIT_CHECKLIST_STEPS,
+  canDismissChecklist,
+  loadChecklistDismissed,
+  loadCompletedSteps,
+  markStepComplete,
+  saveChecklistDismissed,
+  saveCompletedSteps,
+  shouldShowChecklist,
+  type ChecklistStepId,
+} from '../lib/firstVisitChecklist';
 import { profileSyncAlert } from '../lib/profileSyncAlert';
 import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
 import { loadGuestDraft, saveGuestDraft } from '../lib/persistence/guestDraft';
@@ -485,6 +496,17 @@ export default function HomePage() {
   const [activeSection, setActiveSection] = useState('sec-params');
   const stickyTopRef = useRef<HTMLDivElement | null>(null);
   const spyLockUntilRef = useRef(0);
+  // 首访三步 checklist（P2-6）：完成态 + 收起 flag 写 localStorage
+  const [checklistCompleted, setChecklistCompleted] = useState<ChecklistStepId[]>([]);
+  const [checklistDismissed, setChecklistDismissed] = useState(false);
+  const [checklistReady, setChecklistReady] = useState(false);
+  useEffect(() => {
+    setChecklistCompleted(loadCompletedSteps(window.localStorage));
+    setChecklistDismissed(loadChecklistDismissed(window.localStorage));
+    setChecklistReady(true);
+  }, []);
+  const showFirstVisitChecklist = checklistReady
+    && shouldShowChecklist({ dismissed: checklistDismissed, isGuest: !authUser });
   const scrollToSection = (id: string) => {
     setActiveSection(id);
     spyLockUntilRef.current = Date.now() + 1200;
@@ -1320,6 +1342,46 @@ export default function HomePage() {
             <p className="mt-2 text-[11px] font-medium leading-snug text-amber-800 sm:text-xs" role="status">{decisionSummary.riskLine}</p>
           )}
         </section>
+        {showFirstVisitChecklist && (
+          <div className="first-visit-checklist section-card rounded-3xl bg-white p-3 shadow-lg sm:p-4" aria-label="首次规划引导">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-slate-500 sm:text-xs">三步上手 · 改收入 → 改支出 → 看走势</p>
+              {canDismissChecklist(checklistCompleted) && (
+                <button
+                  type="button"
+                  className="touch-btn shrink-0 rounded-full border border-[#e3eae5] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500"
+                  onClick={() => {
+                    saveChecklistDismissed(window.localStorage);
+                    setChecklistDismissed(true);
+                  }}
+                >
+                  收起引导
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {FIRST_VISIT_CHECKLIST_STEPS.map((step) => {
+                const done = checklistCompleted.includes(step.id);
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`first-visit-check-chip${done ? ' is-done' : ''}`}
+                    aria-pressed={done}
+                    onClick={() => {
+                      const next = markStepComplete(checklistCompleted, step.id);
+                      setChecklistCompleted(next);
+                      saveCompletedSteps(next, window.localStorage);
+                      scrollToSection(step.sectionId);
+                    }}
+                  >
+                    {done ? `✓ ${step.label}` : step.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6">
           <div><SectionTitle title="财务参数" tip={"收入与资产配置。\n退休规划已整合到「五险一金和个税 → 退休与社保」；点字段改数即生效并自动保存。"} /></div>
           <div className="section-label flex flex-wrap items-center gap-2">
