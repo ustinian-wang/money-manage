@@ -1,0 +1,124 @@
+app/globals.css
+  s_705da838bd62bb::t_0edf188289f605 237-238
+  s_44b482bc0629ae::t_0d4f5f47ac5b5d 83,93
+  s_705da838bd62bb::t_3d5dc743381022 379-409
+  s_705da838bd62bb::t_ed7b69f4617ab9 293-299
+  s_705da838bd62bb::t_f7eceaa4af0537 300-302
+  s_705da838bd62bb::t_b69f9a7ad5bfd4 138,149,195,309
+app/page.tsx
+  s_39ea8e0df52041::t_ad0bb728dec302 523
+  s_39ea8e0df52041::t_392d8f1ecf66e0 629,635,645
+  s_705da838bd62bb::t_d67c2ed75d1bc8 2116-2117,2119,2122,2124,2126-2133,2145-2151,2161-2164,2170-2211,2213-2234,2236-2252,2728
+  s_705da838bd62bb::t_5d0acb1a329ffe 67
+  s_a4a47e8919a5a5::t_014f669ba824c4 1937,1940-1941
+  s_60c7bcb9722498::t_c0b28e00bf0d79 371-374
+  s_39ea8e0df52041::t_972db83afc5f79 456-457,459
+  s_39ea8e0df52041::t_b0f6307dc7e534 1178
+  s_39ea8e0df52041::t_75f81ff1089794 62
+  s_60c7bcb9722498::t_5f88c6fb2c52e2 222,224
+  s_60c7bcb9722498::t_8eacd1d7dad1c3 106
+  s_043b899b1f6389::t_046e77217b0aec 2003-2008,2010
+  s_c4444b5c153290::t_ae69199213f74f 2257,2259,2261-2268,2270-2279,2281-2321
+  s_043b899b1f6389::t_e471a64c795c1e 8
+  s_39ea8e0df52041::t_131b4b38525d04 556
+  s_60c7bcb9722498::t_64ab7eb0e70c79 261,294-302,310
+  s_39ea8e0df52041::t_bbea91381580f7 413
+  s_60c7bcb9722498::t_0a153d82af4e28 45-52
+  s_c4444b5c153290::t_6378c0a544de29 64
+  s_0af53661746b76::t_94e8d5134cfeca 68
+  s_c66a7b92512841::t_aa81ea68d3a5e6 2053-2054,2071,2079-2080
+  s_60c7bcb9722498::t_8621647208ace3 581-584,589
+  s_60c7bcb9722498::t_0f1587afa1ee21 466-472
+  s_60c7bcb9722498::t_695a09d4f6d1c4 44,72,415,666-667,783,787,815,819,1016-1017,1132,1169,2114,2484,2650,2654-2656,2668-2669,2674-2676,2688-2689,2698-2700,2705-2706,2708,2710-2727,2729-2737,2740-2764,2767-2772,2774-2787
+lib/ux-contract.ts
+  s_a4a47e8919a5a5::t_8c17698ce1fa7d 12,18-20
+  s_38f2f9c90023b9::t_57c836d0359033 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d8701810d05fbec10470042826b3f056f616f042",
+  "prompts": {},
+  "sessions": {
+    "s_043b899b1f6389": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0484f75d-29f4-45db-87eb-f412aa5cd05e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_0af53661746b76": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1154017-380a-4bac-9c11-3ac4ffef8515",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_38f2f9c90023b9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b0a93ca3-ef10-4316-ad43-13d702999a10",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_39ea8e0df52041": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c28e9ca3-1db9-4849-97a8-1520360e1257",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_44b482bc0629ae": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "707df206-54ad-49fe-87a8-22a1f089a96b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_60c7bcb9722498": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bd61bc02-7315-4634-8749-93f1408d3101",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_705da838bd62bb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "faf004bc-eecc-49fa-8f5a-bebf31382c06",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a4a47e8919a5a5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1f406922-45be-4f70-ac77-b9c994367a5f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c4444b5c153290": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e8f2f39c-ad67-4364-8523-b4ed9b58949e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c66a7b92512841": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "83f03a9d-f6f9-4b98-b260-9d1e8f64d91b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
