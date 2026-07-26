@@ -31,7 +31,7 @@ describe('createProfileSyncQueue', () => {
     assert.equal(queue.revision, 5);
   });
 
-  it('reports conflict with the current server revision and keeps retry explicit', async () => {
+  it('blocks ordinary retries after conflict and requires explicit local overwrite', async () => {
     const statuses: ProfileSyncStatus[] = [];
     const revisions: number[] = [];
     let attempt = 0;
@@ -51,9 +51,13 @@ describe('createProfileSyncQueue', () => {
 
     await queue.enqueue(state(1));
     assert.equal(statuses.at(-1)?.phase, 'conflict');
-    assert.equal(queue.revision, 4);
+    assert.equal(queue.revision, 1);
 
     await queue.enqueue(state(1));
+    assert.deepEqual(revisions, [1]);
+    assert.equal(statuses.at(-1)?.phase, 'conflict');
+
+    await queue.resolveConflictWithLocal(state(1));
     assert.deepEqual(revisions, [1, 4]);
     assert.equal(statuses.at(-1)?.phase, 'synced');
   });

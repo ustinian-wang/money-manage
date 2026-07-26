@@ -25,6 +25,8 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
   let revision = Math.max(0, options.initialRevision ?? 0);
   let queued: ProfileSyncState | null = null;
   let running = false;
+  let conflictRevision: number | null = null;
+  let conflictBlocked = false;
   let drainPromise: Promise<void> = Promise.resolve();
 
   const report = (status: ProfileSyncStatus) => options.onStatus?.(status);
@@ -51,9 +53,10 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
           };
           if (response.status === 409) {
             const currentRevision = Number(payload.state?.revision);
-            if (Number.isFinite(currentRevision)) revision = Math.max(0, currentRevision);
+            conflictRevision = Number.isFinite(currentRevision) ? Math.max(0, currentRevision) : null;
+            conflictBlocked = true;
             queued = null;
-            report({ phase: 'conflict', message: '云端数据已更新，请确认后重试同步' });
+            report({ phase: 'conflict', message: '云端数据已更新；继续将覆盖云端版本' });
             break;
           }
           if (!response.ok || !Number.isFinite(Number(payload.revision))) {
@@ -76,6 +79,11 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
 
   return {
     enqueue(state: ProfileSyncState) {
+      if (conflictBlocked) {
+        queued = null;
+        report({ phase: 'conflict', message: '云端数据已更新；继续将覆盖云端版本' });
+        return Promise.resolve();
+      }
       queued = state;
       if (!running) drainPromise = drain();
       return drainPromise;
@@ -86,6 +94,20 @@ export function createProfileSyncQueue(options: ProfileSyncOptions = {}) {
     },
     setRevision(nextRevision: number) {
       revision = Math.max(0, Number.isFinite(nextRevision) ? nextRevision : 0);
+      conflictRevision = null;
+      conflictBlocked = false;
+    },
+    resolveConflictWithLocal(state: ProfileSyncState) {
+      if (!conflictBlocked || conflictRevision == null) {
+        report({ phase: 'failed', message: '无法确认云端版本，请刷新后重试' });
+        return Promise.resolve();
+      }
+      revision = conflictRevision;
+      conflictRevision = null;
+      conflictBlocked = false;
+      queued = state;
+      if (!running) drainPromise = drain();
+      return drainPromise;
     },
     get revision() {
       return revision;
