@@ -1,12 +1,16 @@
 import type { RetirementIdentity, RetirementResult, RetirementRule, RetirementTimelinePoint, SocialInsurancePlanningConfig } from '../../types/retirement';
+import { getCitySocialBasePreset } from './city-bases';
+
+// 广州上下限/默认与 city-bases 同源，避免快捷表与规则表漂移
+const gzBase = getCitySocialBasePreset('guangzhou')!;
 
 export const GUANGZHOU_SOCIAL_RULE_2026 = {
     city: 'guangzhou' as const,
     ruleVersion: 'guangzhou-2026-v1',
     minimumContributionYears: 20,
-    defaultContributionBase: 5510,
-    minContributionBase: 5510,
-    maxContributionBase: 27534,
+    defaultContributionBase: gzBase.base,
+    minContributionBase: gzBase.min ?? gzBase.base,
+    maxContributionBase: gzBase.max ?? gzBase.base,
 };
 
 const OLD_RETIREMENT_AGE: Record<RetirementIdentity, number> = {
