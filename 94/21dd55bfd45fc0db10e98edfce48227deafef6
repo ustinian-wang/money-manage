@@ -1,0 +1,33 @@
+tests/financial-timeline-and-persistence.test.ts
+  s_39ea8e0df52041::t_5b899f02791955 1-3,45
+package.json
+  s_60c7bcb9722498::t_24ab7016296b4f 23
+app/deleteConfirm.test.ts
+  s_39ea8e0df52041::t_1e2fad90cb1676 2,7
+lib/auth/bindEmptyAccount.ts
+  s_39ea8e0df52041::t_0bbe65d6179f7b 52,61-62,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9421dd55bfd45fc0db10e98edfce48227deafef6",
+  "prompts": {},
+  "sessions": {
+    "s_39ea8e0df52041": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c28e9ca3-1db9-4849-97a8-1520360e1257",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_60c7bcb9722498": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bd61bc02-7315-4634-8749-93f1408d3101",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
