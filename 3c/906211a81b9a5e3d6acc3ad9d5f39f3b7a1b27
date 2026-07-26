@@ -1,0 +1,29 @@
+app/page.tsx
+  s_9a6b494a146bcc::t_425b2c6f768fe5 172,178
+  s_9a6b494a146bcc::t_47971074e94d21 1888
+  s_18c55363baca14::t_8705c313ea9c2a 1153,1158,1905,2643,2926,3015
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3c906211a81b9a5e3d6acc3ad9d5f39f3b7a1b27",
+  "prompts": {},
+  "sessions": {
+    "s_18c55363baca14": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "133323ac-43e2-4eca-9c4f-2f5f17384aba",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_9a6b494a146bcc": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4fb27cfc-29d7-45b6-b4ab-2a8c709915b3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
