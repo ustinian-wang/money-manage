@@ -75,7 +75,7 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 ### 4. 本地自动保存与云同步
 
 - **访客（未登录）**：改参约 400ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）；**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。
-- **已登录**：同时写 localStorage，并串行 PUT `/api/profile` 到本人云端；UI 区分正在同步、已同步、失败和 revision 冲突，失败/冲突保留本机草稿并可重试。
+- **已登录**：同时写 localStorage，并串行 PUT `/api/profile` 到本人云端；UI 区分正在同步、已同步、失败和 revision 冲突。失败可重试；冲突会锁住普通同步，保留本机草稿，并要求用户明确选择是否用本机数据覆盖云端。
 - **注册认领**：注册成功且云端为空时，把当前内存/本机草稿写入该账号。
 - **登录空账号**：二次确认是否绑定当前访客草稿；已有云端数据则用云端。
 
