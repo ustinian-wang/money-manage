@@ -34,6 +34,8 @@ export type FloatPanelProps = {
   density?: 'tip' | 'field' | 'panel';
   /** 固定底栏（不随内容滚动），如保存/取消 */
   footer?: ReactNode;
+  /** 同 sheet 子页：标题栏「返回」；Esc/关闭仍走 onClose（调用方做层级） */
+  onBack?: () => void;
   children: ReactNode;
 };
 
@@ -50,6 +52,7 @@ export default function FloatPanel({
   mode = 'auto',
   density = 'panel',
   footer,
+  onBack,
   children,
 }: FloatPanelProps) {
   const isMobile = useIsMobile();
@@ -249,6 +252,7 @@ export default function FloatPanel({
           <PanelHeader
             title={headerTitle || '编辑'}
             onClose={onClose}
+            onBack={onBack}
             density={isFieldCard ? 'field' : 'panel'}
             touchClose={asSheet}
             draggable={draggable && !asSheet}

@@ -1,6 +1,6 @@
 /**
  * detail 收入主区契约：税前 / 五险一金和个税 / 到手收入；明细进合并面板
- * 退休与社保：一级入口行 → 独立二级 FloatPanel，不回流主财务参数卡
+ * 退休与社保：一级入口行 → 移动同 sheet 子页 / PC 二级 FloatPanel，不回流主财务参数卡
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -171,7 +171,7 @@ describe('退休与社保二级弹层归属契约', () => {
     assert.doesNotMatch(retirementEditorSource, /<FloatPanel|Z_INDEX\.nestedPanel/);
   });
 
-  it('SocialTaxBreakdown 入口行打开二级 FloatPanel（nestedPanel）承载 RetirementSocialEditor', () => {
+  it('SocialTaxBreakdown 入口行：移动同 sheet 子页，PC nestedPanel 承载 RetirementSocialEditor', () => {
     assert.match(socialTaxSource, /\bretirement\b/);
     assert.match(socialTaxSource, /\bretirementDate\b/);
     assert.match(socialTaxSource, /\bonRetirementChange\b/);
@@ -179,26 +179,29 @@ describe('退休与社保二级弹层归属契约', () => {
     assert.match(socialTaxSource, /retirementDate:\s*string/);
     assert.match(socialTaxSource, /onRetirementChange:\s*\(patch:\s*Partial<RetirementSetting>\)\s*=>\s*void/);
 
-    // 入口行文案
+    // 入口行文案 + 分轨
     assert.match(socialTaxSource, /INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY/);
-    // 二级弹层：open / nestedPanel / 单标题 / 编辑体
+    assert.match(socialTaxSource, /useIsMobile/);
+    assert.match(socialTaxSource, /mobileSubView/);
+    assert.match(socialTaxSource, /data-sheet-subview=\"retirement\"/);
+    // PC 二级弹层：!isMobile && nestedPanel / 单标题 / 编辑体
     assert.match(
       socialTaxSource,
-      /<FloatPanel[\s\S]*?open=\{retirementSettingsOpen\}[\s\S]*?zIndex=\{Z_INDEX\.nestedPanel\}[\s\S]*?headerTitle=\{INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE\}[\s\S]*?<RetirementSocialEditor\s+retirement=\{retirement\}\s+retirementDate=\{retirementDate\}\s+onChange=\{onRetirementChange\}\s*\/>/,
+      /\{!isMobile && \(\s*<FloatPanel[\s\S]*?open=\{retirementSettingsOpen\}[\s\S]*?zIndex=\{Z_INDEX\.nestedPanel\}[\s\S]*?headerTitle=\{INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE\}[\s\S]*?<RetirementSocialEditor\s+retirement=\{retirement\}\s+retirementDate=\{retirementDate\}\s+onChange=\{onRetirementChange\}\s*\/>/,
     );
-    // 一级关闭时收起二级
+    // 一级关闭 / Esc：子页先 pop
+    assert.match(socialTaxSource, /if \(mobileSubView\) \{[\s\S]*popSub\(\)/);
     assert.match(socialTaxSource, /if \(!open\) \{[\s\S]*setRetirementSettingsOpen\(false\)/);
     // 禁止一级内折叠展开（不再用 ∧∨ / aria-expanded 内联展开）
     assert.doesNotMatch(socialTaxSource, /aria-expanded=\{retirementSettingsOpen\}/);
     assert.doesNotMatch(socialTaxSource, /retirementSettingsOpen \? '∧' : '∨'/);
-    assert.doesNotMatch(socialTaxSource, /\{retirementSettingsOpen && \([\s\S]*<RetirementSocialEditor/);
   });
 });
 
 describe('个税明细二级弹层归属契约', () => {
   const socialTaxSource = sourceBetween(pageSource, 'function SocialTaxBreakdown({');
 
-  // 一级个税区无专项勾选；勾选仅出现在 taxDetail 二级 FloatPanel 内
+  // 一级个税区无专项勾选；勾选仅出现在 taxDetail 二级（移动子页 / PC FloatPanel）内
   it('专项附加扣除勾选仅在个税「查看明细」二级，一级只留摘要与入口', () => {
     assert.match(socialTaxSource, /INCOME_DETAIL_TAX_DETAIL_ENTRY/);
     assert.match(socialTaxSource, /INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE/);
@@ -206,27 +209,55 @@ describe('个税明细二级弹层归属契约', () => {
     assert.match(socialTaxSource, /zIndex=\{Z_INDEX\.nestedPanel\}/);
     assert.match(socialTaxSource, /一级个税区：仅预估摘要/);
     assert.match(socialTaxSource, /二级：抵扣 → 各区间税额 → 税率表/);
+    assert.match(socialTaxSource, /data-sheet-subview=\"tax\"/);
+    assert.match(socialTaxSource, /\{!isMobile && \(\s*<FloatPanel[\s\S]*?open=\{taxDetailOpen\}/);
 
-    // 住房租金 / 赡养老人勾选必须在 taxDetail FloatPanel 内部
-    const taxDetailPanel = socialTaxSource.match(
-      /<FloatPanel[\s\S]*?open=\{taxDetailOpen\}[\s\S]*?headerTitle=\{INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE\}[\s\S]*?<\/FloatPanel>/,
+    // 住房租金 / 赡养老人勾选必须在 taxDetailBody（子页与 PC 二级共用）
+    const taxDetailBody = socialTaxSource.match(
+      /const taxDetailBody = \([\s\S]*?\n  \);/,
     )?.[0];
-    assert.ok(taxDetailPanel, 'tax detail FloatPanel missing');
-    assert.match(taxDetailPanel, /住房租金/);
-    assert.match(taxDetailPanel, /赡养老人/);
-    assert.match(taxDetailPanel, /onRentChange/);
-    assert.match(taxDetailPanel, /onElderlyChange/);
-    assert.match(taxDetailPanel, /专项附加扣除/);
-    assert.match(taxDetailPanel, /本区间税额/);
-    assert.match(taxDetailPanel, /纳税区间表/);
+    assert.ok(taxDetailBody, 'taxDetailBody missing');
+    assert.match(taxDetailBody, /住房租金/);
+    assert.match(taxDetailBody, /赡养老人/);
+    assert.match(taxDetailBody, /onRentChange/);
+    assert.match(taxDetailBody, /onElderlyChange/);
+    assert.match(taxDetailBody, /专项附加扣除/);
+    assert.match(taxDetailBody, /本区间税额/);
+    assert.match(taxDetailBody, /纳税区间表/);
 
     // 一级个税 section：在打开 taxDetail 之前不得出现专项勾选 label
     const primaryTax = socialTaxSource.match(
-      /一级个税区[\s\S]*?<FloatPanel[\s\S]*?open=\{taxDetailOpen\}/,
+      /一级个税区[\s\S]*?\{!isMobile && \(\s*<FloatPanel[\s\S]*?open=\{taxDetailOpen\}/,
     )?.[0];
     assert.ok(primaryTax, 'primary tax section marker missing');
     assert.doesNotMatch(primaryTax, /onRentChange/);
     assert.doesNotMatch(primaryTax, /onElderlyChange/);
     assert.match(primaryTax, /本月预估个税/);
+  });
+});
+
+describe('移动禁浮层叠浮层契约', () => {
+  const pageSourceFresh = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+  const floatPanelSource = fs.readFileSync(new URL('./components/FloatPanel.tsx', import.meta.url), 'utf8');
+  const panelHeaderSource = fs.readFileSync(new URL('./components/PanelHeader.tsx', import.meta.url), 'utf8');
+  const socialTaxSource = sourceBetween(pageSourceFresh, 'function SocialTaxBreakdown({');
+  const assetSource = sourceBetween(pageSourceFresh, 'function AssetLinkedEditor({', 'function InstallmentSettingsPanel');
+
+  it('FloatPanel / PanelHeader 支持 onBack 同 sheet 子页返回', () => {
+    assert.match(floatPanelSource, /onBack\?: \(\) => void/);
+    assert.match(floatPanelSource, /onBack=\{onBack\}/);
+    assert.match(panelHeaderSource, /onBack\?: \(\) => void/);
+    assert.match(panelHeaderSource, /\{onBack && \(/);
+    assert.match(panelHeaderSource, /返回/);
+  });
+
+  it('SocialTaxBreakdown / AssetLinkedEditor 移动不 portal nestedPanel', () => {
+    // nestedPanel 仅包在 !isMobile
+    assert.match(socialTaxSource, /\{!isMobile && \([\s\S]*zIndex=\{Z_INDEX\.nestedPanel\}/);
+    assert.match(assetSource, /\{!isMobile && \([\s\S]*zIndex=\{Z_INDEX\.nestedPanel\}/);
+    assert.match(socialTaxSource, /data-sheet-subview=/);
+    assert.match(assetSource, /data-sheet-subview=\"emergency\"/);
+    assert.match(socialTaxSource, /onBack=\{mobileSubView \? popSub : undefined\}/);
+    assert.match(assetSource, /onBack=\{isMobile && emergencyOpen \? popEmergency : undefined\}/);
   });
 });

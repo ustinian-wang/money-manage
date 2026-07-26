@@ -2533,6 +2533,7 @@ function AssetLinkedEditor({
   monthlyExpenses: number;
   onMonthsPlanChecked: (checked: boolean) => void;
 }) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -2542,8 +2543,13 @@ function AssetLinkedEditor({
   const cashSummary = monthsPlan
     ? (plan.months > 0 ? `应急月数 · ${plan.months} 月` : '应急月数 · 去设置')
     : '默认';
+  // 移动：子页返回；Esc/关闭先 pop 再关一级（禁浮层叠浮层）
+  const popEmergency = () => setEmergencyOpen(false);
   const closeAsset = () => {
-    setEmergencyOpen(false);
+    if (emergencyOpen) {
+      popEmergency();
+      return;
+    }
     setOpen(false);
   };
   const setCashMode = (mode: 'amount' | 'months') => {
@@ -2577,7 +2583,53 @@ function AssetLinkedEditor({
           {money(totalAssets)}
         </button>
       </span>
-      <FloatPanel open={open} anchorRef={anchorRef} onClose={closeAsset} width={340} maxHeightVh={72} headerTitle="资产配置" density="field">
+      <FloatPanel
+        open={open}
+        anchorRef={anchorRef}
+        onClose={closeAsset}
+        onBack={isMobile && emergencyOpen ? popEmergency : undefined}
+        width={340}
+        maxHeightVh={72}
+        headerTitle={isMobile && emergencyOpen ? '应急设置' : '资产配置'}
+        density="field"
+      >
+        {isMobile && emergencyOpen ? (
+          <div className="space-y-3" data-sheet-subview="emergency">
+            <label className="block text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
+              <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
+            </label>
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+              <span>每月支出（自动）</span>
+              <span className="font-mono font-semibold tabular-nums text-[#17212b]">
+                {money(autoMonthly)}
+                <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
+              </span>
+            </div>
+            {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
+              <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
+            )}
+            <label className="block text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1">应急月数<InfoTip>{EMERGENCY_MONTHS_FIELD_TIP}</InfoTip></span>
+              <SoftNumberInput
+                min={0}
+                max={36}
+                step={0.5}
+                suffix="个月"
+                value={plan.months}
+                onCommit={onCashByMonths}
+              />
+            </label>
+            <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center justify-between gap-2">
+                <span>推算现金（备用金）</span>
+                <span className="font-mono font-semibold tabular-nums text-[#17212b]">{money(cash)}</span>
+              </div>
+              <p className="leading-snug text-slate-400">现金 = 每月支出 × 应急月数；理财 = 总资产 − 现金</p>
+            </div>
+          </div>
+        ) : (
+        <>
         <label className="mb-2 block text-xs text-slate-500">总资产
           <SoftNumberInput min={0} step={1000} value={totalAssets} onCommit={onTotal} />
         </label>
@@ -2626,10 +2678,11 @@ function AssetLinkedEditor({
                   {plan.months > 0 ? `${plan.months} 月 · ${money(cash)}` : '往年支出 / 月数'}
                 </span>
               </button>
+              {!isMobile && (
               <FloatPanel
                 open={emergencyOpen}
                 anchorRef={emergencyBtnRef}
-                onClose={() => setEmergencyOpen(false)}
+                onClose={popEmergency}
                 width={320}
                 maxHeightVh={64}
                 zIndex={Z_INDEX.nestedPanel}
@@ -2671,6 +2724,7 @@ function AssetLinkedEditor({
                   </div>
                 </div>
               </FloatPanel>
+              )}
             </div>
           )}
         </div>
@@ -2681,6 +2735,8 @@ function AssetLinkedEditor({
             <span className="font-mono tabular-nums text-[#17212b]">{money(adjustedAvailableAssets)}</span>
           </div>
         </div>
+        </>
+        )}
       </FloatPanel>
     </div>
   );
@@ -2935,6 +2991,7 @@ function SocialTaxBreakdown({
   retirementDate: string;
   onRetirementChange: (patch: Partial<RetirementSetting>) => void;
 }) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [retirementSettingsOpen, setRetirementSettingsOpen] = useState(false);
   const [taxDetailOpen, setTaxDetailOpen] = useState(false);
@@ -2957,11 +3014,90 @@ function SocialTaxBreakdown({
   const taxable = Math.max(0, salary - total - deductions.reduce((sum, row) => sum + row.actual, 0));
   const bracket = findTaxMonthlyBracket(taxable);
   const bracketSliceRows = buildTaxBracketSliceRows(taxable);
+  const mobileSubView = isMobile
+    ? (retirementSettingsOpen ? 'retirement' : taxDetailOpen ? 'tax' : null)
+    : null;
+  const popSub = () => {
+    setRetirementSettingsOpen(false);
+    setTaxDetailOpen(false);
+  };
+  // Esc/关闭：子页先返回一级；一级再关 sheet
   const closeMain = () => {
+    if (mobileSubView) {
+      popSub();
+      return;
+    }
     setRetirementSettingsOpen(false);
     setTaxDetailOpen(false);
     setOpen(false);
   };
+  const openRetirementSub = () => {
+    setTaxDetailOpen(false);
+    setRetirementSettingsOpen((current) => !current);
+  };
+  const openTaxSub = () => {
+    setRetirementSettingsOpen(false);
+    setTaxDetailOpen((current) => !current);
+  };
+  const panelTitle = mobileSubView === 'retirement'
+    ? INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE
+    : mobileSubView === 'tax'
+      ? INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE
+      : INCOME_DETAIL_DEDUCTION_PANEL_TITLE;
+  const taxDetailBody = (
+    <div data-sheet-subview="tax">
+      <section className="space-y-3 text-sm">
+        <p className="text-xs font-medium text-slate-600">专项附加扣除</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "住房租金")?.enabled ?? false} onChange={(event) => onRentChange(event.target.checked)} /><span>住房租金<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "住房租金")?.standard ?? 0)} / 月</span></label>
+          <label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "赡养老人")?.enabled ?? false} onChange={(event) => onElderlyChange(event.target.checked)} /><span>赡养老人<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "赡养老人")?.standard ?? 0)} / 月</span></label>
+        </div>
+        <div className="space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+          <div className="flex justify-between"><span>税前工资</span><span className="tabular-nums text-slate-700">{money(salary)}</span></div>
+          <div className="flex justify-between"><span>个人五险一金</span><span className="tabular-nums text-slate-700">-{money(total)}</span></div>
+          {deductions.map((row) => <div key={row.name} className="flex justify-between"><span>{row.name}</span><span className="tabular-nums text-slate-700">-{money(row.actual)}</span></div>)}
+          <div className="flex justify-between border-t border-slate-100 pt-1 font-medium text-slate-700"><span>应纳税所得额</span><span className="tabular-nums">{money(taxable)}</span></div>
+          <div className="flex justify-between"><span>当前区间：税率 / 速算扣除数</span><span className="tabular-nums">{bracket.rate}% / {money(bracket.quick)}</span></div>
+        </div>
+      </section>
+      <section className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
+        <p className="text-xs text-slate-500">按当前应纳税所得额 {money(taxable)} 分档累进；高亮为命中档。各档税额之和 = 本月预估个税。</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>月应纳税所得额</th><th>税率</th><th>本区间税额</th><th>状态</th></tr></thead>
+            <tbody>
+              {bracketSliceRows.map((item) => (
+                <tr key={item.range} className={item.isCurrent ? 'bg-emerald-50 font-semibold' : ''}>
+                  <td>{item.range}</td>
+                  <td>{item.rate}%</td>
+                  <td className="tabular-nums">{money(item.sliceTax)}</td>
+                  <td>{item.isCurrent ? '当前区间' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
+        <p className="text-xs font-medium text-slate-600">纳税区间表（税率 / 速算扣除数）</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>月应纳税所得额</th><th>税率</th><th>速算扣除数</th><th>当前状态</th></tr></thead>
+            <tbody>
+              {TAX_MONTHLY_BRACKETS.map((item) => (
+                <tr key={item.range} className={item.range === bracket.range ? 'bg-emerald-50 font-semibold' : ''}>
+                  <td>{item.range}</td>
+                  <td>{item.rate}%</td>
+                  <td>{money(item.quick)}</td>
+                  <td>{item.range === bracket.range ? '当前区间' : '可选区间'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
   return (
     <div className="relative block">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row">
@@ -2971,7 +3107,22 @@ function SocialTaxBreakdown({
         </span>
         <button ref={anchorRef} type="button" onClick={() => setOpen((current) => !current)} onDoubleClick={() => setOpen(true)} title="点击查看明细" className="field-click self-start sm:self-auto">-{money(deductionTotal)}</button>
       </span>
-      <FloatPanel open={open} anchorRef={anchorRef} onClose={closeMain} width={620} headerTitle={INCOME_DETAIL_DEDUCTION_PANEL_TITLE}>
+      <FloatPanel
+        open={open}
+        anchorRef={anchorRef}
+        onClose={closeMain}
+        onBack={mobileSubView ? popSub : undefined}
+        width={620}
+        headerTitle={panelTitle}
+      >
+        {mobileSubView === 'retirement' ? (
+          <div data-sheet-subview="retirement">
+            <RetirementSocialEditor retirement={retirement} retirementDate={retirementDate} onChange={onRetirementChange} />
+          </div>
+        ) : mobileSubView === 'tax' ? (
+          taxDetailBody
+        ) : (
+        <>
         <section className="space-y-3">
           <h4 className="text-sm font-semibold text-slate-700">五险一金</h4>
           <label className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
@@ -2979,12 +3130,12 @@ function SocialTaxBreakdown({
             <span className="font-medium">缴纳五险一金</span>
             <span className="text-xs text-slate-400">{socialEnabled ? '勾选后按费率扣个人/企业社保，并抵减个税' : '未勾选：个人/企业均为 0，个税无社保扣减'}</span>
           </label>
-          {/* 入口行 → 二级 FloatPanel（nestedPanel）；勿在一级内折叠展开 */}
+          {/* 入口行 → 移动同 sheet 子页 / PC 二级 FloatPanel（nestedPanel）；勿在一级内折叠展开 */}
           <div className="relative">
             <button
               ref={retirementSettingsAnchorRef}
               type="button"
-              onClick={() => setRetirementSettingsOpen((current) => !current)}
+              onClick={openRetirementSub}
               className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2.5 text-left text-sm hover:border-slate-200"
             >
               <span className="font-medium text-slate-700">{INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY}</span>
@@ -2992,6 +3143,7 @@ function SocialTaxBreakdown({
                 {retirement.enabled ? `已关联 · ${retirementDate || '待完善'}` : '未关联'}
               </span>
             </button>
+            {!isMobile && (
             <FloatPanel
               open={retirementSettingsOpen}
               anchorRef={retirementSettingsAnchorRef}
@@ -3004,6 +3156,7 @@ function SocialTaxBreakdown({
             >
               <RetirementSocialEditor retirement={retirement} retirementDate={retirementDate} onChange={onRetirementChange} />
             </FloatPanel>
+            )}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
@@ -3069,14 +3222,15 @@ function SocialTaxBreakdown({
                 <button
                   ref={taxDetailAnchorRef}
                   type="button"
-                  onClick={() => setTaxDetailOpen((current) => !current)}
+                  onClick={openTaxSub}
                   className="text-xs font-semibold text-[#d9654a] hover:underline"
                 >
                   {INCOME_DETAIL_TAX_DETAIL_ENTRY}
                 </button>
                 <strong className="text-red-500">-{money(tax)}</strong>
               </span>
-              {/* 二级：抵扣 → 各区间税额 → 税率表；勿双标题 */}
+              {/* 二级：抵扣 → 各区间税额 → 税率表；移动同 sheet 子页，PC nestedPanel；勿双标题 */}
+              {!isMobile && (
               <FloatPanel
                 open={taxDetailOpen}
                 anchorRef={taxDetailAnchorRef}
@@ -3086,61 +3240,15 @@ function SocialTaxBreakdown({
                 zIndex={Z_INDEX.nestedPanel}
                 headerTitle={INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE}
               >
-                <section className="space-y-3 text-sm">
-                  <p className="text-xs font-medium text-slate-600">专项附加扣除</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "住房租金")?.enabled ?? false} onChange={(event) => onRentChange(event.target.checked)} /><span>住房租金<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "住房租金")?.standard ?? 0)} / 月</span></label>
-                    <label className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"><span className="flex items-center gap-2"><input type="checkbox" className="accent-[#f07f62]" checked={deductions.find((row) => row.name === "赡养老人")?.enabled ?? false} onChange={(event) => onElderlyChange(event.target.checked)} /><span>赡养老人<span className="ml-1 font-normal text-slate-400">（勾选计入专项附加扣除）</span></span></span><span className="mt-2 block text-xs text-slate-500">政策标准 {money(deductions.find((row) => row.name === "赡养老人")?.standard ?? 0)} / 月</span></label>
-                  </div>
-                  <div className="space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
-                    <div className="flex justify-between"><span>税前工资</span><span className="tabular-nums text-slate-700">{money(salary)}</span></div>
-                    <div className="flex justify-between"><span>个人五险一金</span><span className="tabular-nums text-slate-700">-{money(total)}</span></div>
-                    {deductions.map((row) => <div key={row.name} className="flex justify-between"><span>{row.name}</span><span className="tabular-nums text-slate-700">-{money(row.actual)}</span></div>)}
-                    <div className="flex justify-between border-t border-slate-100 pt-1 font-medium text-slate-700"><span>应纳税所得额</span><span className="tabular-nums">{money(taxable)}</span></div>
-                    <div className="flex justify-between"><span>当前区间：税率 / 速算扣除数</span><span className="tabular-nums">{bracket.rate}% / {money(bracket.quick)}</span></div>
-                  </div>
-                </section>
-                <section className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
-                  <p className="text-xs text-slate-500">按当前应纳税所得额 {money(taxable)} 分档累进；高亮为命中档。各档税额之和 = 本月预估个税。</p>
-                  <div className="table-wrap">
-                    <table>
-                      <thead><tr><th>月应纳税所得额</th><th>税率</th><th>本区间税额</th><th>状态</th></tr></thead>
-                      <tbody>
-                        {bracketSliceRows.map((item) => (
-                          <tr key={item.range} className={item.isCurrent ? 'bg-emerald-50 font-semibold' : ''}>
-                            <td>{item.range}</td>
-                            <td>{item.rate}%</td>
-                            <td className="tabular-nums">{money(item.sliceTax)}</td>
-                            <td>{item.isCurrent ? '当前区间' : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-                <section className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
-                  <p className="text-xs font-medium text-slate-600">纳税区间表（税率 / 速算扣除数）</p>
-                  <div className="table-wrap">
-                    <table>
-                      <thead><tr><th>月应纳税所得额</th><th>税率</th><th>速算扣除数</th><th>当前状态</th></tr></thead>
-                      <tbody>
-                        {TAX_MONTHLY_BRACKETS.map((item) => (
-                          <tr key={item.range} className={item.range === bracket.range ? 'bg-emerald-50 font-semibold' : ''}>
-                            <td>{item.range}</td>
-                            <td>{item.rate}%</td>
-                            <td>{money(item.quick)}</td>
-                            <td>{item.range === bracket.range ? '当前区间' : '可选区间'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
+                {taxDetailBody}
               </FloatPanel>
+              )}
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-2"><span className="flex items-center gap-1">到手收入（主区同步）<InfoTip>税前工资 − 五险一金 − 本月个税</InfoTip></span><strong>{money(net)}</strong></div>
           </div>
         </section>
+        </>
+        )}
       </FloatPanel>
     </div>
   );
