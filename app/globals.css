@@ -600,3 +600,41 @@ td { color: #52605b; }
   padding: 0.45rem 0.65rem;
   font-size: 0.75rem;
 }
+
+/* 冷启动骨架：session/hydrate 未就绪；ink/paper 克制占位，无毛玻璃/大动效 */
+.cold-skel {
+  display: block;
+  background: #e8eeea;
+  border-radius: 0.55rem;
+}
+.cold-skel-pill {
+  width: 5.5rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: #17212b;
+  opacity: 0.1;
+}
+.cold-skel-chip {
+  width: 4.25rem;
+  height: 2.1rem;
+  border-radius: 999px;
+}
+.cold-skel-title {
+  width: 5.75rem;
+  height: 1.1rem;
+}
+.cold-skel-label {
+  width: 3.5rem;
+  height: 0.7rem;
+  margin-top: 1.1rem;
+  background: #edf1ee;
+}
+.cold-skel-row {
+  height: 2.85rem;
+  width: 100%;
+  border-radius: 0.85rem;
+  background: #f8faf9;
+  border: 1px solid #edf1ee;
+}
+.cold-skel-row-short { width: 72%; }
+.cold-skel-row-mid { width: 88%; }

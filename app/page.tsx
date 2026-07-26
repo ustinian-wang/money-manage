@@ -1177,11 +1177,42 @@ export default function HomePage() {
     totalAssets,
   });
 
-  // 会话未就绪：简短占位，避免闪一下主界面
-  if (!authReady) {
+  // session/hydrate 未就绪：品牌顶栏 + 参数卡骨架，避免空白「加载中」与演示数闪一下
+  if (!authReady || !hydrated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] text-[#17212b]">
-        <p className="text-sm text-slate-400">加载中…</p>
+      <main className="min-h-screen bg-paper text-ink" aria-busy="true" aria-live="polite">
+        <div className="mobile-sticky-top">
+          <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink text-sm font-bold text-white">M</div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">财务规划</p>
+                <p className="hidden truncate text-[11px] leading-tight text-slate-400 sm:block">消费承受力测算 · 访客可体验</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2" aria-hidden>
+              <span className="cold-skel cold-skel-pill" />
+              <span className="cold-skel cold-skel-chip" />
+            </div>
+          </header>
+        </div>
+        <div className="page-pad mx-auto max-w-[1920px] px-3 py-3 sm:px-6 lg:px-10">
+          <section className="section-card rounded-3xl bg-white p-4 shadow-lg sm:p-6" aria-hidden>
+            <span className="cold-skel cold-skel-title" />
+            <span className="cold-skel cold-skel-label block" />
+            <div className="mt-3 space-y-2.5">
+              <span className="cold-skel cold-skel-row" />
+              <span className="cold-skel cold-skel-row" />
+              <span className="cold-skel cold-skel-row cold-skel-row-short" />
+            </div>
+            <span className="cold-skel cold-skel-label block" />
+            <div className="mt-3 space-y-2.5">
+              <span className="cold-skel cold-skel-row" />
+              <span className="cold-skel cold-skel-row cold-skel-row-mid" />
+            </div>
+          </section>
+        </div>
+        <p className="sr-only">加载中…</p>
       </main>
     );
   }
