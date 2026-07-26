@@ -1,0 +1,21 @@
+domain/tax/index.ts
+  s_8751f4621873f5::t_3ee121cdeb585b 19-46,52-62,65-89
+domain/tax/index.test.ts
+  s_8751f4621873f5::t_253cf08d68ba3f 3,7-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "be0db875d8ddf422f1ef4cf74137cb157ca0d5d3",
+  "prompts": {},
+  "sessions": {
+    "s_8751f4621873f5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "868fcbaa-1860-40d4-91c9-b8cfa0bcf8de",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
