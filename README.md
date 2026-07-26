@@ -18,7 +18,7 @@
 | --- | --- |
 | 框架 | Next.js 15、React 18、TypeScript |
 | UI / 图 | Tailwind CSS；ECharts（`echarts-for-react`） |
-| Node | `>=20 <23`，npm `>=10`（见 `package.json` → `engines`） |
+| Node | `>=22.6 <23`，npm `>=10`（见 `package.json` → `engines`；单测依赖 `--experimental-strip-types`） |
 
 ```bash
 npm install
