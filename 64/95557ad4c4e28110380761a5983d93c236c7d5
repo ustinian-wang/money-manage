@@ -1,0 +1,21 @@
+lib/persistence/profileSync.test.ts
+  s_5f92ffacc00d8e::t_8de41734eb6479 1-72
+lib/persistence/profileSync.ts
+  s_5f92ffacc00d8e::t_a5e5e9582ec4f9 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6495557ad4c4e28110380761a5983d93c236c7d5",
+  "prompts": {},
+  "sessions": {
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
