@@ -1,0 +1,19 @@
+package.json
+  s_07ac7f81ff2fc8::t_16e44feb975f5e 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "75d2af75e5d26cb02664b6ab727ea0f3805184d8",
+  "prompts": {},
+  "sessions": {
+    "s_07ac7f81ff2fc8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "60c6e120-8dc1-4c84-a460-88947edfb007",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
