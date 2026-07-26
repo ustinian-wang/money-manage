@@ -1,0 +1,25 @@
+app/page.tsx
+  s_984f7b2ab69545::t_8699d9db2ad5f1 2539-2540
+  s_984f7b2ab69545::t_e15ff2bc0363fd 1256
+  s_984f7b2ab69545::t_ac09dc95de30f7 2038-2042,2059,2062-2074,2090,2095,2106
+  s_984f7b2ab69545::t_daf7059426ad1e 2631,2634-2635,2637
+  s_984f7b2ab69545::t_a25172d7d5c710 2350,2357,2365,2380-2384,2390,2409-2414
+  s_984f7b2ab69545::t_acb736f61388d1 2773
+  s_984f7b2ab69545::t_4d79b9c2de7880 2415
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a6e20f0730041b03d9b75a18f06ab4f290979507",
+  "prompts": {},
+  "sessions": {
+    "s_984f7b2ab69545": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cf72bd95-8c1b-422c-bb70-37ad3e4518ac",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
