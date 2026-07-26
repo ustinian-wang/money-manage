@@ -1,0 +1,21 @@
+app/globals.css
+  s_9045110359ad1b::t_e414073119b2e2 142,148
+  s_9045110359ad1b::t_66ecb67454bece 197,202,204,208
+  s_9045110359ad1b::t_fc60bbabc42ec7 23-24,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cd83cfc8b3016f9126aa5be4a6fde72e1d5b4ef3",
+  "prompts": {},
+  "sessions": {
+    "s_9045110359ad1b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c3160ccd-e4af-499d-b6a2-b232c74a3dc8",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
