@@ -1,0 +1,36 @@
+package.json
+  s_5f92ffacc00d8e::t_fdfb9be720d355 23-25
+app/incomeDetailLayout.test.ts
+  s_5f92ffacc00d8e::t_a9524c16f52cdd 16,24
+domain/installment/validation.test.ts
+  s_5f92ffacc00d8e::t_a9524c16f52cdd 16
+tsconfig.json
+  s_5f92ffacc00d8e::t_5911c46c35f1c1 6
+lib/ui/designTokens.test.ts
+  s_9a6b494a146bcc::t_0c4515483b15da 3-4,12,40-44
+  s_9a6b494a146bcc::t_d1b4419c4060a2 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "47c23ad473374cfb00db595989b3e02a9c43b0bc",
+  "prompts": {},
+  "sessions": {
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_9a6b494a146bcc": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4fb27cfc-29d7-45b6-b4ab-2a8c709915b3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
