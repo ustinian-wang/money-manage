@@ -1,0 +1,23 @@
+domain/social-security/retirement.ts
+  s_4604666ab886a4::t_78369ed2ab31df 2-5,11-13
+domain/social-security/city-bases.test.ts
+  s_4604666ab886a4::t_78136f4340433e 1-36
+domain/social-security/city-bases.ts
+  s_4604666ab886a4::t_acd10439a640f0 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d2229e6b5bf09dcc2c872ad2f6e6a0d1c6fc777a",
+  "prompts": {},
+  "sessions": {
+    "s_4604666ab886a4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3c818ead-3a5d-4ace-b2e8-8a7db06fbcf1",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
