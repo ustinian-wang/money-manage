@@ -118,7 +118,7 @@ Jest/jsdom 只能覆盖业务逻辑与组件行为，**不能**可靠验证真�
 
 ### D. 测试与发布清单
 
-- [x] Jest：zIndex 阶梯 + 现有领域测保持绿（203 / 197 pass / 6 skip）
+- [x] Jest：zIndex 阶梯 + 现有领域测保持绿（stale skip 已清：资产/收益 clamp、场景对比、autosave 已接真实导出）
 - [x] `docs/ui-checklist.md`：弹层盖顶、菜单不被裁切、375 无横撑、sheet 键盘近似、图表非 0
 - [x] `mobile-smoke.md` 与清单交叉引用；保留登录/注册独立页步骤
 

@@ -7,6 +7,7 @@ import { termToMonths } from '../types/installment';
 import { compareProfiles } from '../lib/scenario/compare';
 import { applyOverrides } from '../lib/scenario/applyOverrides';
 import { createAutosave, LOCAL_REVISION_KEY, LOCAL_STATE_KEY } from '../lib/persistence/clientAutosave';
+import { clampNumberField, showsNumberSlider, usesInlineNumberEdit } from '../app/numberFieldUi';
 import type { PersistedState } from '../lib/persistence/types';
 
 test('installment terms accept months and years', () => {
@@ -57,6 +58,18 @@ test('autosave writes every interaction to localStorage and flushes on blur', as
     }
 });
 
-test('asset and percentage slider constraints are explicit contracts until production exports exist', { skip: 'No production asset validator or slider conversion export exists yet.' }, () => {
-    assert.fail('Expected cash 0..2000000, investment <= total assets, return 0..100, and percentage/value conversion.');
+test('asset and percentage fields clamp without opening a slider panel', () => {
+    const totalAssets = 800_000;
+    // 现金 / 理财：相对总资产上下界（产品未再设固定 200 万硬顶）
+    assert.equal(clampNumberField(-10, { min: 0, max: totalAssets }), 0);
+    assert.equal(clampNumberField(totalAssets + 50, { min: 0, max: totalAssets }), totalAssets);
+    assert.equal(clampNumberField(200_000, { min: 0, max: totalAssets }), 200_000);
+    // 年化收益与理财占比：0..100
+    assert.equal(clampNumberField(120, { min: 0, max: 100 }), 100);
+    assert.equal(clampNumberField(-1, { min: 0, max: 100 }), 0);
+    // 金额 ↔ 占比：ratio% * total
+    const ratio = clampNumberField(25, { min: 0, max: 100 });
+    assert.equal(totalAssets * ratio / 100, 200_000);
+    assert.equal(showsNumberSlider('rangedPercent'), false);
+    assert.equal(usesInlineNumberEdit('rangedPercent'), true);
 });
