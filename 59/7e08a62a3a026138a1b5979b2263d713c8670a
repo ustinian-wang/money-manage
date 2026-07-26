@@ -1,0 +1,78 @@
+docs/form-controls.md
+  s_7f7c0c0ce735ec::t_5511014bca00df 1-170
+README.md
+  s_39ea8e0df52041::t_5857d42400c01e 75
+  s_39ea8e0df52041::t_7f6f0d682cdc73 158
+  s_39ea8e0df52041::t_21c9c67c8975a0 3
+  s_39ea8e0df52041::t_e3e72d6ffeb7c8 82
+tests/mobile-smoke.md
+  s_38f2f9c90023b9::t_2491c3182535a7 25
+  s_44b482bc0629ae::t_c1334f1e3438e7 71-79
+  s_a4a47e8919a5a5::t_207cfcc452de49 41
+  s_39ea8e0df52041::t_7fd8fc289c3982 24
+  s_44b482bc0629ae::t_bf9583544fd330 80
+docs/prd-mobile-ux.md
+  s_39ea8e0df52041::t_54a48c6d15404f 58
+  s_39ea8e0df52041::t_81a3db7dc5fc48 32
+docs/ui-checklist.md
+  s_39ea8e0df52041::t_d6ea2bb8c15581 26
+  s_38f2f9c90023b9::t_6b4793a0032248 23
+docs/first-visit-audit.md
+  s_c66a7b92512841::t_f27889df952d7c 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "597e08a62a3a026138a1b5979b2263d713c8670a",
+  "prompts": {},
+  "sessions": {
+    "s_38f2f9c90023b9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b0a93ca3-ef10-4316-ad43-13d702999a10",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_39ea8e0df52041": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c28e9ca3-1db9-4849-97a8-1520360e1257",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_44b482bc0629ae": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "707df206-54ad-49fe-87a8-22a1f089a96b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_7f7c0c0ce735ec": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4e11ef51-5525-418a-bff3-e37b9147adff",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_a4a47e8919a5a5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1f406922-45be-4f70-ac77-b9c994367a5f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_c66a7b92512841": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "83f03a9d-f6f9-4b98-b260-9d1e8f64d91b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
