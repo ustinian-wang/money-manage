@@ -1,0 +1,20 @@
+lib/ui/zIndex.test.ts
+  s_18c55363baca14::t_ef9c01588baad0 4-9,37-55
+  s_18c55363baca14::t_71e40bfa5d6086 56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "be8f40ae9fdb163a706a63eca1b79c2b8bb7cbce",
+  "prompts": {},
+  "sessions": {
+    "s_18c55363baca14": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "133323ac-43e2-4eca-9c4f-2f5f17384aba",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
