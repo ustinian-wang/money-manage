@@ -1,0 +1,47 @@
+docs/notion-refactor-spec.md
+  s_3ca801666a66a1::t_f183f0f8e428dc 40
+  s_dcad7379211f02::t_2aaaccce7d1fce 102-104,115-117,121,130,137-138
+  s_dcad7379211f02::t_7eef563646c840 1-35,41-79,81-101,105-114,118-120,124-129,131-136,139
+  s_dcad7379211f02::t_f21c3a860edba8 36-39
+  s_3ca801666a66a1::t_afcce360a19579 80
+  s_3ca801666a66a1::t_9d1ae7bee74a79 122-123
+docs/ui-checklist.md
+  s_3ca801666a66a1::t_be9e3ec12cba9f 70
+  s_3ca801666a66a1::t_96d42f55d71daa 1-69,71-79
+docs/design-tokens.md
+  s_3142c9eff68a01::t_78eb103be57792 1-33,37-39,41-46
+  s_3142c9eff68a01::t_dc19fa701bc6b9 40
+  s_3142c9eff68a01::t_e59c8552458ee8 34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cf5ea16e5195cad7b8a5826260d67e34b3e34f03",
+  "prompts": {},
+  "sessions": {
+    "s_3142c9eff68a01": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c9f41fde-109e-4ad4-8908-798c5f213edb",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3ca801666a66a1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3e150196-8dda-46ec-8e65-c5786bf13b25",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_dcad7379211f02": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d212a1b5-26be-478f-a743-d28445c7c148",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
