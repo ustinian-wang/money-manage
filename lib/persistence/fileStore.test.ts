@@ -7,12 +7,13 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { readState, writeState, listBackups, STATE_FILE, userScopedKey } from './fileStore';
+import { resolveDataFile } from './localFs';
 
 test('读写 user 作用域 profile 并递增 revision，用户间隔离', async () => {
     const userId = 'test-user-a';
-    const stateFile = path.join(process.cwd(), 'data', userScopedKey(userId, STATE_FILE));
+    const stateFile = resolveDataFile(userScopedKey(userId, STATE_FILE));
     await fs.mkdir(path.dirname(stateFile), { recursive: true });
-    await fs.mkdir(path.join(process.cwd(), 'data', userScopedKey(userId, 'backups')), { recursive: true });
+    await fs.mkdir(path.dirname(resolveDataFile(userScopedKey(userId, 'backups/x'))), { recursive: true });
     await fs.writeFile(stateFile, JSON.stringify({
         schemaVersion: 1,
         revision: 2,
@@ -42,7 +43,7 @@ test('读写 user 作用域 profile 并递增 revision，用户间隔离', async
 
 test('expectedRevision 不匹配时抛 REVISION_CONFLICT', async () => {
     const userId = 'test-user-rev';
-    const stateFile = path.join(process.cwd(), 'data', userScopedKey(userId, STATE_FILE));
+    const stateFile = resolveDataFile(userScopedKey(userId, STATE_FILE));
     await fs.mkdir(path.dirname(stateFile), { recursive: true });
     await fs.writeFile(stateFile, JSON.stringify({
         schemaVersion: 1,

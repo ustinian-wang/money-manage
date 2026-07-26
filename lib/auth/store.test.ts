@@ -6,7 +6,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import {
     PASSWORD_MAX,
     USERNAME_MAX,
@@ -21,6 +20,7 @@ import {
     validatePassword,
     validateUsername,
 } from './store';
+import { resolveDataFile } from '../persistence/localFs';
 
 describe('validateUsername / validatePassword / validateEmail', () => {
     test('账号必填且超长拒绝', () => {
@@ -89,8 +89,7 @@ describe('registerUser / authenticateUser / session', () => {
         assert.equal(await getSessionUser(token), null);
 
         // 清理本测写入的用户索引与记录
-        const data = path.join(process.cwd(), 'data');
-        await fs.rm(path.join(data, `user:${created.user.id}`), { force: true });
-        await fs.rm(path.join(data, `idx:username:${username.toLowerCase()}`), { force: true });
+        await fs.rm(resolveDataFile(`user:${created.user.id}`), { force: true });
+        await fs.rm(resolveDataFile(`idx:username:${username.toLowerCase()}`), { force: true });
     });
 });
