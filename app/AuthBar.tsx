@@ -298,7 +298,7 @@ export default function AuthBar({
             >
                 <div className="mb-6 flex flex-col items-center gap-2 text-center">
                     <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#17212b] text-lg font-bold text-white">M</div>
-                    <p className="text-lg font-semibold">财务管理</p>
+                    <p className="text-lg font-semibold">财务规划</p>
                     <p className="text-xs text-slate-400">
                         {variant === 'page'
                             ? (mode === 'login' ? '登录同步云端，或返回继续访客体验' : '注册认领数据，或返回继续访客体验')

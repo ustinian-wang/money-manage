@@ -1177,8 +1177,8 @@ export default function HomePage() {
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight">财务管理</p>
-          <p className="hidden truncate text-[11px] leading-tight text-slate-400 sm:block">访客可体验 · 注册认领数据</p>
+          <p className="text-sm font-semibold leading-tight">财务规划</p>
+          <p className="hidden truncate text-[11px] leading-tight text-slate-400 sm:block">消费承受力测算 · 访客可体验</p>
         </div>
       </div>
       <div className="relative flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
