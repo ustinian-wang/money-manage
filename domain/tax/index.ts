@@ -16,19 +16,77 @@ const DEDUCTION_KEYS: Exclude<TaxDeductionKey, 'basic'>[] = [
 const clampRate = (value: number | undefined): number => Math.min(100, Math.max(0, Number.isFinite(value) ? value as number : 0));
 const nonNegative = (value: number | undefined): number => Number.isFinite(value) ? Math.max(0, value as number) : 0;
 
+/** 月度预扣累进税率档（与 UI 纳税区间表同源） */
+export type TaxMonthlyBracket = {
+    range: string;
+    min: number;
+    max: number;
+    rate: number;
+    quick: number;
+};
+
+export const TAX_MONTHLY_BRACKETS: readonly TaxMonthlyBracket[] = [
+    { range: '不超过 3,000', min: 0, max: 3000, rate: 3, quick: 0 },
+    { range: '3,000 - 12,000', min: 3000, max: 12000, rate: 10, quick: 210 },
+    { range: '12,000 - 25,000', min: 12000, max: 25000, rate: 20, quick: 1410 },
+    { range: '25,000 - 35,000', min: 25000, max: 35000, rate: 25, quick: 2660 },
+    { range: '35,000 - 55,000', min: 35000, max: 55000, rate: 30, quick: 4410 },
+    { range: '55,000 - 80,000', min: 55000, max: 80000, rate: 35, quick: 7160 },
+    { range: '超过 80,000', min: 80000, max: Number.POSITIVE_INFINITY, rate: 45, quick: 15160 },
+];
+
+export type TaxBracketSliceRow = {
+    range: string;
+    rate: number;
+    quick: number;
+    /** 当前应纳税所得额落在本档的税额（未命中则为 0） */
+    sliceTax: number;
+    isCurrent: boolean;
+};
+
 function monthlyBase(input: TaxDeductionInput | undefined): number {
     if (!input) return 0;
     return nonNegative(input.deductionBaseMonthly ?? (input.deductionBaseAnnual || 0) / 12);
 }
 
-function estimateTax(monthlyTaxableIncome: number, marginalTaxRate?: number): number {
+/** 按月应纳税所得额命中税率档 */
+export function findTaxMonthlyBracket(monthlyTaxableIncome: number): TaxMonthlyBracket {
+    const taxable = nonNegative(monthlyTaxableIncome);
+    return TAX_MONTHLY_BRACKETS.find((b) => taxable <= b.max) ?? TAX_MONTHLY_BRACKETS[TAX_MONTHLY_BRACKETS.length - 1];
+}
+
+/**
+ * 月度个税估算：应纳税所得额 × 税率 − 速算扣除数
+ * 与 TAX_MONTHLY_BRACKETS 全档对齐（含 35% / 45%）
+ */
+export function estimateMonthlyTaxFromTaxable(monthlyTaxableIncome: number, marginalTaxRate?: number): number {
     const taxable = nonNegative(monthlyTaxableIncome);
     if (marginalTaxRate !== undefined) return taxable * clampRate(marginalTaxRate) / 100;
-    if (taxable <= 3000) return taxable * 0.03;
-    if (taxable <= 12000) return taxable * 0.1 - 210;
-    if (taxable <= 25000) return taxable * 0.2 - 1410;
-    if (taxable <= 35000) return taxable * 0.25 - 2660;
-    return taxable * 0.3 - 4410;
+    const bracket = findTaxMonthlyBracket(taxable);
+    return Math.max(0, taxable * bracket.rate / 100 - bracket.quick);
+}
+
+/**
+ * 当前应纳税所得额在各累进档的实际税额（分档示意）
+ * 各档 sliceTax 之和 = estimateMonthlyTaxFromTaxable(taxable)
+ */
+export function buildTaxBracketSliceRows(monthlyTaxableIncome: number): TaxBracketSliceRow[] {
+    const taxable = nonNegative(monthlyTaxableIncome);
+    const current = findTaxMonthlyBracket(taxable);
+    return TAX_MONTHLY_BRACKETS.map((bracket) => {
+        const sliceBase = Math.max(0, Math.min(taxable, bracket.max) - bracket.min);
+        return {
+            range: bracket.range,
+            rate: bracket.rate,
+            quick: bracket.quick,
+            sliceTax: sliceBase * bracket.rate / 100,
+            isCurrent: bracket.range === current.range,
+        };
+    });
+}
+
+function estimateTax(monthlyTaxableIncome: number, marginalTaxRate?: number): number {
+    return estimateMonthlyTaxFromTaxable(monthlyTaxableIncome, marginalTaxRate);
 }
 
 export function calculateTax(input: TaxInput): TaxCalculation {
