@@ -334,6 +334,11 @@ html.kb-open .auth-gate-root {
     border-style: dashed;
     border-color: rgba(240, 127, 98, 0.45);
   }
+  .expense-card-title .field-inline-input {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #17212b;
+  }
   .expense-card-amount .field-click {
     font-size: 0.95rem;
     font-weight: 700;
@@ -440,6 +445,11 @@ td { color: #52605b; }
   outline: none;
   background: rgba(240, 127, 98, 0.12);
   box-shadow: none;
+}
+/* 文本 inline：左对齐；名称不用等宽更易读 */
+.field-inline-input.field-inline-text {
+  text-align: left;
+  font-family: inherit;
 }
 .field-readonly {
   border-radius: 0.45rem;
