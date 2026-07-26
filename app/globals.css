@@ -78,6 +78,8 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
 .sheet-backdrop {
   position: fixed;
   inset: 0;
+  pointer-events: auto;
+  touch-action: none;
   background: rgba(23, 33, 43, 0.45);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
