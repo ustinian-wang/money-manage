@@ -43,7 +43,7 @@ npm test         # 领域单测（可选）
 | 收入信息 | 默认「只看到手」；可切「关心五险一金」。两套设置独立存储；结余/预测用统一出口可支配收入 |
 | 资产与理财 | **现金 = 总资产 − 理财**（`LinkedFieldGroup` 等价联动）；理财占比、年化收益率、闲钱投资（百分比或固定月额） |
 | 应急资金 | 应急资金月数、月度剩余、调整后可用资产（已扣分期承诺首付） |
-| 退休与社保 | 可开关；出生日期 / 身份 / 参保日 / 缴费年限；展示预计退休日与基数（当前为固定展示） |
+| 退休与社保 | 可开关；出生日期 / 身份 / 参保日 / 缴费年限；**社保基数**可手改，并可用城市快捷填入当年常用基数 |
 
 ### 2. 支出管理
 
@@ -171,9 +171,12 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 ```text
 app/page.tsx          # 主 UI + 现场计算口径
-app/AuthBar.tsx       # 登录 / 注册 / 登出
+app/login/page.tsx    # 登录独立页
+app/register/page.tsx # 注册独立页（认领闸门）
+app/auth/page.tsx     # 旧 /auth?mode= → redirect
+app/AuthBar.tsx       # 顶栏跳转入口 + 鉴权表单
 app/api/auth/*        # 注册、登录、登出、me
-lib/auth/             # PBKDF2、会话、用户存 KV/data
+lib/auth/             # PBKDF2、会话、用户存 KV/data、空账号绑定
 domain/               # 税 / 社保 / 分期 / 支出等领域逻辑与测试
 lib/persistence/      # 按 userId 隔离的 profile 读写
 data/                 # 本地数据（勿提交隐私）

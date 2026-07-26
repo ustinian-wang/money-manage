@@ -1,5 +1,7 @@
 # 移动端冒烟（390×844）
 
+> **发布前 UI 清单**：完整人工项见 [`docs/ui-checklist.md`](../docs/ui-checklist.md)（portal 层级、375 横撑、图表 canvas、鉴权独立页、移动禁叠浮层等）。本文件负责可重复步骤与轻量脚本；清单负责「看起来对不对」。
+>
 > **能力边界**：Chromium / Cursor 设备模式 **不能 100% 等价 iOS Safari 键盘**（visualViewport、橡皮筋、`position: fixed` 与键盘顶起均可能不同）。真机仍需 Safari Web Inspector 复核键盘场景。
 
 未引入 Playwright/Puppeteer（`package.json` 无浏览器 E2E 依赖）。本冒烟分两层：
@@ -20,8 +22,23 @@ npm run dev   # 默认 http://localhost:3000
 2. 访问 `http://localhost:3000`
 3. **访客主界面**：未登录应直接进主应用，见顶栏「访客 ∨」与示例数据条幅；主财务面板可用
 4. 顶栏「用户名/访客 + ∨」整块可点（原「更多」）：含快照、安装（若有）、**重启网站**、登录（窄屏）；点「重启网站」应弹出确认（取消则不刷新）
-5. 聚焦可编辑字段：页面不应白屏/崩溃
-6. （可选）注册 → 刷新仍登录且数据在 → 登出回访客
+5. **顶栏菜单不被裁切**：打开「访客 ∨」下拉后，菜单四边完整可见（不被顶栏/`sticky-chrome` 切掉）；向下轻滚使顶栏收起后，已打开的菜单仍应完整可见；375 与桌面各验一次
+6. **鉴权独立页**：点「注册保存」→ `/register`；菜单/顶栏「登录」→ `/login`（非整页 sheet）；页内可「去登录/去注册」互跳；访客可点「继续访客体验」回 `/`
+7. 聚焦可编辑字段：页面不应白屏/崩溃
+8. （可选）注册 → 刷新仍登录且数据在 → 登出回访客（可留在主页）
+
+## Notion 对齐勾选项（对照 ui-checklist）
+
+与 [`docs/ui-checklist.md`](../docs/ui-checklist.md) 交叉引用；下列 **脚本不测或测不全**，需人工 / Browser：
+
+| 清单节 | 本文件对应步骤 | 脚本覆盖 |
+| --- | --- | --- |
+| A portal/层级 | 步骤 5（顶栏菜单不被裁切）；抽查 FloatPanel / 删除确认 | 否 |
+| B 375 无横撑 | 步骤 1–2 设备 390×844，Console 查 `scrollWidth` | 否 |
+| B 图表 canvas | 展开「资产走势」等，目测三图非空白 | 否 |
+| C 鉴权独立页 | **步骤 3、6**（保留 `/login` `/register`） | 部分（HTTP 探针 `/login` `/register`） |
+| D 禁浮层叠浮层 | 移动打开分析 sheet，二级编辑应在同层展开 | 否 |
+| E 发布前 | `npm test` + 本节脚本 | `npm test` 另跑 |
 
 ## 脚本怎么跑
 
@@ -33,7 +50,7 @@ npm run dev
 npm run test:mobile-smoke
 ```
 
-脚本行为：请求首页 HTTP 200；可选 headless 检查 `document.body`。**不再**要求全屏门禁文案。
+脚本行为：请求首页 HTTP 200；校验主界面 shell；首页 HTML 或 `app/page` 脚本 chunk 含 `/login`、`/register`；`/login` `/register` 两页 HTTP 可访问；可选 headless dump-dom 含主界面痕迹。**不再**要求全屏门禁文案。层级/ canvas / 横撑见 ui-checklist 人工项。
 
 ## 键盘 / visualViewport 焦点（浮层）
 
@@ -47,7 +64,7 @@ Browser 设备模式 **不能 100% 模拟 iOS 键盘**。可用下列方式近�
    document.documentElement.classList.add('kb-open');
    // 若页面监听 visualViewport，可在 CDP 里改 metrics；否则依赖 FloatPanel place + scroll 校正
    ```
-2. **真机**：iOS Safari → 打开工资/资产 field 浮层或登录 sheet → 聚焦输入框；输入框应完整落在键盘上方（约 14px 边距）；浮层内部仍可手指滚动（未设 `touch-action: none`）。
+2. **真机**：iOS Safari → 打开工资/资产 field 浮层或 `/login`/`/register` 表单 → 聚焦输入框；输入框应完整落在键盘上方（约 14px 边距）；浮层内部仍可手指滚动（未设 `touch-action: none`）。
 3. **代码路径**：`scrollFocusedFieldIntoView`（延迟 ~280ms）→ `ensureFocusedInVisualViewportNow`；VV `resize`/`scroll` 再校正；`FloatPanel.place` 在焦点仍在面板内时同步校正。
 
 ## 刻意不测

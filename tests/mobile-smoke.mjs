@@ -28,13 +28,58 @@ async function httpSmoke() {
   }
   if (!res.ok) fail(`HTTP ${res.status} from ${BASE_URL}`);
   const html = await res.text();
-  // 访客主界面 / 鉴权入口：不再强制全屏门禁
-  const markers = ['财务管理', '访客', '注册保存', '剩余', 'AuthBar', '登录'];
+  // 访客主界面：鉴权入口为跳转 /login · /register（SSR/CSR 均可能在 HTML 出现路径或 href）
+  const markers = ['财务管理', '访客', '注册保存', '剩余'];
   const hit = markers.some((m) => html.includes(m));
   if (!hit) {
-    fail(`首页 HTML 未见主界面/鉴权相关标记（试过: ${markers.join(', ')}）`);
+    fail(`首页 HTML 未见主界面标记（试过: ${markers.join(', ')}）`);
   }
-  ok(`HTTP ${res.status}，页面含主界面/鉴权相关内容`);
+  ok(`HTTP ${res.status}，主界面 shell 正常`);
+
+  // 首页 CSR：/login·/register 可能在 hydration 后才出现；探针 HTML 或任一本页 script chunk
+  const authInHtml = html.includes('/login') && html.includes('/register');
+  if (authInHtml) {
+    ok('首页 HTML 含 /login·/register 入口');
+  } else {
+    const base = BASE_URL.replace(/\/$/, '');
+    const scriptPaths = [...html.matchAll(/\/_next\/static\/chunks\/[^"']+\.js/g)].map((m) => m[0]);
+    let authInBundle = false;
+    for (const rel of scriptPaths) {
+      let chunkRes;
+      try {
+        chunkRes = await fetch(`${base}${rel}`);
+      } catch {
+        continue;
+      }
+      if (!chunkRes.ok) continue;
+      const chunkJs = await chunkRes.text();
+      if (chunkJs.includes('/login') && chunkJs.includes('/register')) {
+        authInBundle = true;
+        break;
+      }
+    }
+    if (!authInBundle) {
+      fail('首页 script bundle 未见 /login·/register（独立页鉴权可能被移除）');
+    }
+    ok('首页 script bundle 含 /login·/register（CSR 鉴权入口未破坏）');
+  }
+
+  const base = BASE_URL.replace(/\/$/, '');
+  for (const path of ['/register', '/login']) {
+    const url = `${base}${path}`;
+    let pageRes;
+    try {
+      pageRes = await fetch(url, { redirect: 'follow' });
+    } catch (err) {
+      fail(`无法连接 ${url}: ${err.message}`);
+    }
+    if (!pageRes.ok) fail(`HTTP ${pageRes.status} from ${url}`);
+    const pageHtml = await pageRes.text();
+    if (!/(注册|登录|AuthBar|auth)/i.test(pageHtml)) {
+      fail(`${path} HTML 未见鉴权页痕迹`);
+    }
+    ok(`HTTP ${pageRes.status}，${path} 可访问`);
+  }
 }
 
 function resolveChrome() {
@@ -79,10 +124,10 @@ function chromeSmoke(chromePath) {
     return;
   }
   const dom = result.stdout || '';
-  if (!/(input|登录|注册|账号)/i.test(dom)) {
-    fail('Chromium dump-dom 未见 input/登录相关节点');
+  if (!/(注册保存|访客|剩余)/i.test(dom)) {
+    fail('Chromium dump-dom 未见主界面痕迹');
   }
-  ok(`Chromium ${VIEWPORT.width}×${VIEWPORT.height} dump-dom 含输入/门禁痕迹`);
+  ok(`Chromium ${VIEWPORT.width}×${VIEWPORT.height} dump-dom 含主界面痕迹`);
   console.warn(
     '[mobile-smoke] NOTE: Chromium 设备模式 ≠ iOS Safari 键盘；真机请用 Web Inspector 复核',
   );
