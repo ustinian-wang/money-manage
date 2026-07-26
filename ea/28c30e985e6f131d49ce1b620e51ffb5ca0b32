@@ -1,0 +1,32 @@
+app/page.tsx
+  s_14abdc6e30b4c5::t_b082300cf622ce 2166,2168,2173-2214,2216,2239
+  s_14abdc6e30b4c5::t_4edcf79eef6a7a 2167
+  s_14abdc6e30b4c5::t_60a08242ab1ffe 67
+  s_14abdc6e30b4c5::t_ca4a07d5e8071d 2215
+app/numberFieldUi.ts
+  s_14abdc6e30b4c5::t_999d6449418484 7,12-15
+  s_14abdc6e30b4c5::t_237239f8c136c4 16
+app/globals.css
+  s_14abdc6e30b4c5::t_a072effcb32c65 236-242,247-248,256-258
+  s_14abdc6e30b4c5::t_a453e11ba89515 369-385,389,396-398,421-422
+app/numberFieldUi.test.ts
+  s_14abdc6e30b4c5::t_98d97ea297b3ab 9,31-35
+  s_14abdc6e30b4c5::t_9f91c9f6d70663 5
+  s_14abdc6e30b4c5::t_64c293655826c8 36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ea28c30e985e6f131d49ce1b620e51ffb5ca0b32",
+  "prompts": {},
+  "sessions": {
+    "s_14abdc6e30b4c5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "731b1140-c3a3-48b7-8c99-59ce4cd3c86d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
