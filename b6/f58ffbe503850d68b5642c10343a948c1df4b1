@@ -1,0 +1,21 @@
+domain/emergency/index.ts
+  s_60c7bcb9722498::t_7108f173cbc4c7 1-96
+domain/emergency/index.test.ts
+  s_60c7bcb9722498::t_ba64345630bedb 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b6f58ffbe503850d68b5642c10343a948c1df4b1",
+  "prompts": {},
+  "sessions": {
+    "s_60c7bcb9722498": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bd61bc02-7315-4634-8749-93f1408d3101",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
