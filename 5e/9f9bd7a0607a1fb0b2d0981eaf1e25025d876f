@@ -1,0 +1,19 @@
+app/components/PanelHeader.tsx
+  s_043b899b1f6389::t_d83efefe27d5f3 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5e9f9bd7a0607a1fb0b2d0981eaf1e25025d876f",
+  "prompts": {},
+  "sessions": {
+    "s_043b899b1f6389": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0484f75d-29f4-45db-87eb-f412aa5cd05e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
