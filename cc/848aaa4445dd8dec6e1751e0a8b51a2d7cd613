@@ -1,0 +1,34 @@
+app/incomeDetailLayout.ts
+  s_96318878252cd8::t_7fbbb857a9625d 4,13-16,24,28-29
+  s_8751f4621873f5::t_d2b0de02a66218 17-20,25,30-31
+app/incomeDetailLayout.test.ts
+  s_96318878252cd8::t_ba9df9db03d03e 3,11-12,28,40-46
+  s_8751f4621873f5::t_a500e1a334bcde 13-14
+  s_8751f4621873f5::t_5c8a90780bc4aa 48-54
+  s_8751f4621873f5::t_c74b476d381cca 55
+  s_96318878252cd8::t_4c16810c63d0df 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cc848aaa4445dd8dec6e1751e0a8b51a2d7cd613",
+  "prompts": {},
+  "sessions": {
+    "s_8751f4621873f5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "868fcbaa-1860-40d4-91c9-b8cfa0bcf8de",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_96318878252cd8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3b8f16ac-42f2-4c31-91b9-646c0620181e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
