@@ -1,0 +1,30 @@
+app/numberFieldUi.ts
+  s_aa1fe1a1104fb7::t_8f795f7479ee8d 3-4,8-9,19-24,27-29,34
+app/numberFieldUi.test.ts
+  s_feaca7580b06c1::t_7fba8d4e1e1ee4 18,27-28
+  s_aa1fe1a1104fb7::t_6a71058e7311a2 2-5,10,17,26,56-57,59-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cc6dc3aa4d8c64a3de46b64429f94f2fa870b97d",
+  "prompts": {},
+  "sessions": {
+    "s_aa1fe1a1104fb7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "941d3999-5d3f-4001-831f-26bb0bb4f183",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_feaca7580b06c1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1b3ef385-65e6-4787-85ab-08f476e3727d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
