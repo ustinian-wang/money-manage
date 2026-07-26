@@ -4,9 +4,15 @@
  * - rangedPercent：有明确范围且与百分比联动 → 可出滚动条，按 [min,max] clamp；走 FloatPanel
  *
  * 非百分比但有业务上界（如应急月数）可传 max 且 kind 仍为 free：有 clamp、无滚动条、仍 inline。
+ * 单位（%、个月、年等）一律外置，不拼进展示串、不进 input。
  */
 
 export type NumberFieldKind = 'free' | 'rangedPercent';
+
+/** 行内展示数值（不含单位） */
+export function formatEditableNumber(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString('zh-CN') : value.toFixed(1);
+}
 
 /** 仅 rangedPercent 展示 range/slider 滚动条 */
 export function showsNumberSlider(kind: NumberFieldKind = 'free'): boolean {

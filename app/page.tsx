@@ -64,7 +64,7 @@ import { calcSocialBurdenSharePct, resolveContributionBase } from '../domain/soc
 import { CITY_SOCIAL_BASE_PRESETS, defaultSocialBase, getCitySocialBasePreset, resolveCitySocialBase } from '../domain/social-security/city-bases';
 import { DEFAULT_INCOME_VIEW_MODE, parseIncomeViewMode, resolveDisposableIncome, seedTakeHomeIncome, type IncomeViewMode } from '../domain/income/index';
 import { softNumberCommit, softNumberLive } from './softNumber';
-import { clampNumberField, showsNumberSlider, usesInlineNumberEdit, type NumberFieldKind } from './numberFieldUi';
+import { clampNumberField, formatEditableNumber, showsNumberSlider, usesInlineNumberEdit, type NumberFieldKind } from './numberFieldUi';
 import { INCOME_DETAIL_DEDUCTION_PANEL_TITLE } from './incomeDetailLayout';
 
 type Expense = { id: string; name: string; category: string; mode: 'fixed' | 'percentage' | 'installment' | 'one_time'; amount: number; rate?: number; total?: number; downPayment?: number; term?: number; interest?: number; repaymentMode?: RepaymentMode; startDate?: string; endDate?: string; followRetirement?: boolean };
@@ -2163,52 +2163,57 @@ function Editable({ label, value, min = 0, max, step, suffix = '', kind = 'free'
       setEditBox(null);
     }
   };
-  const display = `${Number.isInteger(value) ? value.toLocaleString('zh-CN') : value.toFixed(1)}${suffix}`;
+  // 单位外置：展示/编辑框只含数值；suffix（%、个月、年等）旁侧展示，不进 input
+  const displayNum = formatEditableNumber(value);
+  const unit = suffix.trim();
   return (
     <div className="relative block">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
         <span className="flex items-center gap-1">{label}{tip ? <InfoTip>{tip}</InfoTip> : null}</span>
-        {inline && editing ? (
-          <input
-            ref={inputRef}
-            type="number"
-            inputMode="decimal"
-            min={min}
-            max={max}
-            step={step}
-            aria-label={label}
-            value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
-            onBlur={onDraftBlur}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setDraft(formatValue(value));
-                setEditing(false);
-                setEditBox(null);
-              }
-              if (event.key === 'Enter') {
-                event.currentTarget.blur();
-              }
-            }}
-            className="field-inline-input self-start sm:self-auto"
-            style={editBox ? { width: editBox.w, height: editBox.h, minWidth: editBox.w, minHeight: editBox.h } : undefined}
-          />
-        ) : (
-          <button
-            ref={anchorRef}
-            type="button"
-            onClick={() => {
-              if (inline) startInline();
-              else if (open) setOpen(false);
-              else openEdit();
-            }}
-            onDoubleClick={() => { if (inline) startInline(); else openEdit(); }}
-            title={inline ? '点击直接编辑' : '点击打开编辑'}
-            className="field-click self-start sm:self-auto"
-          >
-            {display}
-          </button>
-        )}
+        <span className="field-value-with-unit self-start sm:self-auto">
+          {inline && editing ? (
+            <input
+              ref={inputRef}
+              type="number"
+              inputMode="decimal"
+              min={min}
+              max={max}
+              step={step}
+              aria-label={label}
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onBlur={onDraftBlur}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setDraft(formatValue(value));
+                  setEditing(false);
+                  setEditBox(null);
+                }
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                }
+              }}
+              className="field-inline-input"
+              style={editBox ? { width: editBox.w, height: editBox.h, minWidth: editBox.w, minHeight: editBox.h } : undefined}
+            />
+          ) : (
+            <button
+              ref={anchorRef}
+              type="button"
+              onClick={() => {
+                if (inline) startInline();
+                else if (open) setOpen(false);
+                else openEdit();
+              }}
+              onDoubleClick={() => { if (inline) startInline(); else openEdit(); }}
+              title={inline ? '点击直接编辑' : '点击打开编辑'}
+              className="field-click"
+            >
+              {displayNum}
+            </button>
+          )}
+          {unit ? <span className="field-unit">{unit}</span> : null}
+        </span>
       </span>
       {!inline && (
         <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={280} maxHeightVh={48} headerTitle={label} density="field">
@@ -2231,7 +2236,7 @@ function Editable({ label, value, min = 0, max, step, suffix = '', kind = 'free'
                 className="field-input mt-1"
               />
             </label>
-            <span className="pt-5 font-mono text-sm text-slate-500">{suffix}</span>
+            {unit ? <span className="pt-5 font-mono text-sm text-slate-500">{unit}</span> : null}
           </div>
           {showSlider && (
             <div className="mt-3 flex items-center gap-2">

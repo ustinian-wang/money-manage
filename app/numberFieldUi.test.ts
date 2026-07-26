@@ -2,10 +2,11 @@
  * 数值字段 UX：自由金额无 max/无 slider；百分比范围联动才有 slider
  * 需求：自由输入不限制最大值也不出滚动条；有范围且与百分比联动才出滚动条
  * 补充：free → Editable 原地 inline；rangedPercent → 仍弹层
+ * 补充：展示数值与单位分离（formatEditableNumber 不含 %/个月 等）
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clampNumberField, showsNumberSlider, usesInlineNumberEdit } from './numberFieldUi';
+import { clampNumberField, formatEditableNumber, showsNumberSlider, usesInlineNumberEdit } from './numberFieldUi';
 import { softNumberCommit } from './softNumber';
 
 test('自由字段不展示滚动条', () => {
@@ -25,6 +26,13 @@ test('自由字段走 inline，不弹层', () => {
 test('rangedPercent 不走 inline，仍弹层+slider', () => {
   assert.equal(usesInlineNumberEdit('rangedPercent'), false);
   assert.equal(showsNumberSlider('rangedPercent'), true);
+});
+
+test('展示数值不含单位（单位由 UI 外置）', () => {
+  assert.equal(formatEditableNumber(12345), '12,345');
+  assert.equal(formatEditableNumber(12.5), '12.5');
+  assert.ok(!formatEditableNumber(6).includes('%'));
+  assert.ok(!formatEditableNumber(6).includes('月'));
 });
 
 test('自由金额无 max：不设上界', () => {
