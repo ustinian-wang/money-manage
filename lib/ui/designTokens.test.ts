@@ -28,10 +28,10 @@ describe('designTokens zIndex', () => {
   });
 
   test('tailwind theme.extend.zIndex 镜像同名档位', () => {
-    const themeZ = config.theme?.extend?.zIndex as Record<string, number> | undefined;
+    const themeZ = config.theme?.extend?.zIndex as Record<string, string | number> | undefined;
     assert.ok(themeZ, 'theme.extend.zIndex missing');
     for (const key of Z_INDEX_LAYERS) {
-      assert.equal(themeZ[key], Z_INDEX[key], `tailwind zIndex.${key} mismatch`);
+      assert.equal(Number(themeZ[key]), Z_INDEX[key], `tailwind zIndex.${key} mismatch`);
     }
   });
 });

@@ -14,9 +14,9 @@ const config: Config = {
       boxShadow: {
         panel: '0 18px 50px rgba(23, 33, 43, 0.08)',
       },
-      // 与 lib/ui/zIndex.ts 同源；改数值请先改该文件
+      // 与 lib/ui/zIndex.ts 同源；改数值请先改该文件（Tailwind theme 要求 string）
       zIndex: {
-        ...Object.fromEntries(Z_INDEX_LAYERS.map((k) => [k, Z_INDEX[k]])),
+        ...Object.fromEntries(Z_INDEX_LAYERS.map((k) => [k, String(Z_INDEX[k])])),
       },
     },
   },
