@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildMonthlyAssetForecast, yearlyTotalsFromMonthly } from './assetForecast';
+import { assetAxisBounds, buildMonthlyAssetForecast, yearlyTotalsFromMonthly } from './assetForecast';
 
 const noReinvestment = { mode: 'amount' as const, rate: 0, amount: 0 };
 
@@ -70,5 +70,14 @@ describe('yearlyTotalsFromMonthly', () => {
     });
 
     assert.deepEqual(rows.map((row) => row.total), [100_000, 40_000, -20_000]);
+  });
+});
+
+describe('assetAxisBounds', () => {
+  it('keeps negative assets visible instead of clipping the chart at zero', () => {
+    assert.deepEqual(assetAxisBounds([100_000, 40_000, -20_000]), {
+      min: -100_000,
+      max: 100_000,
+    });
   });
 });

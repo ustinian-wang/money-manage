@@ -21,6 +21,17 @@ export type MonthlyAssetRow = {
   available: number;
 };
 
+export function assetAxisBounds(values: number[]): { min: number; max: number } {
+  const finite = values.filter(Number.isFinite);
+  const minValue = finite.length ? Math.min(0, ...finite) : 0;
+  const maxValue = finite.length ? Math.max(0, ...finite) : 0;
+  const interval = 100_000;
+  return {
+    min: Math.min(0, Math.floor(minValue / interval) * interval),
+    max: Math.max(interval, Math.ceil(maxValue / interval) * interval),
+  };
+}
+
 /**
  * Project assets from operating cash flow and investment growth.
  * Investment return stays in the investment balance and is never counted again as cash income.
