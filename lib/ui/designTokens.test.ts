@@ -1,6 +1,7 @@
 /**
  * Tailwind design token：zIndex theme 与 lib/ui/zIndex 同源
- * 需求：Notion 流 B — theme.extend.zIndex 六档存在且递增
+ * 需求：Notion 流 B — theme.extend.zIndex 主阶梯存在且递增
+ * 主阶梯：content < header < dropdown < drawer < modal < nestedPanel < tip < toast
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
@@ -8,7 +9,7 @@ import config from '../../tailwind.config.ts';
 import { Z_INDEX, Z_INDEX_LAYERS } from './zIndex';
 
 describe('designTokens zIndex', () => {
-  test('Z_INDEX 主阶梯含 nestedPanel/tip 且递增', () => {
+  test('Z_INDEX 八档主阶梯存在且递增', () => {
     assert.deepEqual([...Z_INDEX_LAYERS], [
       'content',
       'header',
@@ -35,5 +36,11 @@ describe('designTokens zIndex', () => {
     for (const key of Z_INDEX_LAYERS) {
       assert.equal(Number(themeZ[key]), Z_INDEX[key], `tailwind zIndex.${key} mismatch`);
     }
+  });
+
+  test('语义别名与主档同值：mask/panel/topbarMenu', () => {
+    assert.equal(Z_INDEX.mask, Z_INDEX.dropdownBackdrop);
+    assert.equal(Z_INDEX.panel, Z_INDEX.modal);
+    assert.equal(Z_INDEX.topbarMenu, Z_INDEX.drawer);
   });
 });

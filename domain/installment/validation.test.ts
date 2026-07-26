@@ -13,6 +13,7 @@ import type { InstallmentConsumption, InterestPlan } from '../../types/installme
 
 const plan = (overrides: Partial<InterestPlan> = {}): InterestPlan => ({
     id: 'p1',
+    name: 'plan',
     type: 'general',
     principal: 1000,
     annualRate: 0,

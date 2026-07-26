@@ -13,7 +13,7 @@ import {
   INCOME_DETAIL_TAX_DETAIL_ENTRY,
   INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE,
   isIncomeDetailMainOnlyLabel,
-} from './incomeDetailLayout.ts';
+} from './incomeDetailLayout';
 
 describe('incomeDetailLayout detail 主区契约', () => {
   it('主区恰好三类且顺序固定', () => {
@@ -21,7 +21,7 @@ describe('incomeDetailLayout detail 主区契约', () => {
   });
 
   it('基数 / 专项等在面板清单，主区标签不回流', () => {
-    const panel = [...INCOME_DETAIL_PANEL_ITEMS.social, ...INCOME_DETAIL_PANEL_ITEMS.tax];
+    const panel: readonly string[] = [...INCOME_DETAIL_PANEL_ITEMS.social, ...INCOME_DETAIL_PANEL_ITEMS.tax];
     assert.ok(panel.includes('五险基数'));
     assert.ok(panel.includes('公积金基数'));
     assert.ok(panel.includes('专项附加扣除勾选'));
