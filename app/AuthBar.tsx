@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import { FormEvent, FocusEvent, useEffect, useState } from 'react';
 import { authHref } from '../lib/auth/authHref';
+import { authGateRootClassName } from '../lib/ui/authGateShell';
 import { scrollFocusedFieldIntoView, useVisualViewport } from '../lib/useVisualViewport';
 import { parseClaimMode, type ClaimMode } from '../lib/claimGate';
 
@@ -290,7 +291,7 @@ export default function AuthBar({
     if (variant === 'gate' || variant === 'page') {
         return (
             <div
-                className="auth-gate-root flex min-h-screen flex-col items-center bg-[#f6f8f5] px-4 py-10 text-[#17212b]"
+                className={authGateRootClassName()}
                 role="dialog"
                 aria-modal="true"
                 aria-label={mode === 'login' ? '登录' : '注册'}

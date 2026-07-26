@@ -10,6 +10,7 @@ import AuthBar, { type AuthMeta, type AuthMode, type AuthUser } from '../AuthBar
 import { safeReturnUrl } from '../../lib/auth/authHref';
 import { bindEmptyAccountAfterAuth } from '../../lib/auth/bindEmptyAccount';
 import { claimSummaryLinesFromStorage } from '../../lib/auth/claimSummaryFromDraft';
+import { authPageShellMainClassName } from '../../lib/ui/authGateShell';
 
 type Props = {
   mode: AuthMode;
@@ -62,7 +63,7 @@ function AuthPageShellInner({ mode, title }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8f5] text-[#17212b]" aria-label={title}>
+    <main className={authPageShellMainClassName()} aria-label={title}>
       <AuthBar
         user={null}
         variant="page"
