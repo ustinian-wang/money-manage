@@ -39,5 +39,6 @@ export function claimSnapshotFromDraft(raw: Record<string, unknown> | null): Cla
 }
 
 export function claimSummaryLinesFromStorage(): string[] {
+  // 鉴权页摘要只看访客草稿键
   return buildClaimSummaryLines(claimSnapshotFromDraft(loadGuestDraft()));
 }

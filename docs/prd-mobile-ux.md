@@ -17,12 +17,12 @@
 | 项 | 约定 |
 | --- | --- |
 | 进门 | **默认访客进主界面**（示例 / 本机草稿）；顶栏有「访客」chip +「注册保存」；可选全屏门禁已弱化，不再强制登录 |
-| 访客写盘 | 只写 `localStorage`（`money-manage-profile`）；**不** PUT `/api/profile` |
+| 访客写盘 | 只写 `localStorage`（`money-manage-profile:guest`；旧键 `money-manage-profile` 首次读迁移）；**不** PUT `/api/profile` |
 | 注册认领 | 空账号 → 注册 sheet 展示摘要；可选「用当前数据认领」或「清空示例后再注册」后写入云端 |
 | 登录空账号 | 云端为空时 **二次确认**是否绑定访客草稿；取消则不上传 |
 | 登录有数据 | 用云端覆盖本地展示 |
 | API | `/api/profile` 等仍须登录 |
-| 隔离 | KV/本地键：`user:{id}` · `session:{token}` · `user:{id}/financial-profile.json` |
+| 隔离 | 服务端：`user:{id}` · `session:{token}` · `user:{id}/financial-profile.json`；本机：访客 `money-manage-profile:guest` / 登录 `money-manage-profile:{userId}` |
 | 密码 | PBKDF2-SHA256（Web Crypto），不明文存储 |
 | 重启网站 | **纯客户端**：确认后 unregister SW + 清 Cache Storage + 硬刷新；**不**清 localStorage / cookie，≠登出、≠清访客草稿、≠调后端 |
 

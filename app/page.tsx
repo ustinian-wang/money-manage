@@ -29,7 +29,7 @@ import {
 } from '../lib/firstVisitChecklist';
 import { profileSyncAlert } from '../lib/profileSyncAlert';
 import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
-import { loadGuestDraft, saveGuestDraft } from '../lib/persistence/guestDraft';
+import { loadGuestDraft, resolveGuestProfile, saveGuestDraft } from '../lib/persistence/guestDraft';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
 import {
@@ -648,7 +648,7 @@ export default function HomePage() {
       } catch { /* 无会话 → 访客 */ }
       if (!cancelled) setAuthReady(true);
 
-      // 访客：本机草稿或内存 LIGHT_DEMO；不打云端
+      // 访客：本机 guest 键草稿或内存 LIGHT_DEMO；不打云端
       if (!me) {
         const saved = loadGuestDraft();
         if (!cancelled && saved) applyProfileData(saved);
@@ -664,12 +664,14 @@ export default function HomePage() {
           if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
             applyProfileData(state.profile as Record<string, unknown>);
           } else {
+            // 空账号：读访客草稿供认领预览（不读其他账号本机键）
             const saved = loadGuestDraft();
             if (!cancelled && saved) applyProfileData(saved);
           }
         }
       } catch {
-        const saved = loadGuestDraft();
+        // 离线：优先本账号 local 缓存，勿串用其他账号键
+        const saved = loadGuestDraft({ userId: me.id }) ?? loadGuestDraft();
         if (!cancelled && saved) applyProfileData(saved);
       }
       if (!cancelled) setHydrated(true);
@@ -717,22 +719,36 @@ export default function HomePage() {
     ...(takeHomeIncome != null ? { takeHomeIncome } : {}),
   };
   const save = () => {
-    // 访客与登录均写本机；云端仅登录后 enqueue
-    saveGuestDraft(profile);
+    // 访客 → guest 键；登录 → 本账号键；云端仅登录后 enqueue
+    saveGuestDraft(profile, { userId: authUser?.id ?? null });
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
   };
 
-  // 登出 → 访客：保留当前内存作本机草稿，不再打云端
+  // 登出 → 访客键；不把当前账号画像写入访客键（保留原访客草稿或回落轻演示）
   const handleLogout = () => {
+    let guestRaw: Record<string, unknown> | null = null;
+    try {
+      guestRaw = loadGuestDraft();
+    } catch { /* ignore */ }
     setAuthUser(null);
     profileSyncRef.current?.setRevision(0);
     setProfileSyncStatus({ phase: 'idle' });
     setSavedAt('');
     setHeaderMoreOpen(false);
     setHydrated(true);
-    try {
-      saveGuestDraft(profile);
-    } catch { /* ignore */ }
+    if (guestRaw) {
+      applyProfileData(guestRaw);
+    } else {
+      applyProfileData({
+        salary: 16667,
+        returnRate: 3.2,
+        socialRates: defaultSocialRates,
+        rentEnabled: true,
+        elderlyEnabled: false,
+        retirement: { ...retirementDefaults },
+        ...(resolveGuestProfile(null).profile as Record<string, unknown>),
+      });
+    }
   };
 
   // 访客只写 localStorage；登录后再防抖同步云端

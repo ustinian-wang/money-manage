@@ -29,6 +29,7 @@ type BindOpts = {
 };
 
 function readLocalDraft(): Record<string, unknown> | null {
+  // 认领始终读访客键，不读登录用户本机缓存
   return loadGuestDraft();
 }
 

@@ -12,7 +12,7 @@
 | 线上 URL | https://money-manage.wangjser.workers.dev |
 | Version ID | `dd3c7d7d-4277-43a7-90fd-bfee928599c1`（线上旧版；待 deploy 后复验） |
 | 本地落地 commit | `4b077f8` → `f5831eb` → `3124053` → `fd10222`（及本文件后续 docs commit）；**未 push / 未 deploy** |
-| 视角 | 新用户 / 访客；清 `localStorage`（`money-manage-profile`）后 reload |
+| 视角 | 新用户 / 访客；清 `localStorage`（`money-manage-profile:guest` 与旧键 `money-manage-profile`）后 reload |
 | 视口 | 约 390×844（手机宽） |
 | 范围 | 审计后已落地 P0/P1（见跟进记录）；线上复验需 deploy 后重做 |
 
