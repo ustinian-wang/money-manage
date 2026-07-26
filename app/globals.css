@@ -20,9 +20,12 @@
   --z-header: 40;
 }
 * { box-sizing: border-box; }
-html, body { max-width: 100%; overflow-x: clip; }
+/* ponytail: overflow 只挂 body，避免 html+body 双 overflow 在 Safari 里把 sticky 裁半截 */
+html { max-width: 100%; }
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: clip;
   background: #f6f8f5;
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -136,14 +139,13 @@ html.kb-open .auth-gate-root {
   -webkit-tap-highlight-color: transparent;
 }
 /* 桌面：顶栏轻吸顶（始终展开） */
+/* ponytail: 勿用 backdrop-filter——Safari sticky 合成层在工具栏显隐时会把顶栏裁半截；改用不透明底 */
 @media (min-width: 640px) {
   .mobile-sticky-top {
     position: sticky;
     top: 0;
     z-index: var(--z-header);
-    background: rgba(246, 248, 245, 0.96);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: #f6f8f5;
     border-bottom: 1px solid #e8eeea;
   }
   .scroll-mt-24 { scroll-margin-top: 4rem; }
@@ -192,19 +194,18 @@ html.kb-open .auth-gate-root {
   .chart-year-labels { font-size: 0.75rem; }
   .cell-wrap { max-width: 10rem; }
   .expense-list { max-height: 32rem; }
-  /* header 吸顶（移动，始终展开） */
+  /* header 吸顶（移动，始终展开）；safe-area 挂 sticky 盒，避免顶栏钻进状态栏像被吃掉 */
   .mobile-sticky-top {
     position: sticky;
     top: 0;
     z-index: var(--z-header);
-    background: rgba(246, 248, 245, 0.94);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: #f6f8f5;
     border-bottom: 1px solid #e8eeea;
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .app-header {
     position: static;
-    padding-top: max(0.4rem, env(safe-area-inset-top));
+    padding-top: 0.4rem;
     border-bottom: none;
     background: transparent;
   }
