@@ -9,18 +9,18 @@
  * 6. 等价联动字段（资产四元组、首付金额↔比例、年数↔期数）用 LinkedFieldGroup 成组 + 中间链标；恒等式不提供解锁。
  *
  * PC（popover）
- * - 编辑：锚点旁浮层，点外部关闭，Esc 关闭
+ * - 编辑：锚点旁浮层；点 mask/外部不关，Esc + 标题关闭等明确入口
  * - 说明：悬停 / focus 气泡，不抢焦点
  * - 大面板（分析）：可居中 + 可拖拽标题栏
  * - 支出：表格
  *
  * 移动（max-width: 639px）
- * - tip：贴锚点气泡，不锁 body
- * - field：矮底卡 / 内容 hug（无 78vh 抬升），轻量编辑
- * - panel：底部抽屉 + 遮罩 + 手柄 + 标题关闭；打开时锁 body 滚动
+ * - tip：贴锚点气泡，不锁 body（InfoTip 仍可点遮罩关闭，契约 §3）
+ * - field：矮底卡 / 内容 hug（无 78vh 抬升），轻量编辑；点 mask 不关
+ * - panel：底部抽屉 + 遮罩 + 手柄 + 标题关闭；点 mask 不关；打开时锁 body 滚动
  * - 字段：Settings 式左右 tile（.field-row-mobile）
  * - 支出：卡片（标题+金额 + meta chip），底栏操作
- * - 顶栏+分区 chips 一并吸顶；IntersectionObserver 高亮当前区
+ * - 顶栏吸顶且始终展开（无分区 chips / 无滚动收起）
  * - 图表：ChartHost 固定高度，可见时 resize
  */
 export {};

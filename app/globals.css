@@ -43,7 +43,6 @@ button, input, select { font: inherit; }
 .field-input:focus, .field input:focus, .field select:focus, .percent-position input:focus { border-color: #f07f62; box-shadow: 0 0 0 3px rgba(240, 127, 98, .14); outline: none; }
 .field input::placeholder { color: #a1ada8; }
 .forecast-bar { min-width: 2px; transition: height .18s ease; }
-.snapshot-row { align-items: center; background: #f8faf9; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: .75rem 1rem; }
 .table-wrap, .local-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
 .local-scroll { overflow-y: auto; }
 /* 局部滚动表：单容器横纵滚动 + thead sticky（表头/表体 scrollLeft 自然对齐） */
@@ -81,6 +80,7 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
   -webkit-backdrop-filter: blur(2px);
 }
 /* 键盘弹出：fixed 门禁/auth sheet 贴 visualViewport（高度已=可见区，勿再叠 --kb-inset） */
+/* 勿在 JSX 叠 min-h-screen：100vh 会盖住 height，scrollFocusedFieldIntoView 算得出 delta 但 canScroll=false */
 .auth-gate-root {
   position: fixed;
   left: 0;
@@ -90,6 +90,7 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
   width: 100%;
   max-width: 100%;
   height: var(--vv-height, 100dvh);
+  min-height: 0;
   justify-content: center;
   overflow-x: hidden;
   overflow-y: auto;
@@ -134,38 +135,7 @@ html.kb-open .auth-gate-root {
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
 }
-.mobile-nav-chip {
-  flex: 1 1 0;
-  min-height: 2.25rem;
-  border-radius: 999px;
-  border: 1px solid #e3eae5;
-  background: #fff;
-  color: #52605b;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.4rem 0.5rem;
-}
-.mobile-nav-chip:active { background: #f1f5f2; }
-.mobile-nav-chip.is-active {
-  background: #17212b;
-  border-color: #17212b;
-  color: #fff;
-}
-/* 顶栏 chrome：向下滚收起；chips 留在 sticky 内 */
-.sticky-chrome {
-  max-height: 14rem;
-  overflow: hidden;
-  opacity: 1;
-  transform: translateY(0);
-  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
-}
-.mobile-sticky-top.is-header-collapsed .sticky-chrome {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-0.35rem);
-  pointer-events: none;
-}
-/* 桌面：顶栏+chips 轻吸顶，scroll spy 可见；chip 不拉满整行 */
+/* 桌面：顶栏轻吸顶（始终展开） */
 @media (min-width: 640px) {
   .mobile-sticky-top {
     position: sticky;
@@ -176,14 +146,7 @@ html.kb-open .auth-gate-root {
     -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid #e8eeea;
   }
-  .scroll-mt-24 { scroll-margin-top: 5.5rem; }
-  /* 收起后仅 chips：取略保守的留白 */
-  main.is-header-collapsed .scroll-mt-24 { scroll-margin-top: 3.5rem; }
-  .mobile-section-nav .mobile-nav-chip {
-    flex: 0 1 auto;
-    min-width: 4.75rem;
-    padding: 0.45rem 1.1rem;
-  }
+  .scroll-mt-24 { scroll-margin-top: 4rem; }
 }
 .expense-meta-chip {
   display: inline-flex;
@@ -229,7 +192,7 @@ html.kb-open .auth-gate-root {
   .chart-year-labels { font-size: 0.75rem; }
   .cell-wrap { max-width: 10rem; }
   .expense-list { max-height: 32rem; }
-  /* header + 分区 chips 一并吸顶（移动） */
+  /* header 吸顶（移动，始终展开） */
   .mobile-sticky-top {
     position: sticky;
     top: 0;
@@ -244,9 +207,6 @@ html.kb-open .auth-gate-root {
     padding-top: max(0.4rem, env(safe-area-inset-top));
     border-bottom: none;
     background: transparent;
-  }
-  .mobile-section-nav {
-    padding-bottom: 0.55rem;
   }
   /* iOS Settings 式：左标签右值，整行 tile */
   .field-row-mobile {
@@ -274,7 +234,8 @@ html.kb-open .auth-gate-root {
     line-height: 1.35;
   }
   .field-row-mobile .field-click,
-  .field-row-mobile .field-readonly {
+  .field-row-mobile .field-readonly,
+  .field-row-mobile .field-inline-input {
     flex: 0 1 auto;
     min-width: 0; /* truncate/换行需要，否则长金额撑破 375 */
     max-width: 58%;
@@ -329,19 +290,23 @@ html.kb-open .auth-gate-root {
     border-radius: 0.65rem;
     background: #fff;
   }
+  .field-inline-input {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.35rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.88rem;
+    border: 1px solid rgba(240, 127, 98, 0.45);
+    border-radius: 0.65rem;
+    background: #fff;
+  }
   .expense-card {
     border: 1px solid #e3eae5;
     border-radius: 1rem;
     background: #fff;
     padding: 0.85rem 0.9rem;
     box-shadow: 0 4px 14px rgba(23, 33, 43, 0.04);
-    scroll-margin-top: 6.5rem; /* 对齐 sticky 顶栏，新增后滚入可见区 */
-  }
-  /* 收起 chrome 后 sticky 仅 chips：收窄锚点留白；补上安全区 */
-  main.is-header-collapsed .expense-card { scroll-margin-top: 4.25rem; }
-  main.is-header-collapsed .scroll-mt-24 { scroll-margin-top: 4.5rem; }
-  .mobile-sticky-top.is-header-collapsed .mobile-section-nav {
-    padding-top: max(0.5rem, env(safe-area-inset-top));
+    scroll-margin-top: 4.5rem; /* 对齐 sticky 顶栏，新增后滚入可见区 */
   }
   .expense-card-head {
     display: flex;
@@ -410,6 +375,37 @@ td { color: #52605b; }
   border-bottom-style: solid;
   color: #c4533a;
   outline: none;
+}
+/* Editable inline：与 .field-click 同盒，避免切换跳动；勿用 .field-input 大 padding */
+.field-inline-input {
+  box-sizing: border-box;
+  cursor: text;
+  border-radius: 0.45rem;
+  border: none;
+  border-bottom: 1.5px solid #f07f62;
+  background: rgba(240, 127, 98, 0.08);
+  color: #c4533a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0.2rem 0.4rem;
+  margin: 0;
+  width: auto;
+  max-width: 100%;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  -webkit-tap-highlight-color: transparent;
+}
+.field-inline-input::-webkit-outer-spin-button,
+.field-inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field-inline-input:focus {
+  outline: none;
+  background: rgba(240, 127, 98, 0.12);
+  box-shadow: none;
 }
 .field-readonly {
   border-radius: 0.45rem;
