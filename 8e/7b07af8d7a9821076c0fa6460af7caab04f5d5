@@ -1,0 +1,32 @@
+lib/ui/zIndex.ts
+  s_9a6b494a146bcc::t_651506fcfba1e7 4,13,17,20,22,24,26,39-40
+  s_18c55363baca14::t_64fb1315cc4691 5,10,12,16,19,21,23,25,32
+lib/ui/zIndex.test.ts
+  s_9a6b494a146bcc::t_4d05781da5747a 3-5,7-10,14,17,22-24,27-39,45-47,50-52,55-57,60-73,82,86,88,91,93-102,105,109,111
+lib/ui/designTokens.test.ts
+  s_18c55363baca14::t_c5faeee0ffee40 11,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8e7b07af8d7a9821076c0fa6460af7caab04f5d5",
+  "prompts": {},
+  "sessions": {
+    "s_18c55363baca14": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "133323ac-43e2-4eca-9c4f-2f5f17384aba",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_9a6b494a146bcc": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4fb27cfc-29d7-45b6-b4ab-2a8c709915b3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
