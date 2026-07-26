@@ -6,6 +6,7 @@ dist/
 data/backups
 data/user:*/
 data/user_*/
+data/user_*
 data/idx_*
 data/session_*
 data/ratelimit_*
