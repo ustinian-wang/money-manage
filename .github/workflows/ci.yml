@@ -1,3 +1,4 @@
+# Playwright e2e: not in this workflow yet (see README「E2E 冒烟」); add as separate/optional job later.
 name: CI
 
 on:

@@ -26,6 +26,7 @@ npm run dev      # next dev --turbopack，默认 http://localhost:3000
 npm run build
 npm run start    # 生产启动（需先 build）
 npm test         # 领域单测（可选）
+npm run test:e2e # Playwright 最小冒烟（需先 install chromium）
 ```
 
 可选 PM2：`npm run pm2:start` / `pm2:restart` / `pm2:stop` / `pm2:logs`（见 `ecosystem.config.cjs`）。
@@ -163,6 +164,26 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 - 「重启网站」无法强制清掉浏览器 HTTP 磁盘缓存的全部条目（依赖 SW/Cache API + 硬刷新）
 
 ---
+
+
+## E2E 冒烟（Playwright）
+
+最小访客冒烟（`e2e/smoke.spec.ts`，1～3 条）：首页决策摘要、改到手收入后摘要仍在、分区 chip「走势」。
+
+```bash
+# 首次（或换机）只需 Chromium
+npx playwright install chromium
+
+# 推荐：先 build 再由 webServer 起 next start（省内存）
+npm run test:e2e
+
+# 已有本地服务时：先 npm run start（或 dev），再
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:dev
+```
+
+- 配置：`playwright.config.ts`（默认端口 `4173`，可用 `PLAYWRIGHT_PORT` 覆盖）
+- **CI**：尚未接入 workflow；后续可加独立 job（`continue-on-error` 或非 required），勿拖垮主 `check`
+- 更细的移动端人工清单仍见 [`tests/mobile-smoke.md`](tests/mobile-smoke.md)
 
 ## 目录速览
 
