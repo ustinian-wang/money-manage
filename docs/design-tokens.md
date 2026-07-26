@@ -7,20 +7,37 @@
 
 | 类别 | 来源 | 用法 |
 | --- | --- | --- |
-| 品牌色 | `tailwind.config` → `colors.ink/paper/mint/coral` | `text-ink`、`bg-paper` 等 |
-| 面板阴影 | `boxShadow.panel` | `shadow-panel` |
+| 品牌色 | `globals.css` `:root --color-*` → Tailwind `ink/paper/mint/coral*`；JS 用 `lib/ui/brandColors.ts` | `text-ink`、`bg-paper`、`text-coral-deep`、`bg-coral/10`；ECharts / `themeColor` 用 `BRAND.*` |
+| 面板阴影 | `boxShadow.panel`（引用 `--color-ink`） | `shadow-panel` |
 | 浮层层级 | `lib/ui/zIndex.ts` + `theme.extend.zIndex` | 见下节 |
 
 **禁止新增**（存量可渐进替换）：
 
 - 随意 `z-[NN]`、`z-index: 999999`
 - 大量 magic 尺寸 `w-[371px]`、`mt-[13px]`
+- 新写品牌色裸 hex（`#17212b` / `#f07f62` / `#d9654a` / `#f6f8f5`）；改 token 或 `BRAND`
+
+## 品牌色
+
+| Token / 变量 | Hex | 典型场景 |
+| --- | --- | --- |
+| `ink` / `--color-ink` | `#17212b` | 正文、主按钮、图表强调线 |
+| `ink-hover` | `#2a3644` | 深色按钮 hover |
+| `paper` / `--color-paper` | `#f6f8f5` | 页底、输入底 |
+| `coral` / `--color-coral` | `#f07f62` | 主强调、CTA、图表主系列 |
+| `coral-deep` | `#d9654a` | 链接文案、次强调字色 |
+| `coral-hover` | `#df6e51` | 珊瑚按钮 hover |
+| `coral-ink` | `#c4533a` | 可编辑字段强调字 |
+| `mint` | `#d8f3e4` | 轻点缀 |
+
+CSS 变量存 **RGB 通道**（空格分隔），Tailwind 为 `rgb(var(--color-*) / <alpha-value>)`，支持 `/10` 等透明度。  
+`lib/ui/brandColors.ts` 的 `BRAND` / `BRAND_RGB` 须与 `:root` **同源**（改一处同步两处）。
 
 ## 允许自由
 
 - Dashboard / 图表 / 卡片排版、信息架构
 - 页面级 Flex/Grid 组合（不必抽成 Primitive）
-- 已有任意值 class 暂可保留，触达时再改
+- 已有任意值 class 暂可保留，触达时再改（非品牌色的 slate 轴色等）
 
 ## zIndex 语义档
 

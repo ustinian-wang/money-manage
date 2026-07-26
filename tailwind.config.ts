@@ -6,13 +6,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: '#17212b',
-        paper: '#f6f8f5',
-        mint: '#d8f3e4',
-        coral: '#f07f62',
+        // 与 app/globals.css :root --color-* / lib/ui/brandColors.ts 同源
+        ink: {
+          DEFAULT: 'rgb(var(--color-ink) / <alpha-value>)',
+          hover: 'rgb(var(--color-ink-hover) / <alpha-value>)',
+        },
+        paper: 'rgb(var(--color-paper) / <alpha-value>)',
+        mint: 'rgb(var(--color-mint) / <alpha-value>)',
+        coral: {
+          DEFAULT: 'rgb(var(--color-coral) / <alpha-value>)',
+          deep: 'rgb(var(--color-coral-deep) / <alpha-value>)',
+          hover: 'rgb(var(--color-coral-hover) / <alpha-value>)',
+          ink: 'rgb(var(--color-coral-ink) / <alpha-value>)',
+        },
       },
       boxShadow: {
-        panel: '0 18px 50px rgba(23, 33, 43, 0.08)',
+        panel: '0 18px 50px rgb(var(--color-ink) / 0.08)',
       },
       // 与 lib/ui/zIndex.ts 同源；改数值请先改该文件（Tailwind theme 要求 string）
       zIndex: {

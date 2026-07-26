@@ -18,7 +18,7 @@ function AuthRedirectInner() {
   }, [router, search]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] text-[#17212b]">
+    <main className="flex min-h-screen items-center justify-center bg-paper text-ink">
       <p className="text-sm text-slate-400">正在跳转…</p>
     </main>
   );
@@ -28,7 +28,7 @@ export default function AuthRedirectPage() {
   return (
     <Suspense
       fallback={(
-        <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] text-[#17212b]">
+        <main className="flex min-h-screen items-center justify-center bg-paper text-ink">
           <p className="text-sm text-slate-400">正在跳转…</p>
         </main>
       )}

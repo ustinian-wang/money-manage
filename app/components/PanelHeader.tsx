@@ -39,7 +39,7 @@ export default function PanelHeader({
           <button
             type="button"
             onClick={onBack}
-            className={`shrink-0 rounded-full px-2 text-sm font-semibold text-[#d9654a] hover:bg-orange-50 ${touchClose ? 'touch-btn' : ''}`}
+            className={`shrink-0 rounded-full px-2 text-sm font-semibold text-coral-deep hover:bg-orange-50 ${touchClose ? 'touch-btn' : ''}`}
           >
             返回
           </button>

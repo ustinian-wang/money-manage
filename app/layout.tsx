@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { BRAND } from '../lib/ui/brandColors';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // ponytail: 不设 maximumScale=1，避免妨碍无障碍缩放；iOS 输入缩放靠 ≥16px 字号
   viewportFit: 'cover',
-  themeColor: '#17212b',
+  themeColor: BRAND.ink,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

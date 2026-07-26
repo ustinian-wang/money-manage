@@ -75,7 +75,7 @@ export default function InstallToDesktop() {
       <button
         type="button"
         onClick={() => void onInstall()}
-        className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+        className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-ink hover:border-coral hover:text-coral-deep"
         title="安装为桌面应用"
       >
         保存到桌面
@@ -89,7 +89,7 @@ export default function InstallToDesktop() {
         <button
           type="button"
           onClick={() => setShowIosHelp((current) => !current)}
-          className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+          className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-ink hover:border-coral hover:text-coral-deep"
         >
           保存到桌面
         </button>
@@ -101,7 +101,7 @@ export default function InstallToDesktop() {
               <li>选择「添加到主屏幕」</li>
               <li>确认「添加」</li>
             </ol>
-            <button type="button" className="touch-btn mt-3 w-full rounded-xl bg-[#17212b] text-xs font-semibold text-white sm:mt-2 sm:w-auto sm:bg-transparent sm:text-[#d9654a]" onClick={() => setShowIosHelp(false)}>知道了</button>
+            <button type="button" className="touch-btn mt-3 w-full rounded-xl bg-ink text-xs font-semibold text-white sm:mt-2 sm:w-auto sm:bg-transparent sm:text-coral-deep" onClick={() => setShowIosHelp(false)}>知道了</button>
           </div>
         )}
       </div>

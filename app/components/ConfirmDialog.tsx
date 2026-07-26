@@ -23,7 +23,7 @@ export type ConfirmDialogProps = {
 
 const CONFIRM_BTN: Record<'danger' | 'primary', string> = {
   danger: 'touch-btn flex-1 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-100',
-  primary: 'touch-btn flex-1 rounded-xl bg-[#f07f62] px-3 py-2.5 text-sm font-semibold text-white hover:bg-[#df6e51]',
+  primary: 'touch-btn flex-1 rounded-xl bg-coral px-3 py-2.5 text-sm font-semibold text-white hover:bg-coral-hover',
 };
 
 export default function ConfirmDialog({
