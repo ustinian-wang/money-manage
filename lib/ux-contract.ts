@@ -20,7 +20,7 @@
  * - panel：底部抽屉 + 遮罩 + 手柄 + 标题关闭；点 mask 不关；打开时锁 body 滚动
  * - 字段：Settings 式左右 tile（.field-row-mobile）
  * - 支出：卡片（标题+金额 + meta chip），底栏操作
- * - 顶栏吸顶且始终展开（无分区 chips / 无滚动收起）
+ * - 顶栏吸顶且始终展开；移动分区 chips（参数|支出|走势）+ scroll spy；无滚动收起 chrome
  * - 图表：ChartHost 固定高度，可见时 resize
  */
 export {};

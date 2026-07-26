@@ -38,7 +38,7 @@
 | A | 三张主图可见且 canvas 非 0×0；走势跳转后仍渲染 | 已落地（`ChartHost` + `.chart-box`） |
 | B | `.field-row-mobile` Settings 式左右 tile；Metric/Breakdown 对齐 | 已落地 |
 | C | 支出卡去重摘要；标题+金额层级；meta chip | 已落地 |
-| D | 分区导航 sticky + active（IntersectionObserver） | 已落地 |
+| D | 分区导航 sticky + active（IntersectionObserver） | 已落地（`sectionNav` + chips；曾误删后恢复） |
 | E | Editable sheet `headerTitle` 带字段名 | 已落地 |
 | F | 保持 PC/移动分轨，无新依赖 | 保持 |
 | G | 注册 → 登录 → 改参 → 刷新仍在 → 登出后云端需登录再读 | 已落地 |

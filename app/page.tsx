@@ -16,9 +16,16 @@ import { FLOAT_MARGIN, placeCenteredInViewport, placeNearAnchor, placeSheetAtBot
 import { Z_INDEX } from '../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
+import { buildDecisionSummary } from '../lib/decisionSummary';
+import { profileSyncAlert } from '../lib/profileSyncAlert';
+import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
 import { loadGuestDraft, saveGuestDraft } from '../lib/persistence/guestDraft';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
 import { cashFlowRatios, remainDisposableSharePct, roundPct } from './cashFlowRatios';
+import {
+  aggregateMonthlyExpenses,
+  nonInstallmentRecurring,
+} from './monthlyExpenseAggregate';
 import {
   buildPrefixExpenses,
   buildTemporalWindows,
@@ -268,33 +275,6 @@ type FinanceInput = {
 const HOUSING_FUND_NAME = '住房公积金';
 type FinanceResult = ReturnType<typeof computeFinanceResult>;
 const repaymentModeLabel = (mode?: RepaymentMode) => (mode === 'equal_principal' ? '等额本金' : '等额本息');
-// 非分期的持续月支出（固定 + 比例）；分期按月另算
-function nonInstallmentRecurring(expenses: Expense[], net: number, investmentIncome: number) {
-  return expenses.reduce((sum, expense) => {
-    if (expense.mode === 'one_time' || expense.mode === 'installment') return sum;
-    if (expense.mode === 'fixed') return sum + expense.amount;
-    if (expense.mode === 'percentage') return sum + (net + investmentIncome) * (expense.rate || 0) / 100;
-    return sum;
-  }, 0);
-}
-// 持续月支出：不含 one_time（预测 month>=1 / year>=2 只用这笔）
-function recurringMonthlyExpenses(expenses: Expense[], net: number, investmentIncome: number) {
-  return expenses.reduce((sum, expense) => {
-    if (expense.mode === 'one_time') return sum;
-    if (expense.mode === 'fixed') return sum + expense.amount;
-    if (expense.mode === 'percentage') return sum + (net + investmentIncome) * (expense.rate || 0) / 100;
-    return sum + installmentMonthlyPayment(expense);
-  }, 0);
-}
-// 一次性合计：默认计入 startDate 所在月（缺省=当前月）
-function oneTimeTotal(expenses: Expense[], asOfMonth = todayMonthKey()) {
-  const month = asOfMonth.slice(0, 7);
-  return expenses.reduce((sum, expense) => {
-    if (expense.mode !== 'one_time') return sum;
-    const startMonth = monthKey(expense.startDate || defaultOneTimeDate());
-    return startMonth === month ? sum + expense.amount : sum;
-  }, 0);
-}
 function computeFinanceResult({ salary, contributionBase, housingFundBase, socialEnabled = true, incomeViewMode = DEFAULT_INCOME_VIEW_MODE, takeHomeIncome, cash, invest, returnRate, emergencyMonths, emergency, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates }: FinanceInput) {
   // 五险 / 公积金各自缺省跟工资；关闭缴纳时金额全 0（个税按无社保扣减）
   const insuranceBase = resolveContributionBase(salary, contributionBase);
@@ -322,10 +302,12 @@ function computeFinanceResult({ salary, contributionBase, housingFundBase, socia
   const computedNet = salary - social - Math.max(0, tax);
   const net = resolveDisposableIncome(incomeViewMode, takeHomeIncome, computedNet);
   const investmentIncome = invest * returnRate / 100 / 12;
-  const recurring = recurringMonthlyExpenses(expenses, net, investmentIncome);
-  const oneTime = oneTimeTotal(expenses);
-  // 当期月度指标：一次性像 fixed 一样计入「本月」支出
-  const monthlyExpenses = recurring + oneTime;
+  // 本月支出与剩余% / 决策摘要同源聚合
+  const spend = aggregateMonthlyExpenses(expenses, net, investmentIncome);
+  const recurring = spend.recurring;
+  const oneTime = spend.oneTime;
+  const monthlyExpenses = spend.monthly;
+  const debt = spend.debt;
   const committedDownPayments = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + (expense.downPayment || 0), 0);
   const liquidAssets = cash + invest;
   // 兼容旧调用：未传 emergency 时，也组装成两套分存的完整结构。
@@ -347,7 +329,6 @@ function computeFinanceResult({ salary, contributionBase, housingFundBase, socia
   const totalLiabilities = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + Math.max(0, (expense.total || 0) - (expense.downPayment || 0)), 0);
   const netWorth = totalAssets - totalLiabilities;
   const surplus = net + investmentIncome - monthlyExpenses;
-  const debt = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + installmentMonthlyPayment(expense), 0);
   // 分母=可支配收入 net（与占比图一致）；剩余 = 100 − 支出占比，超支可为负
   const { expensePct } = cashFlowRatios({ debt, otherExpenses: Math.max(0, monthlyExpenses - debt), income: net });
   const remainDisposablePct = remainDisposableSharePct(expensePct);
@@ -499,6 +480,66 @@ export default function HomePage() {
       vv?.removeEventListener('scroll', place);
     };
   }, [headerMoreOpen]);
+  // 分区 chips scroll spy：滚动高亮 + 点击立即切（P1-4）
+  const SECTION_IDS = ['sec-params', 'sec-expenses', 'sec-charts'] as const;
+  const [activeSection, setActiveSection] = useState('sec-params');
+  const stickyTopRef = useRef<HTMLDivElement | null>(null);
+  const spyLockUntilRef = useRef(0);
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    spyLockUntilRef.current = Date.now() + 1200;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const stickyPx = stickyTopRef.current?.getBoundingClientRect().height
+      ?? (isNarrow ? 168 : 72);
+    window.requestAnimationFrame(() => {
+      const top = el.getBoundingClientRect().top;
+      if (Math.abs(top - stickyPx) > 24) {
+        window.scrollTo({
+          top: stickyAwareScrollY(top, window.scrollY, stickyPx),
+          behavior: 'smooth',
+        });
+      }
+    });
+  };
+  useEffect(() => {
+    if (!hydrated) return;
+    const ids = [...SECTION_IDS];
+    const ratios: Record<string, number> = Object.fromEntries(ids.map((id) => [id, 0]));
+    const readDistances = () => {
+      const mid = window.innerHeight / 2;
+      const distances: Record<string, number> = {};
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        distances[id] = Math.abs(rect.top + rect.height / 2 - mid);
+      }
+      return distances;
+    };
+    const applySpy = () => {
+      if (Date.now() < spyLockUntilRef.current) return;
+      setActiveSection(pickActiveSection(ids, ratios, readDistances()));
+    };
+    const rootMargin = isNarrow ? '-22% 0px -48% 0px' : '-10% 0px -55% 0px';
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        ratios[entry.target.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
+      }
+      applySpy();
+    }, { rootMargin, threshold: [0, 0.1, 0.25, 0.4, 0.55, 0.75] });
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    window.addEventListener('scroll', applySpy, { passive: true });
+    applySpy();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', applySpy);
+    };
+  }, [isNarrow, hydrated]);
   // 列表删除二次确认（支出桌面/移动）；复用 FloatPanel field 矮卡
   const [pendingDelete, setPendingDelete] = useState<null | { kind: 'expense'; id: string; title: string; message: string }>(null);
   const deleteAnchorRef = useRef<HTMLElement | null>(null);
@@ -1079,6 +1120,7 @@ export default function HomePage() {
           : profileSyncStatus.phase === 'failed'
             ? '已保存到本机，云端同步失败'
             : '改参后自动同步到云端';
+  const syncAlert = authUser ? profileSyncAlert(profileSyncStatus.phase) : null;
   const canResolveProfileSync = Boolean(authUser)
     && (profileSyncStatus.phase === 'failed' || profileSyncStatus.phase === 'conflict');
   const retryProfileSync = () => {
@@ -1090,6 +1132,13 @@ export default function HomePage() {
     }
     void profileSyncRef.current?.enqueue(state);
   };
+  // 首屏决策摘要：与 result 同源（月支出=聚合口径）
+  const decisionSummary = buildDecisionSummary({
+    monthlySpendable: result.net,
+    monthlyExpense: result.monthlyExpenses,
+    monthlySurplus: result.surplus,
+    totalAssets,
+  });
 
   // 会话未就绪：简短占位，避免闪一下主界面
   if (!authReady) {
@@ -1101,7 +1150,7 @@ export default function HomePage() {
   }
   // 访客与登录均可进主应用；未登录用示例/本机草稿
   return <main className="min-h-screen bg-[#f6f8f5] text-[#17212b] pb-[env(safe-area-inset-bottom,0px)]">
-    <div className="mobile-sticky-top">
+    <div className="mobile-sticky-top" ref={stickyTopRef}>
     <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#17212b] text-sm font-bold text-white">M</div>
@@ -1225,9 +1274,52 @@ export default function HomePage() {
         <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的 · 注册后可认领</p>
       </div>
     )}
+    {syncAlert && (
+      <div
+        className={`sync-alert-banner page-pad mx-auto flex max-w-[1920px] flex-wrap items-center gap-2 px-3 py-1.5 sm:px-6 lg:px-10 ${syncAlert.tone === 'conflict' ? 'is-conflict' : 'is-failed'}`}
+        role="alert"
+      >
+        <p className="min-w-0 flex-1 text-[11px] font-medium leading-snug sm:text-xs">{syncAlert.message}</p>
+        <button
+          type="button"
+          className="touch-btn shrink-0 rounded-full bg-[#17212b] px-3 py-1.5 text-[11px] font-semibold text-white"
+          onClick={retryProfileSync}
+        >
+          {syncAlert.actionLabel}
+        </button>
+      </div>
+    )}
+    <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:max-w-md sm:justify-start lg:max-w-[1920px]" aria-label="页面分区">
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-params' ? 'true' : undefined} onClick={() => scrollToSection('sec-params')}>参数</button>
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-expenses' ? 'true' : undefined} onClick={() => scrollToSection('sec-expenses')}>支出</button>
+      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-charts' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-charts' ? 'true' : undefined} onClick={() => scrollToSection('sec-charts')}>走势</button>
+    </nav>
     </div>
     <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
       <div className="min-w-0 space-y-2">
+        <section className="decision-summary section-card rounded-3xl bg-white p-3 shadow-lg sm:p-4" aria-label="本月决策摘要">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="min-w-0 rounded-2xl bg-[#f8faf9] px-2.5 py-2">
+              <p className="text-[10px] font-semibold text-slate-400 sm:text-[11px]">月可花</p>
+              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[#17212b] sm:text-base">{money(decisionSummary.monthlySpendable)}</p>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-[#f8faf9] px-2.5 py-2">
+              <p className="text-[10px] font-semibold text-slate-400 sm:text-[11px]">月支出</p>
+              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[#17212b] sm:text-base">{money(decisionSummary.monthlyExpense)}</p>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-[#f8faf9] px-2.5 py-2">
+              <p className="text-[10px] font-semibold text-slate-400 sm:text-[11px]">月结余</p>
+              <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums sm:text-base ${decisionSummary.monthlySurplus < 0 ? 'text-red-600' : 'text-[#17212b]'}`}>{money(decisionSummary.monthlySurplus)}</p>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-[#f8faf9] px-2.5 py-2">
+              <p className="text-[10px] font-semibold text-slate-400 sm:text-[11px]">总资产</p>
+              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[#17212b] sm:text-base">{money(decisionSummary.totalAssets)}</p>
+            </div>
+          </div>
+          {decisionSummary.riskLine && (
+            <p className="mt-2 text-[11px] font-medium leading-snug text-amber-800 sm:text-xs" role="status">{decisionSummary.riskLine}</p>
+          )}
+        </section>
         <section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6">
           <div><SectionTitle title="财务参数" tip={"收入与资产配置。\n退休规划已整合到「五险一金和个税 → 退休与社保」；点字段改数即生效并自动保存。"} /></div>
           <div className="section-label flex flex-wrap items-center gap-2">
