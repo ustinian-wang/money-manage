@@ -1,0 +1,22 @@
+app/assetForecast.ts
+  s_5f92ffacc00d8e::t_494a68064648bb 24-34
+app/assetForecast.test.ts
+  s_5f92ffacc00d8e::t_998520e279bd57 3,75-81
+  s_5f92ffacc00d8e::t_80b42c9dc970b1 82-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "707d5a84da1688956797b464a0b90d18e795c154",
+  "prompts": {},
+  "sessions": {
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
