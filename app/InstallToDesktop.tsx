@@ -94,7 +94,7 @@ export default function InstallToDesktop() {
           保存到桌面
         </button>
         {showIosHelp && (
-          <div className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm leading-6 text-slate-600 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 sm:p-3 sm:text-[11px] sm:leading-5 sm:shadow-xl" style={{ zIndex: Z_INDEX.drawer }}>
+          <div className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm leading-6 text-slate-600 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 sm:p-3 sm:text-[11px] sm:leading-5 sm:shadow-xl" style={{ zIndex: Z_INDEX.topbarMenu }}>
             <p className="font-semibold text-slate-800">添加到主屏幕</p>
             <ol className="mt-2 list-decimal space-y-1 pl-4">
               <li>点底部分享按钮</li>
