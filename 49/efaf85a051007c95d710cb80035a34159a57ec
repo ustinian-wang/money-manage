@@ -1,0 +1,19 @@
+app/InstallToDesktop.tsx
+  s_9a6b494a146bcc::t_f6037a01d7d4be 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "49efaf85a051007c95d710cb80035a34159a57ec",
+  "prompts": {},
+  "sessions": {
+    "s_9a6b494a146bcc": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4fb27cfc-29d7-45b6-b4ab-2a8c709915b3",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
