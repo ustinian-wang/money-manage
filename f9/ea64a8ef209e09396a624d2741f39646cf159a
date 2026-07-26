@@ -1,0 +1,43 @@
+lib/ui/overlayEvents.ts
+  s_5f92ffacc00d8e::t_7a170507c99769 11-29
+  s_5f92ffacc00d8e::t_5ccf561c4c7196 1-10
+app/incomeDetailLayout.test.ts
+  s_5f92ffacc00d8e::t_7a170507c99769 17,97-113
+  s_5f92ffacc00d8e::t_b090beddd5ec41 53-64,124-128,143-157,160,172-173
+  s_5f92ffacc00d8e::t_f015a6a354354d 161-166,168-171
+  s_5f92ffacc00d8e::t_e352db203cc6fa 6,19-28,76-78,86,88,114-116,118-123,129-135,158-159,167,174-175
+  s_5f92ffacc00d8e::t_576c9641b5ba1c 3,87
+  s_5f92ffacc00d8e::t_482417a44d45c0 40,117
+  s_5f92ffacc00d8e::t_72452e7e3460e9 93-96,136-142
+  s_5f92ffacc00d8e::t_1ccb5d5585c543 79-85,89-92
+  s_5f92ffacc00d8e::t_d0bce27d15e024 18
+app/page.tsx
+  s_5f92ffacc00d8e::t_fc241cecc6badd 594
+  s_5f92ffacc00d8e::t_5b220b8fdf7a8a 2093-2096
+  s_5f92ffacc00d8e::t_72452e7e3460e9 4,1239-1251,2092,2097-2127,2182-2185
+  s_5f92ffacc00d8e::t_64c80d2ab96ad3 2421,2454,2465-2524,3018-3020,3041-3043,3046,3050,3053,3067,3076,3088,3091,3093,3096-3099,3101-3103
+  s_5f92ffacc00d8e::t_5ccf561c4c7196 92-99,127,2165-2175
+  s_5f92ffacc00d8e::t_7a170507c99769 17,2069,2086
+  s_5f92ffacc00d8e::t_494a68064648bb 59,891,942,1074,1078,1082-1087,1165,1168,1175
+  s_5f92ffacc00d8e::t_0d1f798316e374 1226-1238,1252-1289
+app/globals.css
+  s_5f92ffacc00d8e::t_5ccf561c4c7196 81-82
+app/incomeDetailLayout.ts
+  s_5f92ffacc00d8e::t_a9c9aac90d826c 4,13-14,23,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f9ea64a8ef209e09396a624d2741f39646cf159a",
+  "prompts": {},
+  "sessions": {
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
