@@ -1,7 +1,8 @@
 /**
  * 用户 / 会话：存 KV（或本地 data/）文本键
  * keys: user:{id} · idx:username:{name} · idx:email:{email}（可选）· session:{token}
- * 账号/密码：仅最长长度；邮箱产品面不要求，存库可空
+ * 账号：仅最长；密码：注册最短 PASSWORD_MIN + 最长 PASSWORD_MAX（登录不复检最短）
+ * 邮箱产品面不要求，存库可空
  */
 import { hashPassword, randomToken, verifyPassword, type PasswordRecord } from './crypto';
 import { deleteDataText, readDataText, writeDataText } from '../persistence/localFs';
@@ -10,6 +11,7 @@ import { getMoneyDataBinding } from '../persistence/cloudflareBinding';
 export const SESSION_COOKIE = 'mm_session';
 export const SESSION_TTL_SEC = 60 * 60 * 24 * 30; // 30 天
 export const USERNAME_MAX = 32;
+export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 72;
 
 export type PublicUser = {
@@ -122,9 +124,10 @@ export function validateEmail(email: string): string | null {
     return null;
 }
 
-/** 密码：必填 + 最长 PASSWORD_MAX；无最短长度 */
+/** 密码（注册用）：必填 + 最短 PASSWORD_MIN + 最长 PASSWORD_MAX；登录走 authenticateUser，不调用本函数 */
 export function validatePassword(password: string): string | null {
     if (!password) return '请输入密码';
+    if (password.length < PASSWORD_MIN) return `密码至少 ${PASSWORD_MIN} 位`;
     if (password.length > PASSWORD_MAX) return `密码最长 ${PASSWORD_MAX} 位`;
     return null;
 }

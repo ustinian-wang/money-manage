@@ -18,6 +18,7 @@ export type AuthMode = 'login' | 'register';
 export type AuthMeta = { from: AuthMode; claimMode?: ClaimMode };
 
 const USERNAME_MAX = 32;
+const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 72;
 
 type Props = {
@@ -76,9 +77,19 @@ export default function AuthBar({
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         setError('');
-        if (mode === 'register' && confirm && confirm !== password) {
-            setError('两次密码不一致');
-            return;
+        if (mode === 'register') {
+            if (password.length < PASSWORD_MIN) {
+                setError(`密码至少 ${PASSWORD_MIN} 位`);
+                return;
+            }
+            if (!confirm) {
+                setError('请确认密码');
+                return;
+            }
+            if (confirm !== password) {
+                setError('两次密码不一致');
+                return;
+            }
         }
         setBusy(true);
         try {
@@ -211,7 +222,10 @@ export default function AuthBar({
                         />
                     </label>
                 )}
-                <label className="block text-xs text-slate-500">密码（最长 {PASSWORD_MAX} 位）
+                <label className="block text-xs text-slate-500">
+                    {mode === 'register'
+                        ? `密码（${PASSWORD_MIN}–${PASSWORD_MAX} 位）`
+                        : `密码（最长 ${PASSWORD_MAX} 位）`}
                     <input
                         className="field-input mt-1"
                         name="password"
@@ -220,11 +234,12 @@ export default function AuthBar({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        minLength={mode === 'register' ? PASSWORD_MIN : undefined}
                         maxLength={PASSWORD_MAX}
                     />
                 </label>
                 {mode === 'register' && (
-                    <label className="block text-xs text-slate-500">确认密码（可选）
+                    <label className="block text-xs text-slate-500">确认密码
                         <input
                             className="field-input mt-1"
                             name="new-password"
@@ -232,6 +247,8 @@ export default function AuthBar({
                             autoComplete="new-password"
                             value={confirm}
                             onChange={(e) => setConfirm(e.target.value)}
+                            required
+                            minLength={PASSWORD_MIN}
                             maxLength={PASSWORD_MAX}
                         />
                     </label>
