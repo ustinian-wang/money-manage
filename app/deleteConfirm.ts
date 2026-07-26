@@ -7,8 +7,3 @@ export function expenseDeleteMessage(name: string, modeLabel: string, paymentLab
   const title = name.trim() || '未命名';
   return `即将删除支出「${title}」\n${modeLabel} · ${paymentLabel}\n取消不删除，确认后移除。`;
 }
-
-export function snapshotDeleteMessage(name: string, date: string, salarySummary: string) {
-  const title = name.trim() || '未命名';
-  return `即将删除快照「${title}」\n${date} · ${salarySummary}\n取消不删除，确认后移除。`;
-}

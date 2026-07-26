@@ -1,81 +1,17 @@
+/**
+ * 分期年月、场景对比、autosave：与已删的财务快照 domain 解耦
+ */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-    applySnapshotChanges,
-    compareSnapshotWithPrevious,
-    confirmSnapshotSave,
-    getPreviousSnapshot,
-    resolveSimulationWindow,
-    toMonthCount,
-    validateSnapshotSave,
-} from '../domain/snapshot/index';
 import { termToMonths } from '../types/installment';
 import { compareProfiles } from '../lib/scenario/compare';
 import { applyOverrides } from '../lib/scenario/applyOverrides';
 import { createAutosave, LOCAL_REVISION_KEY, LOCAL_STATE_KEY } from '../lib/persistence/clientAutosave';
-import type { FinancialSnapshot, SnapshotState } from '../types/snapshot';
 import type { PersistedState } from '../lib/persistence/types';
-
-const state = (overrides: Partial<SnapshotState> = {}): SnapshotState => ({
-    grossMonthlySalary: 20000,
-    otherMonthlyIncome: 0,
-    parentSupportMonthly: 3000,
-    livingExpenseMonthly: 5000,
-    cashAssets: 200000,
-    investmentAssets: 300000,
-    investmentReturnRate: 3,
-    committedDownPayments: 0,
-    ...overrides,
-});
-
-const snapshot = (overrides: Partial<FinancialSnapshot> = {}): FinancialSnapshot => ({
-    id: 'snapshot-test',
-    name: '测试快照',
-    effectiveDate: '2031-06-01',
-    changes: [{ id: 'salary', path: 'grossMonthlySalary', value: 5000, mode: 'set' }],
-    createdAt: '2026-07-20T00:00:00.000Z',
-    updatedAt: '2026-07-20T00:00:00.000Z',
-    ...overrides,
-});
-
-test('snapshot applies a salary change without mutating the previous state', () => {
-    const before = state();
-    const after = applySnapshotChanges(before, snapshot().changes);
-    assert.equal(after.grossMonthlySalary, 5000);
-    assert.equal(before.grossMonthlySalary, 20000);
-});
-
-test('simulation defaults to 30 years and supports an explicit month horizon', () => {
-    assert.deepEqual(resolveSimulationWindow({ asOfDate: '2026-07-20' }), {
-        asOfDate: '2026-07-20',
-        horizonMonths: 360,
-        endDate: '2056-07-20',
-    });
-    assert.equal(resolveSimulationWindow({ asOfDate: '2026-07-20', horizonMonths: 18 }).horizonMonths, 18);
-});
-
-test('snapshot comparison uses the most recent earlier date', () => {
-    const earlier = snapshot({ id: 'earlier', effectiveDate: '2028-01-01', changes: [{ id: 'salary', path: 'grossMonthlySalary', value: 18000 }] });
-    const current = snapshot({ changes: [{ id: 'salary', path: 'grossMonthlySalary', value: 5000 }] });
-    assert.equal(getPreviousSnapshot([earlier], current.effectiveDate)?.id, 'earlier');
-    assert.deepEqual(compareSnapshotWithPrevious(current, earlier)[0], {
-        path: 'grossMonthlySalary', previous: 18000, next: 5000, mode: 'set',
-    });
-});
-
-test('negative-asset snapshot requires explicit confirmation before saving', () => {
-    const risky = snapshot({ changes: [{ id: 'cash', path: 'cashAssets', value: -250000 }] });
-    const blocked = validateSnapshotSave(state(), risky);
-    assert.equal(blocked.blocked, true);
-    assert.equal(blocked.requiresConfirmation, true);
-    assert.equal(confirmSnapshotSave(state(), risky, true).blocked, false);
-    assert.equal(confirmSnapshotSave(state(), risky, true).minimumCashAssets, -250000);
-});
 
 test('installment terms accept months and years', () => {
     assert.equal(termToMonths({ value: 36, unit: 'month' }), 36);
     assert.equal(termToMonths({ value: 3, unit: 'year' }), 36);
-    assert.equal(toMonthCount(2.5, 'year'), 30);
 });
 
 test('scenario comparison does not mutate the baseline profile', () => {
@@ -106,6 +42,7 @@ test('autosave writes every interaction to localStorage and flushes on blur', as
     }) as typeof fetch;
 
     try {
+        // ponytail: 持久化 schema 仍带 snapshots:[]，业务不再写入
         const profile = { schemaVersion: 1, revision: 7, updatedAt: '2026-07-20T00:00:00.000Z', profile: {}, snapshots: [], scenarios: [] } as PersistedState;
         const autosave = createAutosave({ apiPath: '/api/profile', debounceMs: 1000 });
         autosave.onInput(profile);

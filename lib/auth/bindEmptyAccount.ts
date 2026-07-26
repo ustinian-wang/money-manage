@@ -49,7 +49,7 @@ export async function bindEmptyAccountAfterAuth(
     let toBind: Record<string, unknown> = { ...draft };
 
     if (meta.from === 'register' && parseClaimMode(meta.claimMode) === 'clear') {
-      toBind = { ...draft, ...emptyClaimProfilePatch(), snapshots: [] };
+      toBind = { ...draft, ...emptyClaimProfilePatch() };
     } else if (meta.from === 'login') {
       const confirm = opts.confirmEmptyLogin
         ?? (() => window.confirm(
@@ -58,11 +58,12 @@ export async function bindEmptyAccountAfterAuth(
       if (!confirm()) return { status: 'skipped' };
     }
 
-    const { snapshots: snap = [], ...rest } = toBind;
+    // ponytail: 剥离旧草稿 snapshots；云端固定空数组兼容 schema
+    const { snapshots: _ignored, ...rest } = toBind;
     const put = await fetchFn('/api/profile', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ revision: 0, state: { profile: rest, snapshots: snap, scenarios: [] } }),
+      body: JSON.stringify({ revision: 0, state: { profile: rest, snapshots: [], scenarios: [] } }),
     });
     if (!put.ok) return { status: 'error' };
     const next = await put.json().catch(() => ({}));
