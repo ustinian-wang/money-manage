@@ -1,0 +1,27 @@
+lib/ui/authGateShell.test.ts
+  s_44b482bc0629ae::t_9623069e390708 1-21
+lib/ui/authGateShell.ts
+  s_44b482bc0629ae::t_f269af58e1c2ad 1-14
+app/components/AuthPageShell.tsx
+  s_44b482bc0629ae::t_2642a97f615637 13
+  s_44b482bc0629ae::t_4914f897ec71b9 66
+app/AuthBar.tsx
+  s_44b482bc0629ae::t_834da6839b1dcc 294
+  s_44b482bc0629ae::t_08e37ffb33d05b 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "27785337327516579b90e384f252a3e9e8be3459",
+  "prompts": {},
+  "sessions": {
+    "s_44b482bc0629ae": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "707df206-54ad-49fe-87a8-22a1f089a96b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
