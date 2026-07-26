@@ -1,9 +1,9 @@
 /**
  * 数值输入 UX 口径：
- * - free：自由金额/普通数字 → 不设上界、不展示滚动条
- * - rangedPercent：有明确范围且与百分比联动 → 可出滚动条，按 [min,max] clamp
+ * - free：自由金额/普通数字 → 不设上界、不展示滚动条；Editable 原地 inline
+ * - rangedPercent：有明确范围且与百分比联动 → 可出滚动条，按 [min,max] clamp；走 FloatPanel
  *
- * 非百分比但有业务上界（如应急月数）可传 max 且 kind 仍为 free：有 clamp、无滚动条。
+ * 非百分比但有业务上界（如应急月数）可传 max 且 kind 仍为 free：有 clamp、无滚动条、仍 inline。
  */
 
 export type NumberFieldKind = 'free' | 'rangedPercent';
@@ -11,6 +11,11 @@ export type NumberFieldKind = 'free' | 'rangedPercent';
 /** 仅 rangedPercent 展示 range/slider 滚动条 */
 export function showsNumberSlider(kind: NumberFieldKind = 'free'): boolean {
   return kind === 'rangedPercent';
+}
+
+/** 简单数值：原地 input；需 slider 的 rangedPercent 仍弹层 */
+export function usesInlineNumberEdit(kind: NumberFieldKind = 'free'): boolean {
+  return !showsNumberSlider(kind);
 }
 
 /**
