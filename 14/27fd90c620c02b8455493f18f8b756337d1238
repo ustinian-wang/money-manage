@@ -1,0 +1,47 @@
+lib/ui/zIndex.test.ts
+  s_87580c87cca2c1::t_b10a8e6af7c519 1-57
+lib/ui/zIndex.ts
+  s_3142c9eff68a01::t_9769b8aeafefe8 5-7,10,14-16
+  s_87580c87cca2c1::t_c16e2a455ac118 17-26
+  s_3142c9eff68a01::t_cce79daff896d7 9,11-13
+  s_87580c87cca2c1::t_5de1b8fdf46d95 1-4,8
+lib/ui/designTokens.test.ts
+  s_3142c9eff68a01::t_a652140b54c324 7
+  s_3142c9eff68a01::t_c1a88083b6cbf9 1-6,8-37
+tailwind.config.ts
+  s_3142c9eff68a01::t_a43311b88a0567 2
+  s_3142c9eff68a01::t_f85460509e5678 18-19
+  s_3142c9eff68a01::t_64fd710b2034da 17
+  s_3142c9eff68a01::t_be66b2903b6273 20
+app/globals.css
+  s_87580c87cca2c1::t_c8587f26bf7a65 173,236
+  s_87580c87cca2c1::t_34925f22035526 58,313
+  s_87580c87cca2c1::t_7136575922f96e 16-21
+app/InstallToDesktop.tsx
+  s_87580c87cca2c1::t_24a625d3cdac9a 4
+  s_87580c87cca2c1::t_51f85880b6e27d 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1427fd90c620c02b8455493f18f8b756337d1238",
+  "prompts": {},
+  "sessions": {
+    "s_3142c9eff68a01": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c9f41fde-109e-4ad4-8908-798c5f213edb",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_87580c87cca2c1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "6303beba-01bf-4046-bd3b-3839ce0c8d35",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
