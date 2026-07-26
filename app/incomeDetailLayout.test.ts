@@ -1,6 +1,6 @@
 /**
  * detail 收入主区契约：税前 / 五险一金和个税 / 到手收入；明细进合并面板
- * 退休与社保在「五险一金和个税」一级面板内展开，不回流主财务参数卡
+ * 退休与社保：一级入口行 → 独立二级 FloatPanel，不回流主财务参数卡
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,6 +10,7 @@ import {
   INCOME_DETAIL_MAIN_LABELS,
   INCOME_DETAIL_PANEL_ITEMS,
   INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY,
+  INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE,
   INCOME_DETAIL_TAX_DETAIL_ENTRY,
   INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE,
   isIncomeDetailMainOnlyLabel,
@@ -33,10 +34,15 @@ describe('incomeDetailLayout detail 主区契约', () => {
   });
 
   it('基数 / 专项等在面板清单，主区标签不回流', () => {
-    const panel: readonly string[] = [...INCOME_DETAIL_PANEL_ITEMS.social, ...INCOME_DETAIL_PANEL_ITEMS.tax];
+    const panel: readonly string[] = [
+      ...INCOME_DETAIL_PANEL_ITEMS.social,
+      ...INCOME_DETAIL_PANEL_ITEMS.tax,
+      ...INCOME_DETAIL_PANEL_ITEMS.taxDetail,
+    ];
     assert.ok(panel.includes('五险基数'));
     assert.ok(panel.includes('公积金基数'));
-    assert.ok(panel.includes('专项附加扣除勾选'));
+    assert.ok(INCOME_DETAIL_PANEL_ITEMS.taxDetail.includes('专项附加扣除勾选'));
+    assert.equal(INCOME_DETAIL_PANEL_ITEMS.tax.includes('专项附加扣除勾选' as never), false);
     assert.ok(panel.includes('退休与社保'));
     assert.equal(panel.includes('可支配收入'), false);
     for (const label of INCOME_DETAIL_MAIN_LABELS) {
@@ -50,8 +56,10 @@ describe('incomeDetailLayout detail 主区契约', () => {
     assert.equal(INCOME_DETAIL_DEDUCTION_PANEL_TITLE, '五险一金和个税');
   });
 
-  it('退休与社保在一级面板内展开完整设置', () => {
+  // 一级入口行 → 二级弹层（非折叠展开）
+  it('退休与社保走二级弹层，含完整设置项', () => {
     assert.equal(INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY, '退休与社保');
+    assert.equal(INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE, '退休与社保');
     assert.deepEqual([...INCOME_DETAIL_PANEL_ITEMS.socialSettings], [
       '关联计算',
       '出生日期',
@@ -65,12 +73,16 @@ describe('incomeDetailLayout detail 主区契约', () => {
     assert.ok(INCOME_DETAIL_PANEL_ITEMS.social.includes(INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY));
   });
 
-  // 二级：预估个税旁「查看明细」→ 分档税额 + 税率表
-  it('个税明细入口进二级，含分档税额与税率表', () => {
+  // 二级：预估个税旁「查看明细」→ 抵扣勾选 → 分档税额 → 税率表；一级不含专项勾选
+  it('个税明细入口进二级，含抵扣与分档税额与税率表', () => {
     assert.equal(INCOME_DETAIL_TAX_DETAIL_ENTRY, '查看明细');
     assert.equal(INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE, '个税明细');
-    assert.ok(INCOME_DETAIL_PANEL_ITEMS.tax.includes('预估个税查看明细'));
-    assert.deepEqual([...INCOME_DETAIL_PANEL_ITEMS.taxDetail], ['各区间实际税额', '税率区间表']);
+    assert.deepEqual([...INCOME_DETAIL_PANEL_ITEMS.tax], ['预估个税查看明细']);
+    assert.deepEqual([...INCOME_DETAIL_PANEL_ITEMS.taxDetail], [
+      '专项附加扣除勾选',
+      '各区间实际税额',
+      '税率区间表',
+    ]);
   });
 });
 
@@ -114,7 +126,7 @@ describe('FloatPanel sheet mask 交互契约', () => {
   });
 });
 
-describe('退休与社保一级面板设置归属契约', () => {
+describe('退休与社保二级弹层归属契约', () => {
   const paramsSectionSource = sourceBetween(
     pageSource,
     '<section id="sec-params"',
@@ -154,10 +166,11 @@ describe('退休与社保一级面板设置归属契约', () => {
     assert.match(retirementEditorSource, /<SocialBaseEditor value=\{retirement\.base\}/);
     assert.match(retirementEditorSource, /预计退休[\s\S]*retirementDate/);
     assert.match(retirementEditorSource, /money-manage-save/);
+    // 编辑体本身不套 FloatPanel；由 SocialTaxBreakdown 二级承载
     assert.doesNotMatch(retirementEditorSource, /<FloatPanel|Z_INDEX\.nestedPanel/);
   });
 
-  it('SocialTaxBreakdown 在一级面板内直接展开 RetirementSocialEditor', () => {
+  it('SocialTaxBreakdown 入口行打开二级 FloatPanel（nestedPanel）承载 RetirementSocialEditor', () => {
     assert.match(socialTaxSource, /\bretirement\b/);
     assert.match(socialTaxSource, /\bretirementDate\b/);
     assert.match(socialTaxSource, /\bonRetirementChange\b/);
@@ -165,11 +178,54 @@ describe('退休与社保一级面板设置归属契约', () => {
     assert.match(socialTaxSource, /retirementDate:\s*string/);
     assert.match(socialTaxSource, /onRetirementChange:\s*\(patch:\s*Partial<RetirementSetting>\)\s*=>\s*void/);
 
-    const primaryPanelStart = socialTaxSource.indexOf('<FloatPanel open={open}');
-    const primaryPanelEnd = socialTaxSource.lastIndexOf('</FloatPanel>');
-    assert.ok(primaryPanelStart >= 0 && primaryPanelEnd > primaryPanelStart, 'primary income detail FloatPanel missing');
-    const primaryPanelSource = socialTaxSource.slice(primaryPanelStart, primaryPanelEnd);
-    assert.match(primaryPanelSource, /\{retirementSettingsOpen && \([\s\S]*<RetirementSocialEditor\s+retirement=\{retirement\}\s+retirementDate=\{retirementDate\}\s+onChange=\{onRetirementChange\}\s*\/>[\s\S]*\)\}/);
-    assert.doesNotMatch(socialTaxSource, /<FloatPanel[\s\S]*?open=\{retirementSettingsOpen\}/);
+    // 入口行文案
+    assert.match(socialTaxSource, /INCOME_DETAIL_SOCIAL_SETTINGS_ENTRY/);
+    // 二级弹层：open / nestedPanel / 单标题 / 编辑体
+    assert.match(
+      socialTaxSource,
+      /<FloatPanel[\s\S]*?open=\{retirementSettingsOpen\}[\s\S]*?zIndex=\{Z_INDEX\.nestedPanel\}[\s\S]*?headerTitle=\{INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE\}[\s\S]*?<RetirementSocialEditor\s+retirement=\{retirement\}\s+retirementDate=\{retirementDate\}\s+onChange=\{onRetirementChange\}\s*\/>/,
+    );
+    // 一级关闭时收起二级
+    assert.match(socialTaxSource, /if \(!open\) \{[\s\S]*setRetirementSettingsOpen\(false\)/);
+    // 禁止一级内折叠展开（不再用 ∧∨ / aria-expanded 内联展开）
+    assert.doesNotMatch(socialTaxSource, /aria-expanded=\{retirementSettingsOpen\}/);
+    assert.doesNotMatch(socialTaxSource, /retirementSettingsOpen \? '∧' : '∨'/);
+    assert.doesNotMatch(socialTaxSource, /\{retirementSettingsOpen && \([\s\S]*<RetirementSocialEditor/);
+  });
+});
+
+describe('个税明细二级弹层归属契约', () => {
+  const socialTaxSource = sourceBetween(pageSource, 'function SocialTaxBreakdown({');
+
+  // 一级个税区无专项勾选；勾选仅出现在 taxDetail 二级 FloatPanel 内
+  it('专项附加扣除勾选仅在个税「查看明细」二级，一级只留摘要与入口', () => {
+    assert.match(socialTaxSource, /INCOME_DETAIL_TAX_DETAIL_ENTRY/);
+    assert.match(socialTaxSource, /INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE/);
+    assert.match(socialTaxSource, /open=\{taxDetailOpen\}/);
+    assert.match(socialTaxSource, /zIndex=\{Z_INDEX\.nestedPanel\}/);
+    assert.match(socialTaxSource, /一级个税区：仅预估摘要/);
+    assert.match(socialTaxSource, /二级：抵扣 → 各区间税额 → 税率表/);
+
+    // 住房租金 / 赡养老人勾选必须在 taxDetail FloatPanel 内部
+    const taxDetailPanel = socialTaxSource.match(
+      /<FloatPanel[\s\S]*?open=\{taxDetailOpen\}[\s\S]*?headerTitle=\{INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE\}[\s\S]*?<\/FloatPanel>/,
+    )?.[0];
+    assert.ok(taxDetailPanel, 'tax detail FloatPanel missing');
+    assert.match(taxDetailPanel, /住房租金/);
+    assert.match(taxDetailPanel, /赡养老人/);
+    assert.match(taxDetailPanel, /onRentChange/);
+    assert.match(taxDetailPanel, /onElderlyChange/);
+    assert.match(taxDetailPanel, /专项附加扣除/);
+    assert.match(taxDetailPanel, /本区间税额/);
+    assert.match(taxDetailPanel, /纳税区间表/);
+
+    // 一级个税 section：在打开 taxDetail 之前不得出现专项勾选 label
+    const primaryTax = socialTaxSource.match(
+      /一级个税区[\s\S]*?<FloatPanel[\s\S]*?open=\{taxDetailOpen\}/,
+    )?.[0];
+    assert.ok(primaryTax, 'primary tax section marker missing');
+    assert.doesNotMatch(primaryTax, /onRentChange/);
+    assert.doesNotMatch(primaryTax, /onElderlyChange/);
+    assert.match(primaryTax, /本月预估个税/);
   });
 });
