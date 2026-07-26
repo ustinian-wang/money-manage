@@ -155,14 +155,26 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 ### GitHub Actions 自动部署
 
-`.github/workflows/ci.yml`：PR / 非 `main` 分支只跑 `npm run check`；**push 到 `main`** 且 check 通过后执行 `npm run deploy`。
+`.github/workflows/ci.yml`：PR / 非 `main` 分支只跑 `npm run check`；**push 到 `main`** 且 check 通过后执行 `npm run deploy`（`opennextjs-cloudflare build && deploy`）。
 
-请在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置：
+请在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置（变量名须与 workflow 一致，**不要**把 token 写入仓库或 commit）：
 
 | Secret | 说明 |
 | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（需 Workers 部署权限） |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（见下方创建步骤） |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID（Dashboard 右侧或 Workers 概览；须与 `wrangler.jsonc` 里 KV `id` 所属账号一致） |
+
+**创建 API Token（推荐）：**
+
+1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Token**
+2. 使用模板 **Edit Cloudflare Workers**，或自定义权限至少包含：
+   - Account → **Cloudflare Workers Scripts** → **Edit**
+   - Account → **Workers KV Storage** → **Edit**（本项目绑定了 `MONEY_DATA` KV）
+   - 如模板要求，再勾选 Account 资源范围到你的账号
+3. 创建后复制 token，只粘贴到 GitHub Secret `CLOUDFLARE_API_TOKEN`（只显示一次）
+4. 配好 Secrets 后，对 `main` 再 push 一次或在 Actions 里 **Re-run failed jobs**
+
+若 deploy 仍失败：看 job 日志里是否有 `Authentication error` / `Invalid account` / `KV namespace` / OpenNext build 报错，再分别查 token 权限、Account ID、KV id 或构建问题。
 
 ---
 
