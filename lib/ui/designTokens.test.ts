@@ -8,13 +8,15 @@ import config from '../../tailwind.config.ts';
 import { Z_INDEX, Z_INDEX_LAYERS } from './zIndex';
 
 describe('designTokens zIndex', () => {
-  test('Z_INDEX 六档 content/header/dropdown/drawer/modal/toast 存在且递增', () => {
+  test('Z_INDEX 主阶梯含 nestedPanel/tip 且递增', () => {
     assert.deepEqual([...Z_INDEX_LAYERS], [
       'content',
       'header',
       'dropdown',
       'drawer',
       'modal',
+      'nestedPanel',
+      'tip',
       'toast',
     ]);
     for (let i = 1; i < Z_INDEX_LAYERS.length; i++) {
