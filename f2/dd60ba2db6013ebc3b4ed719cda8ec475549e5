@@ -1,0 +1,26 @@
+app/globals.css
+  s_d7a024b1f2c449::t_8b94abaa1ee3d5 449-453
+  s_d7a024b1f2c449::t_6e08bf42069547 337-341
+app/textFieldUi.test.ts
+  s_d7a024b1f2c449::t_fdc076a44409e4 1-31
+package.json
+  s_d7a024b1f2c449::t_a76fd3866bbf51 23
+app/textFieldUi.ts
+  s_d7a024b1f2c449::t_3658c41d830356 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f2dd60ba2db6013ebc3b4ed719cda8ec475549e5",
+  "prompts": {},
+  "sessions": {
+    "s_d7a024b1f2c449": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "92fe2464-b42c-4eba-9542-491002850a8a",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
