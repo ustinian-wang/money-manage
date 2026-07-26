@@ -34,8 +34,6 @@ import {
   DEFAULT_REINVEST,
   effectiveInvestRate,
   parseReinvestSetting,
-  reinvestFromAnnualSurplus,
-  reinvestFromSurplus,
   reinvestToProfile,
   switchReinvestMode,
   type ReinvestMode,
@@ -43,12 +41,12 @@ import {
 } from '../domain/reinvest';
 import {
   DEFAULT_EMERGENCY,
+  activeCash,
   applyAnnualSpendPlan,
   applyMonthsPlan,
   enableMonthsPlan,
   emergencyReserve,
   emergencyToProfile,
-  monthsFromCash,
   monthlyFromAnnual,
   parseEmergencySetting,
   resolvePlanMonthly,
@@ -57,6 +55,8 @@ import {
   type EmergencyMode,
   type EmergencySetting,
 } from '../domain/emergency';
+import { buildMonthlyAssetForecast, yearlyTotalsFromMonthly } from './assetForecast';
+import { createProfileSyncQueue, type ProfileSyncStatus } from '../lib/persistence/profileSync';
 import {
   clampInstallmentTerm,
   defaultOneTimeDate,
@@ -240,7 +240,7 @@ type FinanceInput = {
   invest: number;
   returnRate: number;
   /** @deprecated 保留兼容；实际用 emergency */
-  emergencyMonths: number;
+  emergencyMonths?: number;
   emergency?: EmergencySetting;
   totalAssets: number;
   expenses: Expense[];
@@ -311,13 +311,20 @@ function computeFinanceResult({ salary, contributionBase, housingFundBase, socia
   const monthlyExpenses = recurring + oneTime;
   const committedDownPayments = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + (expense.downPayment || 0), 0);
   const liquidAssets = cash + invest;
-  // 兼容：未传 emergency 时用旧 emergencyMonths 拼设置
+  // 兼容旧调用：未传 emergency 时，也组装成两套分存的完整结构。
+  const legacyMonths = Number.isFinite(emergencyMonths) ? Math.max(0, emergencyMonths ?? 0) : 0;
   const emergencySetting: EmergencySetting = emergency ?? {
     ...DEFAULT_EMERGENCY,
-    months: emergencyMonths,
-    enabled: emergencyMonths > 0,
+    enabled: legacyMonths > 0,
+    mode: legacyMonths > 0 ? 'months' : 'amount',
+    cashDirect: Math.max(0, cash),
+    monthsPlan: {
+      ...DEFAULT_EMERGENCY.monthsPlan,
+      months: legacyMonths,
+      cash: Math.max(0, cash),
+    },
   };
-  // 备用金 = 现金资产（不再另扣一坨）
+  // 备用金 = 当前 mode 生效现金（不再另扣一坨）
   const emergencyReserveAmount = emergencyReserve(emergencySetting, monthlyExpenses, cash);
   const adjustedAvailableAssets = Math.max(0, liquidAssets - committedDownPayments - emergencyReserveAmount);
   const totalLiabilities = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + Math.max(0, (expense.total || 0) - (expense.downPayment || 0)), 0);
@@ -327,24 +334,21 @@ function computeFinanceResult({ salary, contributionBase, housingFundBase, socia
   // 分母=可支配收入 net（与占比图一致）；剩余 = 100 − 支出占比，超支可为负
   const { expensePct } = cashFlowRatios({ debt, otherExpenses: Math.max(0, monthlyExpenses - debt), income: net });
   const remainDisposablePct = remainDisposableSharePct(expensePct);
-  return { socialRows, social, deductions, tax: Math.max(0, tax), net, detailNet: computedNet, investmentIncome, monthlyExpenses, recurringMonthlyExpenses: recurring, oneTimeTotal: oneTime, surplus, emergency: emergencySetting.months, emergencyReserve: emergencyReserveAmount, emergencySetting, debt, remainDisposablePct, committedDownPayments, liquidAssets, adjustedAvailableAssets, totalLiabilities, netWorth };
+  return { socialRows, social, deductions, tax: Math.max(0, tax), net, detailNet: computedNet, investmentIncome, monthlyExpenses, recurringMonthlyExpenses: recurring, oneTimeTotal: oneTime, surplus, emergency: emergencySetting.monthsPlan.months, emergencyReserve: emergencyReserveAmount, emergencySetting, debt, remainDisposablePct, committedDownPayments, liquidAssets, adjustedAvailableAssets, totalLiabilities, netWorth };
 }
-// 年度预测：year1 结余扣一次性一次，year>=2 仅 recurring（与月度 month1 / month>=2 一致）
-function forecastYearlyTotals(cash: number, invest: number, returnRate: number, reinvest: ReinvestSetting, net: number, investmentIncome: number, recurringMonthly: number, oneTime: number, committedDownPayments: number) {
-  const rows: Array<{ year: number; label: string; total: number }> = [];
-  let cashAsset = cash;
-  let investmentAsset = invest;
-  for (let year = 0; year <= 30; year += 1) {
-    const annualReturn = year === 0 ? 0 : investmentAsset * returnRate / 100;
-    const annualSurplus = Math.max(0, (net + investmentIncome - recurringMonthly) * 12 - (year === 1 ? oneTime : 0));
-    const salaryReinvestment = year === 0 ? 0 : reinvestFromAnnualSurplus(annualSurplus, reinvest);
-    if (year > 0) {
-      investmentAsset += annualReturn + salaryReinvestment;
-      cashAsset += annualSurplus - salaryReinvestment;
-    }
-    rows.push({ year, label: forecastYearLabel(year), total: cashAsset + investmentAsset });
-  }
-  return rows;
+// 年度对比复用月度资产内核，避免主图与消费分析使用不同收益/结余口径。
+function forecastYearlyTotals(cash: number, invest: number, returnRate: number, reinvest: ReinvestSetting, net: number, recurringMonthly: number, oneTime: number, committedDownPayments: number) {
+  return yearlyTotalsFromMonthly({
+    cash,
+    investment: invest,
+    annualReturnRate: returnRate,
+    disposableIncomeMonthly: net,
+    recurringExpenseMonthly: recurringMonthly,
+    oneTimeExpense: oneTime,
+    reinvest,
+    committedDownPayments,
+    years: 30,
+  }).map((row) => ({ ...row, label: forecastYearLabel(row.year) }));
 }
 
 /** 逐月支出占可支配收入占比（分母=税后净收入 net，与面板「可支配收入」一致） */
@@ -390,9 +394,11 @@ export default function HomePage() {
   const [cash, setCash] = useState<number>(LIGHT_DEMO_ASSETS.cash);
   const [emergencyEnabled, setEmergencyEnabled] = useState(DEFAULT_EMERGENCY.enabled);
   const [emergencyMode, setEmergencyMode] = useState<EmergencyMode>(DEFAULT_EMERGENCY.mode);
-  const [emergencyMonths, setEmergencyMonths] = useState<number>(DEFAULT_EMERGENCY.months);
-  const [emergencyAmount, setEmergencyAmount] = useState(DEFAULT_EMERGENCY.amount);
-  const [emergencyAnnualSpend, setEmergencyAnnualSpend] = useState(DEFAULT_EMERGENCY.annualSpend);
+  // 与演示现金同起点，避免未 hydrate 时切模式把默认现金写成 0
+  const [emergencyCashDirect, setEmergencyCashDirect] = useState<number>(LIGHT_DEMO_ASSETS.cash);
+  const [emergencyMonths, setEmergencyMonths] = useState(DEFAULT_EMERGENCY.monthsPlan.months);
+  const [emergencyMonthsCash, setEmergencyMonthsCash] = useState(DEFAULT_EMERGENCY.monthsPlan.cash);
+  const [emergencyAnnualSpend, setEmergencyAnnualSpend] = useState(DEFAULT_EMERGENCY.monthsPlan.annualSpend);
   const [totalAssets, setTotalAssets] = useState<number>(LIGHT_DEMO_ASSETS.totalAssets);
   const [invest, setInvest] = useState<number>(LIGHT_DEMO_ASSETS.invest);
   const [investRatio, setInvestRatio] = useState<number>(LIGHT_DEMO_ASSETS.investRatio);
@@ -422,15 +428,19 @@ export default function HomePage() {
   const elderlyShare = 100;
   const setElderlyShare = (_value: number) => undefined;
   const [savedAt, setSavedAt] = useState('');
+  const [profileSyncStatus, setProfileSyncStatus] = useState<ProfileSyncStatus>({ phase: 'idle' });
   const [hydrated, setHydrated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
-  const [serverRevision, setServerRevision] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [retirement, setRetirement] = useState(retirementDefaults);
   // 退休与社保区块默认收起；仅本地 UI，不持久化
   const [retirementOpen, setRetirementOpen] = useState(false);
   const isNarrow = useIsMobile();
   const router = useRouter();
+  const profileSyncRef = useRef<ReturnType<typeof createProfileSyncQueue> | null>(null);
+  if (!profileSyncRef.current) {
+    profileSyncRef.current = createProfileSyncQueue({ onStatus: setProfileSyncStatus });
+  }
   // 顶栏下拉菜单（原「更多」文案）：收纳安装 / 已保存 / 登出·登录
   const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
   // portal 到 body：避开 sticky 顶栏 stacking / overflow 裁切
@@ -488,9 +498,10 @@ export default function HomePage() {
         const parsed = parseEmergencySetting(data);
         setEmergencyEnabled(parsed.enabled);
         setEmergencyMode(parsed.mode);
-        setEmergencyMonths(parsed.months);
-        setEmergencyAmount(parsed.amount);
-        setEmergencyAnnualSpend(parsed.annualSpend);
+        setEmergencyCashDirect(parsed.cashDirect);
+        setEmergencyMonths(parsed.monthsPlan.months);
+        setEmergencyMonthsCash(parsed.monthsPlan.cash);
+        setEmergencyAnnualSpend(parsed.monthsPlan.annualSpend);
       }
       if (data.totalAssets !== undefined) setTotalAssets(Number(data.totalAssets));
       if (data.invest !== undefined) setInvest(Number(data.invest));
@@ -576,7 +587,7 @@ export default function HomePage() {
           const state = await response.json();
           if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
             applyProfileData(state.profile as Record<string, unknown>);
-            setServerRevision(Number(state.revision) || 0);
+            profileSyncRef.current?.setRevision(Number(state.revision) || 0);
           } else {
             try {
               const saved = localStorage.getItem('money-manage-profile');
@@ -601,8 +612,17 @@ export default function HomePage() {
     [reinvestMode, reinvestRate, reinvestAmount],
   );
   const emergencySetting: EmergencySetting = useMemo(
-    () => ({ enabled: emergencyEnabled, mode: emergencyMode, months: emergencyMonths, amount: emergencyAmount, annualSpend: emergencyAnnualSpend }),
-    [emergencyEnabled, emergencyMode, emergencyMonths, emergencyAmount, emergencyAnnualSpend],
+    () => ({
+      enabled: emergencyEnabled,
+      mode: emergencyMode,
+      cashDirect: emergencyCashDirect,
+      monthsPlan: {
+        months: emergencyMonths,
+        cash: emergencyMonthsCash,
+        annualSpend: emergencyAnnualSpend,
+      },
+    }),
+    [emergencyEnabled, emergencyMode, emergencyCashDirect, emergencyMonths, emergencyMonthsCash, emergencyAnnualSpend],
   );
   const profile = {
     schemaVersion: 4,
@@ -633,7 +653,8 @@ export default function HomePage() {
   // 登出 → 访客：保留当前内存作本机草稿，不再打云端
   const handleLogout = () => {
     setAuthUser(null);
-    setServerRevision(0);
+    profileSyncRef.current?.setRevision(0);
+    setProfileSyncStatus({ phase: 'idle' });
     setSavedAt('');
     setHeaderMoreOpen(false);
     setHydrated(true);
@@ -645,26 +666,15 @@ export default function HomePage() {
   // 访客只写 localStorage；登录后再防抖同步云端
   useEffect(() => {
     if (!hydrated) return;
+    if (authUser) setProfileSyncStatus({ phase: 'syncing' });
     const timer = window.setTimeout(() => {
       save();
       if (!authUser) return;
       // ponytail: 云端 schema 仍带 snapshots:[]，不再写入业务快照
-      void fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          revision: serverRevision,
-          state: { profile, snapshots: [], scenarios: [] },
-        }),
-        keepalive: true,
-      }).then(async (response) => {
-        if (!response.ok) return;
-        const next = await response.json();
-        if (typeof next?.revision === 'number') setServerRevision(next.revision);
-      }).catch(() => undefined);
+      void profileSyncRef.current?.enqueue({ profile, snapshots: [], scenarios: [] });
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [hydrated, authUser, salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, emergencyEnabled, emergencyMode, emergencyMonths, emergencyAmount, emergencyAnnualSpend, totalAssets, invest, investRatio, returnRate, reinvestMode, reinvestRate, reinvestAmount, socialRates, expenses, rentEnabled, elderlyEnabled, retirement]);
+  }, [hydrated, authUser, salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, emergencyEnabled, emergencyMode, emergencyCashDirect, emergencyMonths, emergencyMonthsCash, emergencyAnnualSpend, totalAssets, invest, investRatio, returnRate, reinvestMode, reinvestRate, reinvestAmount, socialRates, expenses, rentEnabled, elderlyEnabled, retirement]);
   const retirementDate = retirementDateFor(retirement.birthDate, retirement.identity);
   const updateRetirement = (patch: Partial<typeof retirement>) => setRetirement((current) => ({ ...current, ...patch }));
   // 现金 = 总资产 - 理财；改任一端同步另外两端
@@ -681,22 +691,23 @@ export default function HomePage() {
   const applyEmergencySetting = (next: EmergencySetting) => {
     setEmergencyEnabled(next.enabled);
     setEmergencyMode(next.mode);
-    setEmergencyMonths(next.months);
-    setEmergencyAmount(next.amount);
-    setEmergencyAnnualSpend(next.annualSpend);
+    setEmergencyCashDirect(next.cashDirect);
+    setEmergencyMonths(next.monthsPlan.months);
+    setEmergencyMonthsCash(next.monthsPlan.cash);
+    setEmergencyAnnualSpend(next.monthsPlan.annualSpend);
   };
   const committedDownPayments = expenses.filter((expense) => expense.mode === 'installment').reduce((sum, expense) => sum + (expense.downPayment || 0), 0);
 
   const effectiveInsuranceBase = resolveContributionBase(salary, contributionBase);
   const effectiveHousingFundBase = resolveContributionBase(salary, housingFundBase);
   const financeInput = useMemo(
-    () => ({ salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, invest, returnRate, emergencyMonths, emergency: emergencySetting, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates }),
-    [salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, invest, returnRate, emergencyMonths, emergencySetting, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates],
+    () => ({ salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, invest, returnRate, emergency: emergencySetting, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates }),
+    [salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, invest, returnRate, emergencySetting, totalAssets, expenses, rentEnabled, elderlyEnabled, socialRates],
   );
   const result = useMemo(() => computeFinanceResult(financeInput), [financeInput]);
 
   // 规划月均：往年÷12，缺省回退账本本月支出
-  const planMonthly = resolvePlanMonthly(emergencySetting.annualSpend, result.monthlyExpenses);
+  const planMonthly = resolvePlanMonthly(emergencySetting.monthsPlan.annualSpend, result.monthlyExpenses);
   const syncEmergencyWithCash = (nextCash: number) => {
     applyEmergencySetting(syncSettingFromCash(emergencySetting, nextCash, result.monthlyExpenses));
   };
@@ -707,7 +718,7 @@ export default function HomePage() {
   const updateCash = (value: number) => {
     const nextCash = clamp(value, 0, totalAssets);
     syncAssets(totalAssets, totalAssets - nextCash);
-    // 直接填现金：强制 amount 模式，并反算应急月数
+    // 直接填现金：强制 amount 模式，只写 cashDirect
     applyEmergencySetting(syncSettingFromCash(
       { ...emergencySetting, mode: 'amount' },
       nextCash,
@@ -725,9 +736,9 @@ export default function HomePage() {
     const nextCash = syncAssets(totalAssets, Math.min(availableCap, totalAssets * ratio / 100));
     syncEmergencyWithCash(nextCash);
   };
-  /** 应急月数 → 现金 = 月均×月数，联动理财 */
+  /** 应急月数 → 现金 = 月均×月数，联动理财；只写 monthsPlan */
   const updateCashByMonths = (months: number) => {
-    const monthly = resolvePlanMonthly(emergencySetting.annualSpend, result.monthlyExpenses);
+    const monthly = resolvePlanMonthly(emergencySetting.monthsPlan.annualSpend, result.monthlyExpenses);
     const { cash: nextCash, setting } = applyMonthsPlan(emergencySetting, months, monthly, totalAssets);
     applyEmergencySetting(setting);
     syncAssets(totalAssets, totalAssets - nextCash);
@@ -738,13 +749,14 @@ export default function HomePage() {
     applyEmergencySetting(setting);
     syncAssets(totalAssets, totalAssets - nextCash);
   };
-  /** select「默认」/「应急月数」→ mode amount|months */
+  /** select「默认」/「应急月数」→ 只切 mode，恢复对应套现金，另一套保留 */
   const setMonthsPlanChecked = (checked: boolean) => {
-    if (checked) {
-      applyEmergencySetting(enableMonthsPlan(emergencySetting, result.monthlyExpenses, cash));
-    } else {
-      applyEmergencySetting(switchEmergencyMode(emergencySetting, 'amount', result.monthlyExpenses, cash));
-    }
+    const next = checked
+      ? enableMonthsPlan(emergencySetting, result.monthlyExpenses)
+      : switchEmergencyMode(emergencySetting, 'amount', result.monthlyExpenses);
+    const nextCash = clamp(activeCash(next), 0, totalAssets);
+    applyEmergencySetting(syncSettingFromCash(next, nextCash, result.monthlyExpenses));
+    syncAssets(totalAssets, totalAssets - nextCash);
   };
 
   // 切到简便：若尚未声明到手，用详细套 detailNet 播种（不碰详细字段）
@@ -843,59 +855,23 @@ export default function HomePage() {
       };
     });
   }, [expenses, result.net, result.investmentIncome, result.oneTimeTotal]);
-  const assetForecast = useMemo(() => {
-    const rows = [];
-    let cashAsset = cash;
-    let investmentAsset = invest;
-    const recurring = result.recurringMonthlyExpenses;
-    const oneTime = result.oneTimeTotal;
-    for (let year = 0; year <= 30; year += 1) {
-      const annualReturn = year === 0 ? 0 : investmentAsset * returnRate / 100;
-      // year1 扣一次性；之后仅 recurring
-      const annualSurplus = Math.max(0, (result.net + result.investmentIncome - recurring) * 12 - (year === 1 ? oneTime : 0));
-      const salaryReinvestment = year === 0 ? 0 : reinvestFromAnnualSurplus(annualSurplus, reinvestSetting);
-      if (year > 0) {
-        investmentAsset += annualReturn + salaryReinvestment;
-        cashAsset += annualSurplus - salaryReinvestment;
-      }
-      const total = cashAsset + investmentAsset;
-      const available = Math.max(0, total - result.committedDownPayments - result.emergencyReserve);
-      rows.push({ year, label: forecastYearLabel(year), cash: cashAsset, investment: investmentAsset, annualReturn, salaryReinvestment, total, available });
-    }
-    return rows;
-  }, [cash, invest, returnRate, reinvestSetting, result.net, result.investmentIncome, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments, result.emergencyReserve]);
   const monthlyAssetForecast = useMemo(() => {
-    // 最终资产 = 理财资产 + 闲置资金
-    // 闲置资金 = 起点现金 + Σ(结余 − 闲钱投资)；理财含月复利与闲钱投资部分
-    const rows = [];
-    let idleFunds = cash;
-    let investmentAsset = invest;
-    const monthlyReturn = (1 + returnRate / 100) ** (1 / 12) - 1;
-    const recurring = result.recurringMonthlyExpenses;
-    const oneTime = result.oneTimeTotal;
-    // month1（现在→下月）含一次性；month>=2 仅 recurring
-    const surplusFirst = Math.max(0, result.net + result.investmentIncome - recurring - oneTime);
-    const surplusRest = Math.max(0, result.net + result.investmentIncome - recurring);
-    for (let month = 0; month <= 360; month += 1) {
-      if (month > 0) {
-        const monthlySurplus = month === 1 ? surplusFirst : surplusRest;
-        const monthlyReinvestment = reinvestFromSurplus(monthlySurplus, reinvestSetting);
-        const monthlyIdle = monthlySurplus - monthlyReinvestment;
-        investmentAsset += investmentAsset * monthlyReturn + monthlyReinvestment;
-        idleFunds += monthlyIdle;
-      }
-      const finalAssets = idleFunds + investmentAsset;
-      rows.push({
-        month,
-        label: month === 0 ? '现在' : `${Math.floor(month / 12)}年${month % 12}个月`,
-        cash: idleFunds,
-        investment: investmentAsset,
-        total: finalAssets,
-        available: Math.max(0, finalAssets - result.committedDownPayments - result.emergencyReserve),
-      });
-    }
-    return rows;
-  }, [cash, invest, returnRate, reinvestSetting, result.net, result.investmentIncome, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments, result.emergencyReserve]);
+    return buildMonthlyAssetForecast({
+      cash,
+      investment: invest,
+      annualReturnRate: returnRate,
+      disposableIncomeMonthly: result.net,
+      recurringExpenseMonthly: result.recurringMonthlyExpenses,
+      oneTimeExpense: result.oneTimeTotal,
+      reinvest: reinvestSetting,
+      months: 360,
+      committedDownPayments: result.committedDownPayments,
+      emergencyReserve: result.emergencyReserve,
+    }).map((row) => ({
+      ...row,
+      label: row.month === 0 ? '现在' : `${Math.floor(row.month / 12)}年${row.month % 12}个月`,
+    }));
+  }, [cash, invest, returnRate, reinvestSetting, result.net, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments, result.emergencyReserve]);
   const assetChartOption = useMemo(() => {
     const labels = monthlyAssetForecast.map((row) => row.label);
     const idle = monthlyAssetForecast.map((row) => row.cash);
@@ -1083,6 +1059,24 @@ export default function HomePage() {
     };
   }, [cashFlowForecast, visibleCashFlowLines, isNarrow]);
 
+  const saveStatusText = !authUser
+    ? (savedAt ? `已保存到本机 ${savedAt}` : '访客数据仅保存在本机')
+    : profileSyncStatus.phase === 'syncing'
+      ? '正在同步到云端…'
+      : profileSyncStatus.phase === 'synced'
+        ? `已同步到云端${profileSyncStatus.at ? ` ${profileSyncStatus.at}` : ''}`
+        : profileSyncStatus.phase === 'conflict'
+          ? '云端数据有更新，本机草稿未丢失'
+          : profileSyncStatus.phase === 'failed'
+            ? '已保存到本机，云端同步失败'
+            : '改参后自动同步到云端';
+  const canRetryProfileSync = Boolean(authUser)
+    && (profileSyncStatus.phase === 'failed' || profileSyncStatus.phase === 'conflict');
+  const retryProfileSync = () => {
+    if (!authUser) return;
+    void profileSyncRef.current?.enqueue({ profile, snapshots: [], scenarios: [] });
+  };
+
   // 会话未就绪：简短占位，避免闪一下主界面
   if (!authReady) {
     return (
@@ -1103,6 +1097,7 @@ export default function HomePage() {
         </div>
       </div>
       <div className="relative flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
+        <span className="sr-only" aria-live="polite">{saveStatusText}</span>
         <button
           type="button"
           className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#17212b] px-2.5 py-1.5 text-left text-white sm:gap-2 sm:px-3"
@@ -1157,9 +1152,19 @@ export default function HomePage() {
                 role="menu"
                 style={{ top: headerMorePos.top, left: headerMorePos.left, zIndex: Z_INDEX.topbarMenu }}
               >
-                <p className="px-2.5 py-1.5 text-[10px] text-slate-400">
-                  {savedAt ? `已保存 ${savedAt}` : (authUser ? '改参自动同步云端' : '访客仅本机临时保存')}
+                <p className={`px-2.5 py-1.5 text-[10px] ${canRetryProfileSync ? 'text-amber-700' : 'text-slate-400'}`}>
+                  {saveStatusText}
                 </p>
+                {canRetryProfileSync && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="header-more-item font-semibold text-amber-700"
+                    onClick={retryProfileSync}
+                  >
+                    重试同步
+                  </button>
+                )}
                 <div className="header-more-item-wrap"><InstallToDesktop /></div>
                 {/* 纯客户端：清 SW/Cache 后刷新，不碰草稿与登录 */}
                 <button
@@ -1570,8 +1575,8 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
   const after = useMemo(() => computeFinanceResult({ ...financeInput, expenses: selectedExpenses }), [financeInput, selectedExpenses]);
 
   // KPI「30 年资产差额」仍用消费前/测算两端资产
-  const assetBefore = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvest, before.net, before.investmentIncome, before.recurringMonthlyExpenses, before.oneTimeTotal, before.committedDownPayments), [financeInput, reinvest, before]);
-  const assetAfter = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvest, after.net, after.investmentIncome, after.recurringMonthlyExpenses, after.oneTimeTotal, after.committedDownPayments), [financeInput, reinvest, after]);
+  const assetBefore = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvest, before.net, before.recurringMonthlyExpenses, before.oneTimeTotal, before.committedDownPayments), [financeInput, reinvest, before]);
+  const assetAfter = useMemo(() => forecastYearlyTotals(financeInput.cash, financeInput.invest, financeInput.returnRate, reinvest, after.net, after.recurringMonthlyExpenses, after.oneTimeTotal, after.committedDownPayments), [financeInput, reinvest, after]);
   // ponytail: 分析图拆层仍吃 %；金额模式用「典型月结余」换算等效比例
   const chartInvestRate = useMemo(() => {
     const typicalSurplus = Math.max(0, before.net + before.investmentIncome - before.recurringMonthlyExpenses);
@@ -1885,7 +1890,6 @@ function ConfirmDialog({
       zIndex={Z_INDEX.toast}
       headerTitle={title}
     >
-      {/* Confirm 用 toast 档，须高于 nestedPanel / tip */}
       <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{message}</p>
       <div className="mt-4 flex gap-2">
         <button type="button" onClick={onCancel} className="touch-btn flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">取消</button>
@@ -2547,8 +2551,9 @@ function AssetLinkedEditor({
   const anchorRef = useRef<HTMLButtonElement>(null);
   const emergencyBtnRef = useRef<HTMLButtonElement>(null);
   const monthsPlan = emergency.mode === 'months';
+  const plan = emergency.monthsPlan;
   const cashSummary = monthsPlan
-    ? (emergency.months > 0 ? `应急月数 · ${emergency.months} 月` : '应急月数 · 去设置')
+    ? (plan.months > 0 ? `应急月数 · ${plan.months} 月` : '应急月数 · 去设置')
     : '默认';
   const closeAsset = () => {
     setEmergencyOpen(false);
@@ -2558,7 +2563,7 @@ function AssetLinkedEditor({
     onMonthsPlanChecked(mode === 'months');
     if (mode !== 'months') setEmergencyOpen(false);
   };
-  const autoMonthly = monthlyFromAnnual(emergency.annualSpend) || planMonthly;
+  const autoMonthly = monthlyFromAnnual(plan.annualSpend) || planMonthly;
   return (
     <div className="relative block min-w-0 sm:col-span-2">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
@@ -2631,7 +2636,7 @@ function AssetLinkedEditor({
               >
                 <span className="font-medium text-slate-700">设置</span>
                 <span className="tabular-nums text-slate-500">
-                  {emergency.months > 0 ? `${emergency.months} 月 · ${money(cash)}` : '往年支出 / 月数'}
+                  {plan.months > 0 ? `${plan.months} 月 · ${money(cash)}` : '往年支出 / 月数'}
                 </span>
               </button>
               <FloatPanel
@@ -2647,7 +2652,7 @@ function AssetLinkedEditor({
                 <div className="space-y-3">
                   <label className="block text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
-                    <SoftNumberInput min={0} step={1000} value={emergency.annualSpend} onCommit={onAnnualSpend} />
+                    <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
                   </label>
                   <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
                     <span>每月支出（自动）</span>
@@ -2656,7 +2661,7 @@ function AssetLinkedEditor({
                       <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
                     </span>
                   </div>
-                  {emergency.annualSpend <= 0 && monthlyExpenses > 0 && (
+                  {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
                     <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
                   )}
                   <label className="block text-xs text-slate-500">
@@ -2666,7 +2671,7 @@ function AssetLinkedEditor({
                       max={36}
                       step={0.5}
                       suffix="个月"
-                      value={emergency.months}
+                      value={plan.months}
                       onCommit={onCashByMonths}
                     />
                   </label>
@@ -3060,4 +3065,3 @@ function SocialTaxBreakdown({
     </div>
   );
 }
-
