@@ -50,7 +50,7 @@ npm test         # 领域单测（可选）
 类型：`fixed` 固定 · `percentage` 按比例（相对可支配收入 + 理财月收益）· `installment` 分期 · `one_time` 一次性。
 
 - **新增**：默认金额 `0`；挂上 DOM 后滚到新项（`data-expense-anchor`，桌面行 / 移动卡双锚点）
-- **删除**：`ConfirmDialog`（FloatPanel field 矮卡）二次确认，**不用**裸 `window.confirm`
+- **删除 / 登录空账号绑草稿**：`ConfirmDialog`（FloatPanel field 矮卡）二次确认，**不用**裸 `window.confirm`
 
 操作列 **分析**：打开「消费影响分析」浮层。
 

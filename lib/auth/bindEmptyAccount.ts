@@ -13,9 +13,16 @@ export type BindEmptyAccountResult =
   | { status: 'skipped' }
   | { status: 'error' };
 
+/** 登录空账号：绑定访客草稿确认文案（供 ConfirmDialog） */
+export const EMPTY_LOGIN_BIND_MESSAGE =
+  '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。';
+
 type BindOpts = {
-  /** 登录空账号二次确认；默认 window.confirm */
-  confirmEmptyLogin?: () => boolean;
+  /**
+   * 登录空账号二次确认（ConfirmDialog / 测试注入）。
+   * 支持同步或 Promise；未提供则 skipped（不上传）。
+   */
+  confirmEmptyLogin?: () => boolean | Promise<boolean>;
   /** 覆盖本机草稿读取（测试用） */
   readDraft?: () => Record<string, unknown> | null;
   fetchImpl?: typeof fetch;
@@ -46,11 +53,10 @@ export async function bindEmptyAccountAfterAuth(
     if (meta.from === 'register' && parseClaimMode(meta.claimMode) === 'clear') {
       toBind = { ...draft, ...emptyClaimProfilePatch() };
     } else if (meta.from === 'login') {
-      const confirm = opts.confirmEmptyLogin
-        ?? (() => window.confirm(
-          '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。',
-        ));
-      if (!confirm()) return { status: 'skipped' };
+      const confirm = opts.confirmEmptyLogin;
+      if (!confirm) return { status: 'skipped' };
+      const ok = await confirm();
+      if (!ok) return { status: 'skipped' };
     }
 
     // ponytail: 剥离旧草稿 snapshots；云端固定空数组兼容 schema

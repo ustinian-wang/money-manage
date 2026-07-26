@@ -18,6 +18,7 @@ import {
 import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
 
 const pageSource = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+const floatPanelModuleSource = fs.readFileSync(new URL('./components/FloatPanel.tsx', import.meta.url), 'utf8');
 
 function sourceBetween(source: string, startMarker: string, endMarker?: string): string {
   const start = source.indexOf(startMarker);
@@ -95,7 +96,7 @@ describe('FloatPanel sheet mask 交互契约', () => {
     });
     assert.deepEqual(calls, ['preventDefault', 'stopPropagation']);
 
-    const floatPanelSource = sourceBetween(pageSource, 'function FloatPanel({', '/** 闲钱投资');
+    const floatPanelSource = floatPanelModuleSource;
     const backdropTag = floatPanelSource.match(/<div\b[^>]*data-sheet-backdrop[^>]*>/)?.[0];
     assert.ok(backdropTag, 'sheet backdrop missing');
     assert.match(backdropTag, /onPointerDown=\{blockOverlayEvent\}/);

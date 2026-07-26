@@ -4,11 +4,15 @@
  * 鉴权页共用壳：已登录回跳、空账号绑定、认领摘要
  * 供 /login · /register 复用；不做 mode 糊页
  */
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthBar, { type AuthMeta, type AuthMode, type AuthUser } from '../AuthBar';
+import ConfirmDialog from './ConfirmDialog';
 import { safeReturnUrl } from '../../lib/auth/authHref';
-import { bindEmptyAccountAfterAuth } from '../../lib/auth/bindEmptyAccount';
+import {
+  EMPTY_LOGIN_BIND_MESSAGE,
+  bindEmptyAccountAfterAuth,
+} from '../../lib/auth/bindEmptyAccount';
 import { claimSummaryLinesFromStorage } from '../../lib/auth/claimSummaryFromDraft';
 import { authPageShellMainClassName } from '../../lib/ui/authGateShell';
 
@@ -23,6 +27,9 @@ function AuthPageShellInner({ mode, title }: Props) {
   const returnUrl = safeReturnUrl(search.get('returnUrl'));
   const [ready, setReady] = useState(false);
   const [claimSummaryLines, setClaimSummaryLines] = useState<string[]>([]);
+  const [bindConfirmOpen, setBindConfirmOpen] = useState(false);
+  const bindConfirmResolverRef = useRef<((ok: boolean) => void) | null>(null);
+  const bindConfirmAnchorRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,8 +56,22 @@ function AuthPageShellInner({ mode, title }: Props) {
     router.push('/');
   };
 
+  const askBindDraftConfirm = () => new Promise<boolean>((resolve) => {
+    bindConfirmResolverRef.current = resolve;
+    setBindConfirmOpen(true);
+  });
+
+  const settleBindConfirm = (ok: boolean) => {
+    const resolve = bindConfirmResolverRef.current;
+    bindConfirmResolverRef.current = null;
+    setBindConfirmOpen(false);
+    resolve?.(ok);
+  };
+
   const onAuthed = async (_user: AuthUser, meta: AuthMeta) => {
-    await bindEmptyAccountAfterAuth(meta);
+    await bindEmptyAccountAfterAuth(meta, {
+      confirmEmptyLogin: askBindDraftConfirm,
+    });
     router.push(returnUrl);
   };
 
@@ -63,7 +84,7 @@ function AuthPageShellInner({ mode, title }: Props) {
   }
 
   return (
-    <main className={authPageShellMainClassName()} aria-label={title}>
+    <main ref={bindConfirmAnchorRef} className={authPageShellMainClassName()} aria-label={title}>
       <AuthBar
         user={null}
         variant="page"
@@ -72,6 +93,16 @@ function AuthPageShellInner({ mode, title }: Props) {
         claimSummaryLines={claimSummaryLines}
         onAuthed={(user, meta) => { void onAuthed(user, meta); }}
         onLogout={goHomeGuest}
+      />
+      <ConfirmDialog
+        open={bindConfirmOpen}
+        anchorRef={bindConfirmAnchorRef}
+        title="绑定访客草稿"
+        message={EMPTY_LOGIN_BIND_MESSAGE}
+        confirmLabel="绑定草稿"
+        confirmTone="primary"
+        onCancel={() => settleBindConfirm(false)}
+        onConfirm={() => settleBindConfirm(true)}
       />
     </main>
   );

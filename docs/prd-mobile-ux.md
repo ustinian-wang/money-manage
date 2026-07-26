@@ -46,7 +46,7 @@
 | I | 「更多」→ 重启网站：确认框 → 仅清 SW/Cache → 刷新；草稿/登录仍在 | 已落地 |
 | J | **375 最小宽度**：单列 `minmax(0,1fr)`、field/支出金额 ellipsis，不横向撑破 | 已落地 |
 | K | 浮层键盘：`visualViewport` 夹紧 + 焦点滚入可视区 | 已落地 |
-| L | 列表删除：`ConfirmDialog`（FloatPanel），非裸 `window.confirm` | 已落地 |
+| L | 列表删除 / 登录空账号绑草稿：`ConfirmDialog`（FloatPanel），非裸 `window.confirm` | 已落地 |
 | M | 新增支出默认 0，滚到 `data-expense-anchor` 新项 | 已落地 |
 | N | 资产走势万元轴；可支配/现金流 `grid.right` 窄屏约 68px | 已落地 |
 | O | 等价联动 `LinkedFieldGroup`（资产四元组、首付、年↔期） | 已落地 |
