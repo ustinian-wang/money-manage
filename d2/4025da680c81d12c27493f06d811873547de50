@@ -1,0 +1,34 @@
+app/incomeDetailLayout.test.ts
+  s_655efbc03c6c23::t_b2200e22e3b899 196-229
+  s_1d6544d81a3502::t_5631068f60ca15 3,13,59-60,62,129,169,173,181-193
+  s_655efbc03c6c23::t_e57f0ef285e786 76-77,80-85
+  s_655efbc03c6c23::t_aeb3e5f7697311 37-41,44-45
+  s_655efbc03c6c23::t_611bdd9aab8494 194-195
+app/incomeDetailLayout.ts
+  s_655efbc03c6c23::t_d4f701cb5e041b 17,25-26,31-32
+  s_1d6544d81a3502::t_93806d1446623d 4,13,15,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d24025da680c81d12c27493f06d811873547de50",
+  "prompts": {},
+  "sessions": {
+    "s_1d6544d81a3502": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bdf839a0-f585-40f9-99fe-ba69f1a0305b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_655efbc03c6c23": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3371a6a6-e843-4d3c-aedf-b70b7d618c6b",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
