@@ -12,6 +12,12 @@ import AuthBar, { logoutSession, type AuthUser } from './AuthBar';
 import { authHref } from '../lib/auth/authHref';
 import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
+import {
+  formatAssetChartAxisLabel,
+  formatYearMonthChartAxisLabel,
+  monthAxisInterval,
+  monthAxisRotate,
+} from '../lib/chartAxis';
 import { FLOAT_MARGIN, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
 import { Z_INDEX } from '../lib/ui/zIndex';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
@@ -1014,7 +1020,7 @@ export default function HomePage() {
       },
       xAxis: {
         type: 'category', boundaryGap: false, data: labels,
-        axisLabel: { color: '#334155', fontSize: 14, fontWeight: 600, interval: 11, rotate: isNarrow ? 50 : 40, hideOverlap: true, margin: 14 },
+        axisLabel: { color: '#334155', fontSize: isNarrow ? 12 : 14, fontWeight: 600, interval: monthAxisInterval(isNarrow), rotate: monthAxisRotate(isNarrow), hideOverlap: true, margin: 14, formatter: (value: string) => formatAssetChartAxisLabel(value, isNarrow) },
         axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } },
         axisLine: { lineStyle: { color: '#64748b', width: 2 } },
         name: '未来月份', nameLocation: 'middle', nameGap: isNarrow ? 36 : 56,
@@ -1042,7 +1048,7 @@ export default function HomePage() {
     // 右侧留白给 markLine；375 下 10%≈32px 仍裁字，窄屏用 68px
     grid: { left: isNarrow ? 40 : 72, right: isNarrow ? 68 : '10%', top: 40, bottom: isNarrow ? 72 : 96 },
     tooltip: { trigger: 'axis', textStyle: { fontSize: isNarrow ? 11 : 16 }, valueFormatter: (value: number) => `${Number(value).toFixed(1)}%` },
-    xAxis: { type: 'category', boundaryGap: false, data: remainForecast.map((point) => point.label), axisLabel: { color: '#334155', fontSize: isNarrow ? 11 : 16, fontWeight: 600, interval: 11, rotate: isNarrow ? 50 : 40, hideOverlap: true, margin: 14 }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { lineStyle: { color: '#64748b', width: 2 } }, name: '未来月份', nameLocation: 'middle', nameGap: isNarrow ? 36 : 56, nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 } },
+    xAxis: { type: 'category', boundaryGap: false, data: remainForecast.map((point) => point.label), axisLabel: { color: '#334155', fontSize: isNarrow ? 11 : 16, fontWeight: 600, interval: monthAxisInterval(isNarrow), rotate: monthAxisRotate(isNarrow), hideOverlap: true, margin: 14, formatter: (value: string) => formatYearMonthChartAxisLabel(value, isNarrow) }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { lineStyle: { color: '#64748b', width: 2 } }, name: '未来月份', nameLocation: 'middle', nameGap: isNarrow ? 36 : 56, nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 } },
     yAxis: { type: 'value', min: Math.floor(yMin / 10) * 10, max: Math.ceil(yMax / 10) * 10, interval: 20, name: '剩余可支配 %', nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 }, axisLabel: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600, formatter: '{value}%' }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { show: true, lineStyle: { color: '#64748b', width: 2 } }, splitLine: { lineStyle: { color: '#cbd5e1', type: 'dashed', width: 1.5 } } },
     dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', height: 18, bottom: 8, start: 0, end: 100 }],
     series: [{
@@ -1127,7 +1133,7 @@ export default function HomePage() {
       },
       xAxis: {
         type: 'category', boundaryGap: false, data: labels,
-        axisLabel: { color: '#334155', fontSize: 14, fontWeight: 600, interval: 11, rotate: isNarrow ? 50 : 40, hideOverlap: true, margin: 14 },
+        axisLabel: { color: '#334155', fontSize: isNarrow ? 12 : 14, fontWeight: 600, interval: monthAxisInterval(isNarrow), rotate: monthAxisRotate(isNarrow), hideOverlap: true, margin: 14, formatter: (value: string) => formatYearMonthChartAxisLabel(value, isNarrow) },
         axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } },
         axisLine: { lineStyle: { color: '#64748b', width: 2 } },
         name: '未来月份', nameLocation: 'middle', nameGap: isNarrow ? 36 : 56,
@@ -1927,7 +1933,18 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate 
         type: 'category',
         boundaryGap: false,
         data: labels,
-        axisLabel: { fontSize: 10, color: '#64748b', interval: 11, rotate: 40, hideOverlap: true, margin: 12 },
+        axisLabel: (() => {
+          const narrow = typeof window !== 'undefined' && window.innerWidth < 640;
+          return {
+            fontSize: 10,
+            color: '#64748b',
+            interval: monthAxisInterval(narrow),
+            rotate: monthAxisRotate(narrow),
+            hideOverlap: true,
+            margin: 12,
+            formatter: (value: string) => formatYearMonthChartAxisLabel(value, narrow),
+          };
+        })(),
       },
       yAxis: {
         type: 'value',
