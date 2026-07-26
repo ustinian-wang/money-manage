@@ -21,8 +21,8 @@ npm run dev   # 默认 http://localhost:3000
 1. 打开 DevTools → Toggle device toolbar → **iPhone 12/13/14** 或自定义 **390 × 844**
 2. 访问 `http://localhost:3000`
 3. **访客主界面**：未登录应直接进主应用，见顶栏「访客 ∨」与示例数据条幅；主财务面板可用
-4. 顶栏「用户名/访客 + ∨」整块可点（原「更多」）：含快照、安装（若有）、**重启网站**、登录（窄屏）；点「重启网站」应弹出确认（取消则不刷新）
-5. **顶栏菜单不被裁切**：打开「访客 ∨」下拉后，菜单四边完整可见（不被顶栏/`sticky-chrome` 切掉）；向下轻滚使顶栏收起后，已打开的菜单仍应完整可见；375 与桌面各验一次
+4. 顶栏「用户名/访客 + ∨」整块可点（原「更多」）：含安装（若有）、**重启网站**、登录（窄屏）；点「重启网站」应弹出确认（取消则不刷新）
+5. **顶栏菜单不被裁切**：打开「访客 ∨」下拉后，菜单四边完整可见（不被顶栏切掉）；上下滚动时顶栏始终展开，菜单仍完整可见；375 与桌面各验一次
 6. **鉴权独立页**：点「注册保存」→ `/register`；菜单/顶栏「登录」→ `/login`（非整页 sheet）；页内可「去登录/去注册」互跳；访客可点「继续访客体验」回 `/`
 7. 聚焦可编辑字段：页面不应白屏/崩溃
 8. （可选）注册 → 刷新仍登录且数据在 → 登出回访客（可留在主页）
@@ -38,6 +38,7 @@ npm run dev   # 默认 http://localhost:3000
 | B 图表 canvas | 展开「资产走势」等，目测三图非空白 | 否 |
 | C 鉴权独立页 | **步骤 3、6**（保留 `/login` `/register`） | 部分（HTTP 探针 `/login` `/register`） |
 | D 禁浮层叠浮层 | 移动打开分析 sheet，二级编辑应在同层展开 | 否 |
+| D FloatPanel 点 mask 不关 | 打开任意 sheet/field（工资、分析、删除确认）：点遮罩应仍开着；仅「关闭」/确认取消/Esc | 否 |
 | E 发布前 | `npm test` + 本节脚本 | `npm test` 另跑 |
 
 ## 脚本怎么跑
@@ -66,6 +67,16 @@ Browser 设备模式 **不能 100% 模拟 iOS 键盘**。可用下列方式近�
    ```
 2. **真机**：iOS Safari → 打开工资/资产 field 浮层或 `/login`/`/register` 表单 → 聚焦输入框；输入框应完整落在键盘上方（约 14px 边距）；浮层内部仍可手指滚动（未设 `touch-action: none`）。
 3. **代码路径**：`scrollFocusedFieldIntoView`（延迟 ~280ms）→ `ensureFocusedInVisualViewportNow`；VV `resize`/`scroll` 再校正；`FloatPanel.place` 在焦点仍在面板内时同步校正。
+
+## 鉴权页键盘（`/login` · `/register`）
+
+根因曾为 `.auth-gate-root` 叠 `min-h-screen`（100vh 盖住 `--vv-height`）→ `canScroll=false`。验收：
+
+1. 打开 `/register`（或 `/login`），设备模式 390×844
+2. Console 执行同上 VV 模拟（`--vv-height: 420px` + `kb-open`）
+3. 确认 `.auth-gate-root` 计算高度约为 420（**不是**满屏 100vh）；`scrollHeight > clientHeight` 时方可滚
+4. 依次聚焦 **密码 / 确认密码**（注册再滚到认领摘要）；字段应落在矮 VV 内，壳内可手指滚
+5. 仍依赖 `AuthBar` 内 `useVisualViewport` + `form onFocusCapture → scrollFocusedFieldIntoView`
 
 ## 刻意不测
 

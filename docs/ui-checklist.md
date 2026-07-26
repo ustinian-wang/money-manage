@@ -20,10 +20,10 @@ npm run test:mobile-smoke             # 终端 B：HTTP + 可选 headless Chromi
 
 | # | 检查项 | 通过标准 | 备注 |
 | --- | --- | --- | --- |
-| A1 | 顶栏下拉 portal | 打开「访客 ∨ / 用户名 ∨」后，菜单四边完整可见；**不被** `sticky-chrome` / 顶栏 `overflow` 裁切 | 375 与 ≥1024 桌面各一次 |
+| A1 | 顶栏下拉 portal | 打开「访客 ∨ / 用户名 ∨」后，菜单四边完整可见；**不被** 顶栏裁切；滚动时顶栏始终展开 | 375 与 ≥1024 桌面各一次 |
 | A2 | 顶栏收起后菜单 | 菜单已打开时向下轻滚使顶栏收起，菜单仍完整可见、可点 | 依赖 portal 到 `body` |
 | A3 | FloatPanel 盖在内容之上 | 打开任意 field / panel sheet（如资产明细、消费分析），遮罩与面板盖住下方卡片与图表，不被 section 卡片压住 | 抽查 1 个 field + 1 个 panel |
-| A4 | ConfirmDialog 盖在内容之上 | 触发删除确认（支出/快照等），矮卡居中/底卡可见，遮罩可点取消 | 复用 FloatPanel field 矮卡 |
+| A4 | ConfirmDialog 盖在内容之上 | 触发删除确认（支出等），矮卡居中/底卡可见；点遮罩不关，仅取消/确认删除/Esc | 复用 FloatPanel field 矮卡 |
 
 ---
 
