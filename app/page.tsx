@@ -169,13 +169,13 @@ const InfoTip = ({ children }: { children: ReactNode }) => {
 
   const tipNode = open && (
     <>
-      {isMobile && <button type="button" aria-label="关闭说明" className="fixed inset-0 cursor-default bg-transparent" style={{ zIndex: Z_INDEX.dropdownBackdrop }} onClick={() => setOpen(false)} />}
+      {isMobile && <button type="button" aria-label="关闭说明" className="fixed inset-0 cursor-default bg-transparent" style={{ zIndex: Z_INDEX.tipBackdrop }} onClick={() => setOpen(false)} />}
       {createPortal(
         <span
           ref={tipRef}
           role="tooltip"
           className={`fixed w-64 max-w-[calc(100vw-2rem)] rounded-xl bg-[#17212b] p-3 text-left text-xs font-normal leading-5 text-white shadow-xl whitespace-pre-line ${isMobile ? '' : 'pointer-events-none'}`}
-          style={{ top: tipPos.top, left: tipPos.left, zIndex: Z_INDEX.dropdown }}
+          style={{ top: tipPos.top, left: tipPos.left, zIndex: Z_INDEX.tip }}
         >
           {children}
         </span>,
@@ -1150,12 +1150,12 @@ export default function HomePage() {
           </button>
           {headerMoreOpen && createPortal(
             <>
-              <button type="button" className="fixed inset-0 cursor-default" style={{ zIndex: Z_INDEX.dropdown }} aria-label="关闭菜单" onClick={() => setHeaderMoreOpen(false)} />
+              <button type="button" className="fixed inset-0 cursor-default" style={{ zIndex: Z_INDEX.mask }} aria-label="关闭菜单" onClick={() => setHeaderMoreOpen(false)} />
               <div
                 ref={headerMoreMenuRef}
                 className="header-more-menu fixed w-52 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-lg"
                 role="menu"
-                style={{ top: headerMorePos.top, left: headerMorePos.left, zIndex: Z_INDEX.drawer }}
+                style={{ top: headerMorePos.top, left: headerMorePos.left, zIndex: Z_INDEX.topbarMenu }}
               >
                 <p className="px-2.5 py-1.5 text-[10px] text-slate-400">
                   {savedAt ? `已保存 ${savedAt}` : (authUser ? '改参自动同步云端' : '访客仅本机临时保存')}
@@ -1885,6 +1885,7 @@ function ConfirmDialog({
       zIndex={Z_INDEX.toast}
       headerTitle={title}
     >
+      {/* Confirm 用 toast 档，须高于 nestedPanel / tip */}
       <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{message}</p>
       <div className="mt-4 flex gap-2">
         <button type="button" onClick={onCancel} className="touch-btn flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">取消</button>
@@ -1901,7 +1902,7 @@ function FloatPanel({
   width = 256,
   maxHeightVh = 70,
   center = false,
-  zIndex = Z_INDEX.modal,
+  zIndex = Z_INDEX.panel,
   draggable = false,
   headerTitle,
   mode = 'auto',
@@ -2639,7 +2640,7 @@ function AssetLinkedEditor({
                 onClose={() => setEmergencyOpen(false)}
                 width={320}
                 maxHeightVh={64}
-                zIndex={Z_INDEX.toast}
+                zIndex={Z_INDEX.nestedPanel}
                 headerTitle="应急设置"
                 density="field"
               >
@@ -2922,7 +2923,7 @@ function SocialTaxBreakdown({
               onClose={() => setSocialSettingsOpen(false)}
               width={300}
               maxHeightVh={52}
-              zIndex={Z_INDEX.toast}
+              zIndex={Z_INDEX.nestedPanel}
               headerTitle={INCOME_DETAIL_SOCIAL_SETTINGS_PANEL_TITLE}
               density="field"
             >
@@ -3011,7 +3012,7 @@ function SocialTaxBreakdown({
                 onClose={() => setTaxDetailOpen(false)}
                 width={560}
                 maxHeightVh={72}
-                zIndex={Z_INDEX.toast}
+                zIndex={Z_INDEX.nestedPanel}
                 headerTitle={INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE}
               >
                 <section className="space-y-2 text-sm">
