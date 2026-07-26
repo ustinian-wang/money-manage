@@ -153,6 +153,17 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 若要改用 R2（约 10GB）：在 [R2 Overview](https://dash.cloudflare.com/?to=/:account/r2) 开通后创建桶，把 `wrangler.jsonc` 的 `kv_namespaces` 换成 `r2_buckets`（binding 仍用 `MONEY_DATA`）。
 
+### GitHub Actions 自动部署
+
+`.github/workflows/ci.yml`：PR / 非 `main` 分支只跑 `npm run check`；**push 到 `main`** 且 check 通过后执行 `npm run deploy`。
+
+请在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置：
+
+| Secret | 说明 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（需 Workers 部署权限） |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID |
+
 ---
 
 ## 已知局限
