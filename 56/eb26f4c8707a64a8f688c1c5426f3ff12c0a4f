@@ -1,0 +1,21 @@
+tailwind.config.ts
+  s_472b8b5e9beb4a::t_b1070a8b2db5c6 17,19
+lib/ui/designTokens.test.ts
+  s_472b8b5e9beb4a::t_bbba870718a5fd 31,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "56eb26f4c8707a64a8f688c1c5426f3ff12c0a4f",
+  "prompts": {},
+  "sessions": {
+    "s_472b8b5e9beb4a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e81c417b-310e-4de0-a8dd-58a8ba1f246f",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
