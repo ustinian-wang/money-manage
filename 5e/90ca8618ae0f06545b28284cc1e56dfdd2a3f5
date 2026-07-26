@@ -1,0 +1,45 @@
+app/page.tsx
+  s_5f92ffacc00d8e::t_79b7593162876a 243,314-315,318-325,398,704-705,758
+  s_2e7ebba44d21b2::t_1cd02795a56f2e 615-625
+  s_2e7ebba44d21b2::t_03c8880cfe388d 2639,2655,2664,2674
+  s_2e7ebba44d21b2::t_d5be1213b81f7c 710,721,739,741,752,754-757,759
+  s_5f92ffacc00d8e::t_dc4ec4d9a8d7a0 859-874
+  s_5f92ffacc00d8e::t_b93f598908369b 590,656-657,674
+  s_2e7ebba44d21b2::t_a10119827990ce 694-697
+  s_2e7ebba44d21b2::t_b55d4018decf95 44
+  s_2e7ebba44d21b2::t_e8bdb47b36ce8a 397
+  s_5f92ffacc00d8e::t_cd9a89e9a08183 58-59,339-351
+  s_2e7ebba44d21b2::t_df3ef4f1f094a1 501-504
+  s_5f92ffacc00d8e::t_d4afdbbb5c594f 431,440-443
+  s_2e7ebba44d21b2::t_14c1c55cac83bb 677
+  s_2e7ebba44d21b2::t_7b991d22f9b345 327,337
+  s_2e7ebba44d21b2::t_7b9ac438d3cb94 399-401
+  s_5f92ffacc00d8e::t_f7cb2d014204c3 669
+  s_5f92ffacc00d8e::t_fd6dfe5772687a 1578-1579
+  s_5f92ffacc00d8e::t_07a6ddcaba781a 1062-1079,1100,1155-1156,1158-1167
+  s_2e7ebba44d21b2::t_c06fa1ea29171b 2554,2556,2566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5e90ca8618ae0f06545b28284cc1e56dfdd2a3f5",
+  "prompts": {},
+  "sessions": {
+    "s_2e7ebba44d21b2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c3398fe2-350f-40bc-8558-049bca7b3b91",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_5f92ffacc00d8e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9dbe-06db-76e3-8013-6771d9cf877c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
