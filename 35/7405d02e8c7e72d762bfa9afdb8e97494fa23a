@@ -1,0 +1,30 @@
+README.md
+  s_d2a2e1a48bbc37::t_6acb7279a390a3 45
+docs/first-visit-audit.md
+  s_feaca7580b06c1::t_37dbad96f6ea34 31
+  s_feaca7580b06c1::t_005509ce095d51 54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "357405d02e8c7e72d762bfa9afdb8e97494fa23a",
+  "prompts": {},
+  "sessions": {
+    "s_d2a2e1a48bbc37": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "910cad2a-b39f-4074-8380-f27a22cbebb4",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_feaca7580b06c1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1b3ef385-65e6-4787-85ab-08f476e3727d",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
