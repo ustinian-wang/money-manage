@@ -1,0 +1,58 @@
+app/assetForecast.ts
+  s_718e248cc35e06::t_2cbbcf8a1ca154 69
+  s_93e210abb588b6::t_636de7c6a501e4 13-16,18-22,55-63,70-72,80,98-104,106,113
+  s_f1cfe769a0b54a::t_8b8ccd9641e88a 23-28
+  s_6aa8807e586c51::t_844245cf6c9992 29-33
+  s_f1cfe769a0b54a::t_6a0e368b08594e 78,87-89
+  s_6aa8807e586c51::t_bfdea94ad2f84c 76-77,90-93
+  s_93e210abb588b6::t_c53ab53f9582e0 64-65
+app/assetForecast.test.ts
+  s_f1cfe769a0b54a::t_8106cd553f84f3 84-103
+  s_93e210abb588b6::t_d599607b2703fe 161,170,173-180
+  s_718e248cc35e06::t_3b33dc2de90ea5 134-135,138-159,162-169,171-172,228-229
+  s_93e210abb588b6::t_a27a90159e97d1 136-137,160,181-184,186,188-197,199,201,203-227
+  s_93e210abb588b6::t_91a06e022e4dfa 185,187,198,200,202
+  s_6aa8807e586c51::t_da636a13ed069b 104-133
+README.md
+  s_93e210abb588b6::t_6b7abe4ae44b49 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d1b2df808c1897be3bb62e8307acc5ec9c7b8a14",
+  "prompts": {},
+  "sessions": {
+    "s_6aa8807e586c51": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4f7566e9-7cd3-4227-b228-9c1376930272",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_718e248cc35e06": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a3fd8fac-c111-4bfc-9466-1eb0acced404",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_93e210abb588b6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c86d0fbd-5ab8-4c50-a63d-a32d6df7da45",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_f1cfe769a0b54a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "bcc9f6a7-3157-4562-8ec6-431fa6dbef43",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
