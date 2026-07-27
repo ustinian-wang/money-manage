@@ -99,7 +99,7 @@ test('scenario before/after comparison yields baseline and override profiles', (
     assert.equal(baseline.salary, 20000); // 不改原对象
 });
 
-test('autosave persists on input/blur and flushes on pagehide', async () => {
+test('autosave persists on blur and flushes pending on pagehide', async () => {
     const writes: Array<{ url: string; body: string }> = [];
     const storage = new Map<string, string>();
     const listeners = new Map<string, Array<() => void>>();
@@ -137,16 +137,17 @@ test('autosave persists on input/blur and flushes on pagehide', async () => {
         const autosave = createAutosave({ apiPath: '/api/profile', debounceMs: 10_000 });
         const unbind = autosave.bindLifecycle();
         autosave.onInput(state);
-        assert.equal(storage.get(LOCAL_STATE_KEY), JSON.stringify(state));
-        assert.equal(storage.get(LOCAL_REVISION_KEY), '4');
+        assert.equal(storage.get(LOCAL_STATE_KEY), undefined);
         await autosave.onBlur(state);
+        assert.equal(storage.get(LOCAL_STATE_KEY), JSON.stringify(state));
         assert.equal(writes.length, 1);
         assert.match(writes[0].body, /"revision":4/);
         writes.length = 0;
         autosave.onInput({ ...state, revision: 5 });
-        assert.equal(storage.get(LOCAL_REVISION_KEY), '5');
+        assert.equal(storage.get(LOCAL_REVISION_KEY), '4');
         for (const handler of listeners.get('pagehide') ?? []) handler();
         await autosave.pending;
+        assert.equal(storage.get(LOCAL_REVISION_KEY), '5');
         assert.equal(writes.length, 1);
         assert.match(writes[0].body, /"revision":5/);
         unbind();

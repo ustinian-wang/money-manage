@@ -12,6 +12,10 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: '财务规划',
   },
+  // Chromium：替代已弃用的仅 apple-mobile-web-app-capable
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   icons: {
     icon: [
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

@@ -73,9 +73,48 @@ export async function resolveReadableDataFile(key: string, cwd = process.cwd()):
     }
 }
 
+/**
+ * 嵌套键写目录时：若中间段已是「扁平文件」（如旧 user:{id}），先抬升为目录内 __legacy_blob__，
+ * 避免 Windows/本地 ENOTDIR（file 与同名 dir 冲突）。
+ */
+export const LEGACY_FLAT_BLOB = '__legacy_blob__';
+
+async function ensureParentDirs(file: string): Promise<void> {
+    const dir = path.dirname(file);
+    try {
+        await fs.mkdir(dir, { recursive: true });
+        return;
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== 'ENOTDIR' && code !== 'EEXIST') throw error;
+    }
+
+    const { root } = path.parse(dir);
+    const rel = path.relative(root, dir);
+    const segments = rel.split(path.sep).filter(Boolean);
+    let cur = root;
+    for (const segment of segments) {
+        cur = path.join(cur, segment);
+        try {
+            const st = await fs.stat(cur);
+            if (st.isDirectory()) continue;
+            if (st.isFile()) {
+                const tmp = `${cur}.${process.pid}.${Date.now()}.hoist`;
+                await fs.rename(cur, tmp);
+                await fs.mkdir(cur);
+                await fs.rename(tmp, path.join(cur, LEGACY_FLAT_BLOB));
+                continue;
+            }
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+            await fs.mkdir(cur);
+        }
+    }
+}
+
 /** 原子写：Win 上目标已存在时 rename 可能失败，先删再移 */
 export async function atomicWriteText(file: string, body: string): Promise<void> {
-    await fs.mkdir(path.dirname(file), { recursive: true });
+    await ensureParentDirs(file);
     const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
     await fs.writeFile(temp, body, 'utf8');
     try {
@@ -91,7 +130,28 @@ export async function readDataText(key: string, cwd = process.cwd()): Promise<st
     try {
         return await fs.readFile(file, 'utf8');
     } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            // 扁平键被 hoist 后：读同目录 __legacy_blob__
+            if (!key.includes('/') && !key.includes('\\')) {
+                const hoisted = path.join(resolveDataFile(key, cwd), LEGACY_FLAT_BLOB);
+                try {
+                    return await fs.readFile(hoisted, 'utf8');
+                } catch (inner) {
+                    if ((inner as NodeJS.ErrnoException).code === 'ENOENT') return null;
+                    throw inner;
+                }
+            }
+            return null;
+        }
+        // 目标路径现为目录（已被 hoist）：读其中 legacy blob
+        if ((error as NodeJS.ErrnoException).code === 'EISDIR') {
+            try {
+                return await fs.readFile(path.join(file, LEGACY_FLAT_BLOB), 'utf8');
+            } catch (inner) {
+                if ((inner as NodeJS.ErrnoException).code === 'ENOENT') return null;
+                throw inner;
+            }
+        }
         throw error;
     }
 }
@@ -103,10 +163,22 @@ export async function writeDataText(key: string, body: string, cwd = process.cwd
 export async function deleteDataText(key: string, cwd = process.cwd()): Promise<void> {
     const existing = await resolveReadableDataFile(key, cwd);
     const targets = existing ? [existing] : [resolveDataFile(key, cwd)];
+    // 扁平键可能已被 hoist 成目录内 blob
+    if (!key.includes('/') && !key.includes('\\')) {
+        targets.push(path.join(resolveDataFile(key, cwd), LEGACY_FLAT_BLOB));
+    }
     for (const file of targets) {
         try {
             await fs.unlink(file);
         } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'EISDIR') {
+                try {
+                    await fs.unlink(path.join(file, LEGACY_FLAT_BLOB));
+                } catch (inner) {
+                    if ((inner as NodeJS.ErrnoException).code !== 'ENOENT') throw inner;
+                }
+                continue;
+            }
             if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
     }

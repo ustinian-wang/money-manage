@@ -1,6 +1,6 @@
 'use client';
 
-/** /register：仅注册（认领摘要闸门 keep/clear） */
+/** /register：仅注册（新账号默认数据，不认领访客草稿） */
 import AuthPageShell from '../components/AuthPageShell';
 
 export default function RegisterPage() {

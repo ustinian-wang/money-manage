@@ -73,10 +73,10 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 分母为「可支配收入」（税后净收入），分期按当月真实月供。曲线水平线：满额 100%、打满 0%、警告 −10/−20/−50%（对应支出 110/120/150%）。
 
-### 4. 本地自动保存与云同步
+### 4. 本地自动保存
 
-- **访客（未登录）**：改参约 400ms 防抖写入 `localStorage` 键 `money-manage-profile:guest`（`schemaVersion: 4`）；**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。若仅有旧键 `money-manage-profile`，首次读时迁移到 guest 键并删除旧键。
-- **已登录**：写本账号键 `money-manage-profile:{userId}`，并串行 PUT `/api/profile` 到本人云端；UI 区分正在同步、已同步、失败和 revision 冲突。失败可重试；冲突会锁住普通同步，保留本机草稿，并要求用户明确选择是否用本机数据覆盖云端。
+- **访客（未登录）**：输入框 **blur**（及显式确认，如支出面板「保存」）写入 `localStorage` 键 `money-manage-profile:guest`（`schemaVersion: 4`）；**change 过程不写盘**，也**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。若仅有旧键 `money-manage-profile`，首次读时迁移到 guest 键并删除旧键。
+- **已登录**：进入时 **GET** `/api/profile` 加载云端；改参同样仅在 blur / 显式确认时写本账号键 `money-manage-profile:{userId}`，**不再**自动 PUT / 「本机覆盖云端」。云端写入仅发生在注册认领、登录空账号确认绑定等显式流程。
 - **登出**：回到访客键；**不会**把当前账号云端/内存画像写入访客键（保留原访客草稿，无则回落轻演示）。
 - **注册认领**：注册成功且云端为空时，把当前内存/本机**访客**草稿写入该账号。
 - **登录空账号**：二次确认是否绑定当前访客草稿；已有云端数据则用云端。

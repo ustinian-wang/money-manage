@@ -8,8 +8,9 @@ import InstallToDesktop from './InstallToDesktop';
 import ConfirmDialog from './components/ConfirmDialog';
 import FloatPanel from './components/FloatPanel';
 import { useRouter } from 'next/navigation';
-import AuthBar, { logoutSession, type AuthUser } from './AuthBar';
+import { logoutSession, type AuthUser } from './AuthBar';
 import { authHref } from '../lib/auth/authHref';
+import { REGISTER_DEFAULT_DATA_MESSAGE } from '../lib/auth/bindEmptyAccount';
 import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
 import {
@@ -34,7 +35,6 @@ import {
   shouldShowChecklist,
   type ChecklistStepId,
 } from '../lib/firstVisitChecklist';
-import { profileSyncAlert } from '../lib/profileSyncAlert';
 import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
 import { loadGuestDraft, resolveGuestProfile, saveGuestDraft } from '../lib/persistence/guestDraft';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
@@ -82,7 +82,6 @@ import {
   type EmergencySetting,
 } from '../domain/emergency';
 import { assetAxisBounds, buildMonthlyAssetForecast, yearlyTotalsFromMonthly } from './assetForecast';
-import { createProfileSyncQueue, type ProfileSyncStatus } from '../lib/persistence/profileSync';
 import {
   clampInstallmentTerm,
   defaultOneTimeDate,
@@ -96,7 +95,7 @@ import { expenseDeleteMessage } from './deleteConfirm';
 import { calcSocialBurdenSharePct, resolveContributionBase } from '../domain/social-security/index';
 import { CITY_SOCIAL_BASE_PRESETS, defaultSocialBase, resolveCitySocialBase } from '../domain/social-security/city-bases';
 import { DEFAULT_INCOME_VIEW_MODE, parseIncomeViewMode, resolveDisposableIncome, seedTakeHomeIncome, type IncomeViewMode } from '../domain/income/index';
-import { softNumberCommit, softNumberIsInvalid, softNumberLive } from './softNumber';
+import { softNumberCommit, softNumberIsInvalid } from './softNumber';
 import { clampNumberField, formatEditableNumber, type NumberFieldKind } from './numberFieldUi';
 import { commitTextField, formatTextFieldDisplay } from './textFieldUi';
 import {
@@ -492,19 +491,15 @@ export default function HomePage() {
   const elderlyShare = 100;
   const setElderlyShare = (_value: number) => undefined;
   const [savedAt, setSavedAt] = useState('');
-  const [profileSyncStatus, setProfileSyncStatus] = useState<ProfileSyncStatus>({ phase: 'idle' });
   const [hydrated, setHydrated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [retirement, setRetirement] = useState(retirementDefaults);
   const isNarrow = useIsMobile();
   const router = useRouter();
-  const profileSyncRef = useRef<ReturnType<typeof createProfileSyncQueue> | null>(null);
-  if (!profileSyncRef.current) {
-    profileSyncRef.current = createProfileSyncQueue({ onStatus: setProfileSyncStatus });
-  }
-  // 顶栏下拉菜单（原「更多」文案）：收纳安装 / 已保存 / 登出·登录
+  // 顶栏下拉：访客=登录/注册/重启；登录=安装/重启/登出
   const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
+  const [registerConfirmOpen, setRegisterConfirmOpen] = useState(false);
   // portal 到 body：避开 sticky 顶栏 stacking / overflow 裁切
   const headerMoreBtnRef = useRef<HTMLButtonElement>(null);
   const headerMoreMenuRef = useRef<HTMLDivElement>(null);
@@ -721,11 +716,10 @@ export default function HomePage() {
         const response = await fetch('/api/profile');
         if (response.ok) {
           const state = await response.json();
-          if (!cancelled) profileSyncRef.current?.setRevision(Number(state?.revision) || 0);
           if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
             applyProfileData(state.profile as Record<string, unknown>);
           } else {
-            // 空账号：读访客草稿供认领预览（不读其他账号本机键）
+            // 空账号：登录未绑定时可本地预览访客草稿；注册路径已写默认画像故通常不进此支
             const saved = loadGuestDraft();
             if (!cancelled && saved) applyProfileData(saved);
           }
@@ -781,10 +775,12 @@ export default function HomePage() {
     ...planChangesToProfile(planChanges),
   };
   const save = () => {
-    // 访客 → guest 键；登录 → 本账号键；云端仅登录后 enqueue
+    // 访客 → guest 键；登录 → 本账号键；仅 blur / 显式确认时调用
     saveGuestDraft(profile, { userId: authUser?.id ?? null });
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
   };
+  const saveRef = useRef(save);
+  saveRef.current = save;
 
   // 登出 → 访客键；不把当前账号画像写入访客键（保留原访客草稿或回落轻演示）
   const handleLogout = () => {
@@ -793,8 +789,6 @@ export default function HomePage() {
       guestRaw = loadGuestDraft();
     } catch { /* ignore */ }
     setAuthUser(null);
-    profileSyncRef.current?.setRevision(0);
-    setProfileSyncStatus({ phase: 'idle' });
     setSavedAt('');
     setHeaderMoreOpen(false);
     setHydrated(true);
@@ -813,18 +807,13 @@ export default function HomePage() {
     }
   };
 
-  // 访客只写 localStorage；登录后再防抖同步云端
+  // blur / 显式确认通过 money-manage-save 落盘；change 只改 React state
   useEffect(() => {
     if (!hydrated) return;
-    if (authUser) setProfileSyncStatus({ phase: 'syncing' });
-    const timer = window.setTimeout(() => {
-      save();
-      if (!authUser) return;
-      // ponytail: 云端 schema 仍带 snapshots:[]，不再写入业务快照
-      void profileSyncRef.current?.enqueue({ profile, snapshots: [], scenarios: [] });
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [hydrated, authUser, salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, emergencyEnabled, emergencyMode, emergencyCashDirect, emergencyMonths, emergencyMonthsCash, emergencyAnnualSpend, totalAssets, invest, investRatio, returnRate, reinvestMode, reinvestRate, reinvestAmount, socialRates, expenses, rentEnabled, elderlyEnabled, retirement, planChanges]);
+    const onPersist = () => saveRef.current();
+    window.addEventListener('money-manage-save', onPersist);
+    return () => window.removeEventListener('money-manage-save', onPersist);
+  }, [hydrated]);
   const retirementDate = retirementDateFor(retirement.birthDate, retirement.identity);
   const updateRetirement = (patch: Partial<typeof retirement>) => setRetirement((current) => ({ ...current, ...patch }));
   // 现金 = 总资产 - 理财；改任一端同步另外两端
@@ -1250,29 +1239,9 @@ export default function HomePage() {
     };
   }, [cashFlowForecast, visibleCashFlowLines, isNarrow]);
 
-  const saveStatusText = !authUser
-    ? (savedAt ? `已保存到本机 ${savedAt}` : '访客数据仅保存在本机')
-    : profileSyncStatus.phase === 'syncing'
-      ? '正在同步到云端…'
-      : profileSyncStatus.phase === 'synced'
-        ? `已同步到云端${profileSyncStatus.at ? ` ${profileSyncStatus.at}` : ''}`
-        : profileSyncStatus.phase === 'conflict'
-          ? '云端数据有更新，本机草稿未丢失；继续将覆盖云端版本'
-          : profileSyncStatus.phase === 'failed'
-            ? '已保存到本机，云端同步失败'
-            : '改参后自动同步到云端';
-  const syncAlert = authUser ? profileSyncAlert(profileSyncStatus.phase) : null;
-  const canResolveProfileSync = Boolean(authUser)
-    && (profileSyncStatus.phase === 'failed' || profileSyncStatus.phase === 'conflict');
-  const retryProfileSync = () => {
-    if (!authUser) return;
-    const state = { profile, snapshots: [], scenarios: [] };
-    if (profileSyncStatus.phase === 'conflict') {
-      void profileSyncRef.current?.resolveConflictWithLocal(state);
-      return;
-    }
-    void profileSyncRef.current?.enqueue(state);
-  };
+  const saveStatusText = savedAt
+    ? `已保存到本机 ${savedAt}`
+    : (authUser ? '失焦后保存到本机' : '访客数据仅保存在本机（失焦后写入）');
   // 首屏决策摘要：与 result 同源（月支出=聚合口径）
   const decisionSummary = buildDecisionSummary({
     monthlySpendable: result.net,
@@ -1342,23 +1311,15 @@ export default function HomePage() {
           <span className="max-w-[4.5rem] text-[10px] leading-tight text-slate-300 sm:max-w-none sm:text-[11px]">剩余可支配</span>
           <strong className="text-base tabular-nums leading-none sm:text-lg">{result.remainDisposablePct}<span className="text-[11px] font-normal text-slate-400">%</span></strong>
         </button>
-        {!authUser && (
-          <AuthBar
-            user={null}
-            registerOnly={isNarrow}
-            onBeforeNavigate={save}
-            onLogout={handleLogout}
-          />
-        )}
         <div className="relative">
-          {/* 用户名/访客 + 箭头 = 原「更多」同一入口，整块可点 */}
+          {/* 登录态=用户名；访客=「访客」圆形菜单（下拉含登录/注册/重启） */}
           <button
             ref={headerMoreBtnRef}
             type="button"
             aria-expanded={headerMoreOpen}
             aria-haspopup="menu"
             aria-label={headerMoreOpen ? '收起菜单' : (authUser ? `${authUser.username}，打开菜单` : '访客，打开菜单')}
-            title={authUser ? authUser.username : '示例数据仅本机临时，注册后可认领到账号'}
+            title={authUser ? authUser.username : '示例数据仅本机临时；注册使用默认数据，不绑定当前草稿'}
             onClick={() => setHeaderMoreOpen((v) => !v)}
             className="touch-btn flex min-h-9 max-w-[9rem] items-center gap-1 rounded-full border border-slate-200 bg-white py-1 pl-2.5 pr-1.5 text-ink hover:border-coral hover:text-coral-deep sm:max-w-[12rem]"
           >
@@ -1387,52 +1348,63 @@ export default function HomePage() {
                 role="menu"
                 style={{ top: headerMorePos.top, left: headerMorePos.left, zIndex: Z_INDEX.topbarMenu }}
               >
-                <p className={`px-2.5 py-1.5 text-[10px] ${canResolveProfileSync ? 'text-amber-700' : 'text-slate-400'}`}>
-                  {saveStatusText}
-                </p>
-                {canResolveProfileSync && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="header-more-item font-semibold text-amber-700"
-                    onClick={retryProfileSync}
-                  >
-                    {profileSyncStatus.phase === 'conflict' ? '以本机数据覆盖云端' : '重试同步'}
-                  </button>
-                )}
-                <div className="header-more-item-wrap"><InstallToDesktop /></div>
-                {/* 纯客户端：清 SW/Cache 后刷新，不碰草稿与登录 */}
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="header-more-item"
-                  onClick={() => { setHeaderMoreOpen(false); void restartSite(); }}
-                >
-                  重启网站
-                </button>
-                {!authUser && isNarrow && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="header-more-item"
-                    onClick={() => {
-                      setHeaderMoreOpen(false);
-                      save();
-                      router.push(authHref('login'));
-                    }}
-                  >
-                    登录
-                  </button>
-                )}
-                {authUser && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="header-more-item text-red-600"
-                    onClick={() => { setHeaderMoreOpen(false); void logoutSession().then(handleLogout); }}
-                  >
-                    登出
-                  </button>
+                {authUser ? (
+                  <>
+                    <p className="px-2.5 py-1.5 text-[10px] text-slate-400">
+                      {saveStatusText}
+                    </p>
+                    <div className="header-more-item-wrap"><InstallToDesktop /></div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item"
+                      onClick={() => { setHeaderMoreOpen(false); void restartSite(); }}
+                    >
+                      重启网站
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item text-red-600"
+                      onClick={() => { setHeaderMoreOpen(false); void logoutSession().then(handleLogout); }}
+                    >
+                      登出
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item"
+                      onClick={() => {
+                        setHeaderMoreOpen(false);
+                        save();
+                        router.push(authHref('login'));
+                      }}
+                    >
+                      登录
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item"
+                      onClick={() => {
+                        setHeaderMoreOpen(false);
+                        setRegisterConfirmOpen(true);
+                      }}
+                    >
+                      注册
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item"
+                      onClick={() => { setHeaderMoreOpen(false); void restartSite(); }}
+                    >
+                      重启网站
+                    </button>
+                  </>
                 )}
               </div>
             </>,
@@ -1443,22 +1415,7 @@ export default function HomePage() {
     </header>
     {!authUser && (
       <div className="page-pad mx-auto max-w-[1920px] px-3 pb-1 sm:px-6 lg:px-10">
-        <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的 · 注册后可认领</p>
-      </div>
-    )}
-    {syncAlert && (
-      <div
-        className={`sync-alert-banner page-pad mx-auto flex max-w-[1920px] flex-wrap items-center gap-2 px-3 py-1.5 sm:px-6 lg:px-10 ${syncAlert.tone === 'conflict' ? 'is-conflict' : 'is-failed'}`}
-        role="alert"
-      >
-        <p className="min-w-0 flex-1 text-[11px] font-medium leading-snug sm:text-xs">{syncAlert.message}</p>
-        <button
-          type="button"
-          className="touch-btn shrink-0 rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold text-white"
-          onClick={retryProfileSync}
-        >
-          {syncAlert.actionLabel}
-        </button>
+        <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的</p>
       </div>
     )}
     <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:max-w-md sm:justify-start lg:max-w-[1920px]" aria-label="页面分区">
@@ -1601,11 +1558,12 @@ export default function HomePage() {
                 housingFollowSalary={housingFundBase == null}
                 onInsuranceFollowSalary={() => { setContributionBase(null); window.dispatchEvent(new Event('money-manage-save')); }}
                 onHousingFollowSalary={() => { setHousingFundBase(null); window.dispatchEvent(new Event('money-manage-save')); }}
-                onInsuranceBaseChange={(value) => { setContributionBase(value); window.dispatchEvent(new Event('money-manage-save')); }}
-                onHousingFundBaseChange={(value) => { setHousingFundBase(value); window.dispatchEvent(new Event('money-manage-save')); }}
-                onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); window.dispatchEvent(new Event('money-manage-save')); }}
-                onRentChange={setRentEnabled}
-                onElderlyChange={setElderlyEnabled}
+                // SoftNumber：blur 才 onCommit（联动）；落盘由 SoftNumberInput 自行 money-manage-save，勿在 onCommit 再写盘
+                onInsuranceBaseChange={(value) => { setContributionBase(value); }}
+                onHousingFundBaseChange={(value) => { setHousingFundBase(value); }}
+                onHousingPersonalChange={(value) => { setSocialRates((current) => ({ ...current, 住房公积金: { ...current['住房公积金'], personal: clamp(value, 5, 12) } })); }}
+                onRentChange={(value) => { setRentEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }}
+                onElderlyChange={(value) => { setElderlyEnabled(value); window.dispatchEvent(new Event('money-manage-save')); }}
                 retirement={retirement}
                 retirementDate={retirementDate}
                 onRetirementChange={updateRetirement}
@@ -1621,12 +1579,12 @@ export default function HomePage() {
             <ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} />
           </div>
         </section>
-      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="支出管理" tip={"表格上只改名称、分类；类型和金额点「编辑」。\n点「分析」打开对比面板，勾选任意支出看叠在一起的影响。"} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); saveEvent(); }} /></td><td><TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" onChange={(category) => { updateExpense(expense.id, { category }); saveEvent(); }} /></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
+      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="支出管理" tip={"表格上只改名称、分类；类型和金额点「编辑」。\n点「分析」打开对比面板，勾选任意支出看叠在一起的影响。"} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); }} /></td><td><TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" onChange={(category) => { updateExpense(expense.id, { category }); }} /></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
 <div className="mt-4 space-y-3 md:hidden">{expenses.map((expense) => (
           <div key={expense.id} data-expense-anchor={expense.id} className="expense-card space-y-2">
             <div className="expense-card-head">
               <div className="expense-card-title min-w-0 flex-1">
-                <TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); saveEvent(); }} />
+                <TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); }} />
               </div>
               <div className="expense-card-amount min-w-0 shrink">
                 <div className="text-right">
@@ -1637,7 +1595,7 @@ export default function HomePage() {
             </div>
             <div className="expense-card-meta">
               <span className="expense-meta-chip text-xs text-slate-600">{formatExpenseMode(expense.mode)}</span>
-              <TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" className="expense-meta-chip" onChange={(category) => { updateExpense(expense.id, { category }); saveEvent(); }} />
+              <TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" className="expense-meta-chip" onChange={(category) => { updateExpense(expense.id, { category }); }} />
             </div>
             {expense.mode === 'installment' && (
               <div className="field-row-mobile">
@@ -1670,6 +1628,20 @@ export default function HomePage() {
           if (!pendingDelete) return;
           removeExpense(pendingDelete.id);
           setPendingDelete(null);
+        }}
+      />
+      <ConfirmDialog
+        open={registerConfirmOpen}
+        anchorRef={headerMoreBtnRef}
+        title="确认注册"
+        message={REGISTER_DEFAULT_DATA_MESSAGE}
+        confirmLabel="继续注册"
+        confirmTone="primary"
+        onCancel={() => setRegisterConfirmOpen(false)}
+        onConfirm={() => {
+          setRegisterConfirmOpen(false);
+          save();
+          router.push(authHref('register'));
         }}
       />
     </main>;
@@ -2471,6 +2443,9 @@ function ReinvestEditor({
     ? (Number.isInteger(setting.rate) ? String(setting.rate) : setting.rate.toFixed(1))
     : formatEditableNumber(setting.amount);
   const unit = isPercent ? '%' : '/月';
+  const apply = (next: ReinvestSetting) => {
+    onChange(next);
+  };
   const commit = (next: ReinvestSetting) => {
     onChange(next);
     window.dispatchEvent(new Event('money-manage-save'));
@@ -2525,7 +2500,7 @@ function ReinvestEditor({
               step={1}
               suffix="%"
               value={Number.isInteger(setting.rate) ? setting.rate : Number(setting.rate.toFixed(1))}
-              onCommit={(n) => commit({ ...setting, rate: n })}
+              onCommit={(n) => apply({ ...setting, rate: n })}
             />
           </label>
         ) : (
@@ -2536,7 +2511,7 @@ function ReinvestEditor({
               step={100}
               suffix="/月"
               value={setting.amount}
-              onCommit={(n) => commit({ ...setting, amount: n })}
+              onCommit={(n) => apply({ ...setting, amount: n })}
             />
           </label>
         )}
@@ -2566,11 +2541,12 @@ function Editable({ label, value, min = 0, max, step, suffix = '', tip, onChange
     inputRef.current.focus();
     inputRef.current.select();
   }, [editing]);
-  const commit = (nextValue: number, syncDraft = true) => {
+  // change 只改 draft；blur 才 onChange（摘要/图表联动）+ 落盘
+  const commit = (nextValue: number, persist: boolean) => {
     const next = clampNumberField(nextValue, { min, max });
-    if (syncDraft) setDraft(formatValue(next));
+    setDraft(formatValue(next));
     onChange(next);
-    window.dispatchEvent(new Event('money-manage-save'));
+    if (persist) window.dispatchEvent(new Event('money-manage-save'));
   };
   const endInline = () => {
     setEditing(false);
@@ -2583,20 +2559,13 @@ function Editable({ label, value, min = 0, max, step, suffix = '', tip, onChange
     setDraft(formatValue(value));
     setEditing(true);
   };
-  const onDraftChange = (raw: string) => {
-    setDraft(raw);
-    const live = softNumberLive(raw);
-    if (live == null) return;
-    // 空串保持 draft=''，勿 syncDraft 把 0 挡回输入框
-    commit(live, raw.trim() !== '');
-  };
   const onDraftBlur = () => {
     if (softNumberIsInvalid(draft)) {
       setDraft(formatValue(value));
       endInline();
       return;
     }
-    commit(softNumberCommit(draft, value));
+    commit(softNumberCommit(draft, value), true);
     endInline();
   };
   // 单位外置：展示/编辑框只含数值；suffix（%、个月、年等）旁侧展示，不进 input
@@ -2617,7 +2586,7 @@ function Editable({ label, value, min = 0, max, step, suffix = '', tip, onChange
               step={step}
               aria-label={label}
               value={draft}
-              onChange={(event) => onDraftChange(event.target.value)}
+              onChange={(event) => setDraft(event.target.value)}
               onBlur={onDraftBlur}
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -2690,7 +2659,7 @@ function SocialBaseEditor({ value, onChange }: { value: number; onChange: (value
           value={value}
           onCommit={(n) => {
             if (cityId && resolveCitySocialBase(cityId) !== n) setCityId('');
-            commit(n);
+            onChange(n);
           }}
         />
       </label>
@@ -2708,6 +2677,9 @@ function RetirementSocialEditor({
   retirementDate: string;
   onChange: (patch: Partial<RetirementSetting>) => void;
 }) {
+  const apply = (patch: Partial<RetirementSetting>) => {
+    onChange(patch);
+  };
   const commit = (patch: Partial<RetirementSetting>) => {
     onChange(patch);
     window.dispatchEvent(new Event('money-manage-save'));
@@ -2747,7 +2719,7 @@ function RetirementSocialEditor({
         </label>
         <label className="block text-xs text-slate-500">
           计划缴费年限
-          <SoftNumberInput min={0} max={20} step={1} suffix="年" value={retirement.contributionYears} onCommit={(value) => commit({ contributionYears: value })} />
+          <SoftNumberInput min={0} max={20} step={1} suffix="年" value={retirement.contributionYears} onCommit={(value) => apply({ contributionYears: value })} />
         </label>
       </div>
       <SocialBaseEditor value={retirement.base} onChange={(value) => onChange({ base: value })} />
@@ -2771,7 +2743,7 @@ function SelectEditable({ label, value, options, onChange }: { label: string; va
 }
 const saveEvent = () => window.dispatchEvent(new Event('money-manage-save'));
 
-/** 数值输入：聚焦可空；空视同 0；blur 空/非法 → 0（再 clamp）；suffix 外置不进 input */
+/** 数值输入：聚焦可空；change 只改 draft；blur 才 onCommit（联动）+ 落盘 */
 function SoftNumberInput({
   value,
   min,
@@ -2822,16 +2794,11 @@ function SoftNumberInput({
         focusedRef.current = true;
         setDraft(String(value));
       }}
-      onChange={(event) => {
-        const raw = event.target.value;
-        setDraft(raw);
-        const live = softNumberLive(raw);
-        if (live == null) return;
-        onCommit(clamp(live, lo, hi));
-      }}
+      onChange={(event) => setDraft(event.target.value)}
       onBlur={() => {
         focusedRef.current = false;
         finish(draft);
+        window.dispatchEvent(new Event('money-manage-save'));
       }}
     />
   );
@@ -3319,7 +3286,10 @@ function TextEditable({
   const onDraftBlur = () => {
     const next = commitTextField(draft, value, { allowEmpty });
     setDraft(next);
-    if (next !== value) onChange(next);
+    if (next !== value) {
+      onChange(next);
+      window.dispatchEvent(new Event('money-manage-save'));
+    }
     endInline();
   };
   const display = formatTextFieldDisplay(value, emptyLabel);

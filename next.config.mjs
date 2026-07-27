@@ -1,6 +1,7 @@
-import type { NextConfig } from 'next';
+import { createRequire } from 'node:module';
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
 };
 
@@ -10,7 +11,7 @@ export default nextConfig;
 // workerd/miniflare 在当前 Windows 环境会 access violation 崩溃；默认走 data/ 文件持久化
 // 需要 Cloudflare 本地绑定时：CLOUDFLARE_DEV=1 npm run dev
 if (process.env.CLOUDFLARE_DEV === '1') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const require = createRequire(import.meta.url);
   const { initOpenNextCloudflareForDev } = require('@opennextjs/cloudflare');
   initOpenNextCloudflareForDev();
 }

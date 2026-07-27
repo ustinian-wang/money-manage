@@ -2,7 +2,7 @@
 
 /**
  * 顶栏账号入口 + 鉴权表单
- * variant=bar：顶栏 Link 跳 /login · /register（不再内嵌 sheet）
+ * variant=bar：顶栏 Link（主页访客改走「访客」圆形菜单，一般不再用）
  * variant=page：独立鉴权页表单（lockMode 时不在本页切 mode）
  * variant=gate：保留全屏门禁形态（可选）
  */
@@ -11,11 +11,10 @@ import { FormEvent, FocusEvent, useEffect, useState } from 'react';
 import { authHref } from '../lib/auth/authHref';
 import { authGateRootClassName } from '../lib/ui/authGateShell';
 import { scrollFocusedFieldIntoView, useVisualViewport } from '../lib/useVisualViewport';
-import { parseClaimMode, type ClaimMode } from '../lib/claimGate';
 
 export type AuthUser = { id: string; username: string; email: string };
 export type AuthMode = 'login' | 'register';
-export type AuthMeta = { from: AuthMode; claimMode?: ClaimMode };
+export type AuthMeta = { from: AuthMode };
 
 const USERNAME_MAX = 32;
 const PASSWORD_MIN = 8;
@@ -23,7 +22,7 @@ const PASSWORD_MAX = 72;
 
 type Props = {
     user: AuthUser | null;
-    /** from：空账号绑定时区分注册认领 / 登录确认；注册含 claimMode（page/gate 必填） */
+    /** from：空账号绑定时区分注册默认初始化 / 登录确认 */
     onAuthed?: (user: AuthUser, meta: AuthMeta) => void;
     onLogout: () => void;
     /** bar=顶栏跳转；page=独立鉴权页；gate=全屏门禁（可选） */
@@ -37,10 +36,6 @@ type Props = {
      * 收进「更多」菜单时传 false。
      */
     showLoggedInControls?: boolean;
-    /** 访客：只显示「注册保存」（登录放「更多」），移动端顶栏用 */
-    registerOnly?: boolean;
-    /** 注册前展示将认领的摘要行（P0-1） */
-    claimSummaryLines?: string[];
     /** 跳转鉴权页前冲刷本机草稿（避免 400ms 防抖未落盘） */
     onBeforeNavigate?: () => void;
 };
@@ -53,8 +48,6 @@ export default function AuthBar({
     initialMode = 'register',
     lockMode = false,
     showLoggedInControls = true,
-    registerOnly = false,
-    claimSummaryLines = [],
     onBeforeNavigate,
 }: Props) {
     // 同步 --vv-height / --kb-inset，供门禁与 auth 页 CSS 使用
@@ -66,8 +59,6 @@ export default function AuthBar({
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
-    // 注册：默认认领当前数据；可改「清空示例后再注册」
-    const [claimMode, setClaimMode] = useState<ClaimMode>('keep');
 
     useEffect(() => {
         setMode(initialMode);
@@ -108,10 +99,7 @@ export default function AuthBar({
                 return;
             }
             if (data.user) {
-                onAuthed?.(data.user as AuthUser, {
-                    from: mode,
-                    ...(mode === 'register' ? { claimMode: parseClaimMode(claimMode) } : {}),
-                });
+                onAuthed?.(data.user as AuthUser, { from: mode });
                 setPassword('');
                 setConfirm('');
             }
@@ -165,7 +153,7 @@ export default function AuthBar({
             </div>
             <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
                 {mode === 'register'
-                    ? '注册前请确认：认领当前数据，或清空示例后再开空账号。'
+                    ? '新账号使用系统默认数据起步；当前访客测算草稿不会绑定到账号。'
                     : '登录后读取你的云端数据；若账号为空，可选择绑定当前访客草稿。'}
             </p>
             <div className="mt-3 flex gap-2 text-xs">
@@ -184,7 +172,7 @@ export default function AuthBar({
                 ) : (
                     <>
                         <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
-                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); setClaimMode('keep'); }}>注册</button>
+                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); }}>注册</button>
                     </>
                 )}
             </div>
@@ -253,44 +241,9 @@ export default function AuthBar({
                         />
                     </label>
                 )}
-                {mode === 'register' && (
-                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-                        <p className="text-[11px] font-semibold text-slate-600">将写入账号的摘要</p>
-                        {claimSummaryLines.length > 0 ? (
-                            <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug text-slate-500">
-                                {claimSummaryLines.map((line) => <li key={line}>{line}</li>)}
-                            </ul>
-                        ) : (
-                            <p className="mt-1 text-[11px] text-slate-400">当前页面数据</p>
-                        )}
-                        <fieldset className="mt-2 space-y-1.5 border-0 p-0">
-                            <legend className="sr-only">认领方式</legend>
-                            <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
-                                <input
-                                    type="radio"
-                                    className="mt-0.5 accent-coral"
-                                    name="claimMode"
-                                    checked={claimMode === 'keep'}
-                                    onChange={() => setClaimMode('keep')}
-                                />
-                                <span>用当前数据认领（含示例/你改过的）</span>
-                            </label>
-                            <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
-                                <input
-                                    type="radio"
-                                    className="mt-0.5 accent-coral"
-                                    name="claimMode"
-                                    checked={claimMode === 'clear'}
-                                    onChange={() => setClaimMode('clear')}
-                                />
-                                <span>清空示例后再注册（空账号起步）</span>
-                            </label>
-                        </fieldset>
-                    </div>
-                )}
                 {error && <p className="text-xs text-red-600">{error}</p>}
                 <button type="submit" disabled={busy} className="touch-btn w-full rounded-xl bg-ink py-3 text-sm font-semibold text-white disabled:opacity-60">
-                    {busy ? '处理中…' : mode === 'login' ? '登录' : (claimMode === 'clear' ? '注册并开空账号' : '注册并认领数据')}
+                    {busy ? '处理中…' : mode === 'login' ? '登录' : '注册'}
                 </button>
             </form>
             {(variant === 'gate' || variant === 'page') && (
@@ -318,7 +271,7 @@ export default function AuthBar({
                     <p className="text-lg font-semibold">财务规划</p>
                     <p className="text-xs text-slate-400">
                         {variant === 'page'
-                            ? (mode === 'login' ? '登录同步云端，或返回继续访客体验' : '注册认领数据，或返回继续访客体验')
+                            ? (mode === 'login' ? '登录同步云端，或返回继续访客体验' : '注册默认数据起步，或返回继续访客体验')
                             : '登录同步云端，或继续访客体验'}
                     </p>
                 </div>
@@ -327,7 +280,7 @@ export default function AuthBar({
         );
     }
 
-    // 访客顶栏：注册保存 → /register；登录 → /login
+    // 兼容：主页访客入口已改为「访客」圆形菜单
     return (
         <div className="flex items-center gap-1.5">
             <Link
@@ -335,17 +288,15 @@ export default function AuthBar({
                 onClick={() => onBeforeNavigate?.()}
                 className="touch-btn rounded-full bg-coral px-3 text-[11px] font-semibold text-white hover:bg-coral-hover"
             >
-                注册保存
+                注册
             </Link>
-            {!registerOnly && (
-                <Link
-                    href={authHref('login')}
-                    onClick={() => onBeforeNavigate?.()}
-                    className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-ink hover:border-coral hover:text-coral-deep"
-                >
-                    登录
-                </Link>
-            )}
+            <Link
+                href={authHref('login')}
+                onClick={() => onBeforeNavigate?.()}
+                className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-ink hover:border-coral hover:text-coral-deep"
+            >
+                登录
+            </Link>
         </div>
     );
 }

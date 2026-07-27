@@ -1,18 +1,19 @@
 /**
- * 软数字：删 0→空→blur 变 0；编辑中空视同 0；非法 blur 恢复原值
+ * 软数字：删 0→空→blur 变 0；非法 blur 恢复原值。
+ * 页面契约（见 guestDraft.test）：change 不改父 state / 不联动；blur 才 commit。
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { softNumberCommit, softNumberIsInvalid, softNumberLive } from './softNumber';
 
-test('编辑中空串视同 0，可继续输入', () => {
+test('解析辅助：空串视同 0，可继续输入', () => {
   assert.equal(softNumberLive(''), 0);
   assert.equal(softNumberLive('  '), 0);
   assert.equal(softNumberLive('12'), 12);
   assert.equal(softNumberLive('0'), 0);
 });
 
-test('编辑中非法不落数（返回 null）', () => {
+test('解析辅助：非法返回 null（勿据此改父 state）', () => {
   assert.equal(softNumberLive('abc'), null);
   assert.equal(softNumberLive('--'), null);
 });

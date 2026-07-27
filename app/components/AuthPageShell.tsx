@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 鉴权页共用壳：已登录回跳、空账号绑定、认领摘要
+ * 鉴权页共用壳：已登录回跳、空账号绑定
  * 供 /login · /register 复用；不做 mode 糊页
  */
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -13,7 +13,6 @@ import {
   EMPTY_LOGIN_BIND_MESSAGE,
   bindEmptyAccountAfterAuth,
 } from '../../lib/auth/bindEmptyAccount';
-import { claimSummaryLinesFromStorage } from '../../lib/auth/claimSummaryFromDraft';
 import { authPageShellMainClassName } from '../../lib/ui/authGateShell';
 
 type Props = {
@@ -26,7 +25,6 @@ function AuthPageShellInner({ mode, title }: Props) {
   const search = useSearchParams();
   const returnUrl = safeReturnUrl(search.get('returnUrl'));
   const [ready, setReady] = useState(false);
-  const [claimSummaryLines, setClaimSummaryLines] = useState<string[]>([]);
   const [bindConfirmOpen, setBindConfirmOpen] = useState(false);
   const bindConfirmResolverRef = useRef<((ok: boolean) => void) | null>(null);
   const bindConfirmAnchorRef = useRef<HTMLElement | null>(null);
@@ -44,13 +42,10 @@ function AuthPageShellInner({ mode, title }: Props) {
           }
         }
       } catch { /* 访客 */ }
-      if (!cancelled) {
-        if (mode === 'register') setClaimSummaryLines(claimSummaryLinesFromStorage());
-        setReady(true);
-      }
+      if (!cancelled) setReady(true);
     })();
     return () => { cancelled = true; };
-  }, [router, returnUrl, mode]);
+  }, [router, returnUrl]);
 
   const goHomeGuest = () => {
     router.push('/');
@@ -70,7 +65,7 @@ function AuthPageShellInner({ mode, title }: Props) {
 
   const onAuthed = async (_user: AuthUser, meta: AuthMeta) => {
     await bindEmptyAccountAfterAuth(meta, {
-      confirmEmptyLogin: askBindDraftConfirm,
+      confirmEmptyLogin: meta.from === 'login' ? askBindDraftConfirm : undefined,
     });
     router.push(returnUrl);
   };
@@ -90,20 +85,21 @@ function AuthPageShellInner({ mode, title }: Props) {
         variant="page"
         initialMode={mode}
         lockMode
-        claimSummaryLines={claimSummaryLines}
         onAuthed={(user, meta) => { void onAuthed(user, meta); }}
         onLogout={goHomeGuest}
       />
-      <ConfirmDialog
-        open={bindConfirmOpen}
-        anchorRef={bindConfirmAnchorRef}
-        title="绑定访客草稿"
-        message={EMPTY_LOGIN_BIND_MESSAGE}
-        confirmLabel="绑定草稿"
-        confirmTone="primary"
-        onCancel={() => settleBindConfirm(false)}
-        onConfirm={() => settleBindConfirm(true)}
-      />
+      {mode === 'login' && (
+        <ConfirmDialog
+          open={bindConfirmOpen}
+          anchorRef={bindConfirmAnchorRef}
+          title="绑定访客草稿"
+          message={EMPTY_LOGIN_BIND_MESSAGE}
+          confirmLabel="绑定草稿"
+          confirmTone="primary"
+          onCancel={() => settleBindConfirm(false)}
+          onConfirm={() => settleBindConfirm(true)}
+        />
+      )}
     </main>
   );
 }

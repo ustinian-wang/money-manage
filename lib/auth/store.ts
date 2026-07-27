@@ -1,6 +1,7 @@
 /**
  * 用户 / 会话：存 KV（或本地 data/）文本键
- * keys: user:{id} · idx:username:{name} · idx:email:{email}（可选）· session:{token}
+ * keys: user:{id}/account.json · idx:username:{name} · idx:email:{email}（可选）· session:{token}
+ * 兼容旧扁平键 user:{id}（本地曾与 profile 目录冲突，读时迁移）
  * 账号：仅最长；密码：注册最短 PASSWORD_MIN + 最长 PASSWORD_MAX（登录不复检最短）
  * 邮箱产品面不要求，存库可空
  */
@@ -88,7 +89,12 @@ async function deleteText(key: string): Promise<void> {
     await deleteDataText(key);
 }
 
+/** 用户记录：嵌套在 user:{id}/ 下，避免与 financial-profile 等同目录文件抢扁平路径 */
 function userKey(id: string) {
+    return `user:${id}/account.json`;
+}
+/** 旧扁平键（本地曾写成单文件，与 profile 目录冲突） */
+function legacyUserKey(id: string) {
     return `user:${id}`;
 }
 function usernameIndexKey(username: string) {
@@ -137,7 +143,19 @@ function toPublic(user: UserRecord): PublicUser {
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
-    const raw = await readText(userKey(id));
+    let raw = await readText(userKey(id));
+    if (!raw) {
+        raw = await readText(legacyUserKey(id));
+        if (raw) {
+            // 抬升到 account.json，释放扁平路径
+            try {
+                await writeText(userKey(id), raw.endsWith('\n') ? raw : `${raw}\n`);
+                await deleteText(legacyUserKey(id));
+            } catch {
+                /* 迁移失败仍可用旧内容登录 */
+            }
+        }
+    }
     if (!raw) return null;
     try {
         return JSON.parse(raw) as UserRecord;

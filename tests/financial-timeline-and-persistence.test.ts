@@ -24,7 +24,7 @@ test('scenario comparison does not mutate the baseline profile', () => {
     assert.equal((compared.comparison as any).socialSecurity.housingFund.personalRate, 12);
 });
 
-test('autosave writes every interaction to localStorage and flushes on blur', async () => {
+test('autosave writes localStorage only on blur, not on input', async () => {
     const writes: Array<{ url: string; body: string }> = [];
     const storage = new Map<string, string>();
     const oldWindow = globalThis.window;
@@ -47,9 +47,10 @@ test('autosave writes every interaction to localStorage and flushes on blur', as
         const profile = { schemaVersion: 1, revision: 7, updatedAt: '2026-07-20T00:00:00.000Z', profile: {}, snapshots: [], scenarios: [] } as PersistedState;
         const autosave = createAutosave({ apiPath: '/api/profile', debounceMs: 1000 });
         autosave.onInput(profile);
+        assert.equal(storage.get(LOCAL_STATE_KEY), undefined);
+        await autosave.onBlur(profile);
         assert.equal(storage.get(LOCAL_STATE_KEY), JSON.stringify(profile));
         assert.equal(storage.get(LOCAL_REVISION_KEY), '7');
-        await autosave.onBlur(profile);
         assert.equal(writes.length, 1);
         assert.match(writes[0].body, /"revision":7/);
     } finally {

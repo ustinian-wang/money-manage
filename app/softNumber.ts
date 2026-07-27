@@ -1,10 +1,10 @@
 /**
- * 软数字输入：聚焦编辑允许空串；空视同 0；非法不 live 改父状态。
- * blur：空 → 0；非法 → 恢复 fallback（编辑前原值）；合法数原样返回。
- * 解决受控 type=number + Number('')===0 导致「0 删不掉」。
+ * 软数字输入：聚焦编辑允许空串；空视同 0；非法串不可解析。
+ * UI 契约：change 只改 draft；blur 才 softNumberCommit + 提交父状态（摘要/图表联动）并落盘。
+ * softNumberLive 仅作解析辅助（空→0 / 非法→null），页面不再用它在 change 时改父 state。
  */
 
-/** 输入过程：空 → 0（视同）；非法 → null（不改父状态，保留 draft） */
+/** 解析过程中的合法数：空 → 0（视同）；非法 → null */
 export function softNumberLive(raw: string): number | null {
   if (raw.trim() === '') return 0;
   const num = Number(raw);

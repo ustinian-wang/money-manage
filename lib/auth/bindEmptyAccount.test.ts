@@ -1,10 +1,15 @@
 /**
- * bindEmptyAccountAfterAuth：空账号认领 / 清空 / 登录确认
+ * bindEmptyAccountAfterAuth：注册默认画像 / 登录确认绑定
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { bindEmptyAccountAfterAuth } from './bindEmptyAccount';
+import {
+  bindEmptyAccountAfterAuth,
+  defaultNewAccountProfile,
+  REGISTER_DEFAULT_DATA_MESSAGE,
+} from './bindEmptyAccount';
+import { LIGHT_DEMO_ASSETS } from '../demoDefaults';
 
 function mockFetch(handlers: Array<(url: string, init?: RequestInit) => Promise<Response> | Response>) {
   let i = 0;
@@ -31,7 +36,7 @@ describe('bindEmptyAccountAfterAuth', () => {
     if (result.status === 'has_server') assert.equal(result.revision, 3);
   });
 
-  it('注册 clear → PUT 空画像', async () => {
+  it('注册 → PUT 默认画像，不读访客草稿', async () => {
     let putBody: unknown;
     const fetchImpl = mockFetch([
       () => Response.json({ revision: 0, profile: {}, snapshots: [] }),
@@ -41,16 +46,24 @@ describe('bindEmptyAccountAfterAuth', () => {
       },
     ]);
     const result = await bindEmptyAccountAfterAuth(
-      { from: 'register', claimMode: 'clear' },
+      { from: 'register' },
       {
         fetchImpl: fetchImpl as typeof fetch,
-        readDraft: () => ({ salary: 999, totalAssets: 80000, expenses: [{ name: '房租' }] }),
+        readDraft: () => ({ salary: 999, totalAssets: 1, expenses: [{ name: '草稿房租' }] }),
       },
     );
     assert.equal(result.status, 'bound');
-    const state = (putBody as { state: { profile: { salary: number; expenses: unknown[] } } }).state;
-    assert.equal(state.profile.salary, 0);
-    assert.deepEqual(state.profile.expenses, []);
+    const state = (putBody as { state: { profile: { totalAssets: number; expenses: { name: string }[] } } }).state;
+    assert.equal(state.profile.totalAssets, LIGHT_DEMO_ASSETS.totalAssets);
+    assert.ok(state.profile.expenses?.some((e) => e.name === '房租'));
+    assert.ok(!state.profile.expenses?.some((e) => e.name === '草稿房租'));
+  });
+
+  it('defaultNewAccountProfile 与轻演示一致', () => {
+    const profile = defaultNewAccountProfile();
+    assert.equal(profile.totalAssets, LIGHT_DEMO_ASSETS.totalAssets);
+    assert.match(REGISTER_DEFAULT_DATA_MESSAGE, /默认数据/);
+    assert.match(REGISTER_DEFAULT_DATA_MESSAGE, /不会把当前访客/);
   });
 
   it('登录空账号取消确认 → skipped', async () => {

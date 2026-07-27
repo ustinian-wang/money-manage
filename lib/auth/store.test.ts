@@ -105,7 +105,7 @@ describe('registerUser / authenticateUser / session', () => {
         assert.equal(await getSessionUser(token), null);
 
         // 清理本测写入的用户索引与记录
-        await fs.rm(resolveDataFile(`user:${created.user.id}`), { force: true });
+        await fs.rm(resolveDataFile(`user:${created.user.id}`), { recursive: true, force: true });
         await fs.rm(resolveDataFile(`idx:username:${username.toLowerCase()}`), { force: true });
     });
 
@@ -120,6 +120,7 @@ describe('registerUser / authenticateUser / session', () => {
             password: await hashPassword(shortPw),
             createdAt: new Date().toISOString(),
         };
+        // 故意写旧扁平键，验证迁移后仍可登录
         await writeDataText(`user:${id}`, `${JSON.stringify(record)}\n`);
         await writeDataText(`idx:username:${shortUser.toLowerCase()}`, id);
 
@@ -134,7 +135,7 @@ describe('registerUser / authenticateUser / session', () => {
             assert.equal(regBlocked.ok, false, '新注册仍须满足最短密码');
             if (!regBlocked.ok) assert.match(regBlocked.error, /至少|最短/);
         } finally {
-            await fs.rm(resolveDataFile(`user:${id}`), { force: true });
+            await fs.rm(resolveDataFile(`user:${id}`), { recursive: true, force: true });
             await fs.rm(resolveDataFile(`idx:username:${shortUser.toLowerCase()}`), { force: true });
         }
     });

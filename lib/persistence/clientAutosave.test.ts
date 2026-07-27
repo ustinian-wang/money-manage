@@ -1,5 +1,5 @@
 /**
- * autosave：登录可 PUT；访客 localOnly 只写本机
+ * autosave：input/change 不写盘；blur / pagehide 才写 localStorage（并可 PUT）
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -43,9 +43,13 @@ function withWindowStorage(run: (storage: Map<string, string>, writes: Array<{ u
 }
 
 describe('createAutosave', () => {
-  it('默认 blur 会 PUT /api/profile', async () => {
+  it('input/change 不写 localStorage；blur 才写并 PUT', async () => {
     await withWindowStorage(async (storage, writes) => {
       const autosave = createAutosave({ apiPath: '/api/profile', debounceMs: 1000 });
+      autosave.onInput(sampleState);
+      autosave.onChange({ ...sampleState, revision: 4 });
+      assert.equal(storage.get(LOCAL_STATE_KEY), undefined);
+      assert.equal(writes.length, 0);
       await autosave.onBlur(sampleState);
       assert.equal(storage.get(LOCAL_STATE_KEY), JSON.stringify(sampleState));
       assert.equal(writes.length, 1);
@@ -54,7 +58,7 @@ describe('createAutosave', () => {
     });
   });
 
-  it('访客 localOnly：写 localStorage，blur/flush/onChange 均不 PUT', async () => {
+  it('访客 localOnly：blur 写本机，永不 PUT', async () => {
     await withWindowStorage(async (storage, writes) => {
       const autosave = createAutosave({
         apiPath: '/api/profile',
@@ -62,12 +66,11 @@ describe('createAutosave', () => {
         localOnly: true,
       });
       autosave.onInput(sampleState);
+      assert.equal(storage.get(LOCAL_STATE_KEY), undefined);
+      await autosave.onBlur(sampleState);
       assert.equal(storage.get(LOCAL_STATE_KEY), JSON.stringify(sampleState));
       assert.equal(storage.get(LOCAL_REVISION_KEY), '3');
-      await autosave.onBlur(sampleState);
-      await autosave.onChange(sampleState);
       await autosave.flush();
-      await new Promise((r) => setTimeout(r, 30));
       assert.equal(writes.length, 0);
     });
   });

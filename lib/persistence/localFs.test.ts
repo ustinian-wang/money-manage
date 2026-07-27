@@ -48,3 +48,22 @@ test('write/read/delete 往返（临时目录）', async () => {
         await fs.rm(cwd, { recursive: true, force: true });
     }
 });
+
+test('write 嵌套键时抬升挡住的扁平文件', async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'mm-localfs-hoist-'));
+    try {
+        const flatKey = 'user:collide';
+        await writeDataText(flatKey, '{"id":"collide"}\n', cwd);
+        await writeDataText('user:collide/financial-profile.json', '{"revision":1}\n', cwd);
+        const profile = await readDataText('user:collide/financial-profile.json', cwd);
+        assert.equal(profile, '{"revision":1}\n');
+        // 原扁平内容仍可读（via __legacy_blob__）
+        const account = await readDataText(flatKey, cwd);
+        assert.match(account || '', /collide/);
+        const dir = resolveDataFile(flatKey, cwd);
+        const st = await fs.stat(dir);
+        assert.equal(st.isDirectory(), true);
+    } finally {
+        await fs.rm(cwd, { recursive: true, force: true });
+    }
+});
