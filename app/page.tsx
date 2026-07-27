@@ -12,7 +12,7 @@ import { authHref } from '../lib/auth/authHref';
 import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../lib/useVisualViewport';
-import { FLOAT_MARGIN, placeCenteredInViewport, placeNearAnchor, placeSheetAtBottom, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
+import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeNearAnchor, placeSheetAtBottom, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
 import { Z_INDEX } from '../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
@@ -86,6 +86,26 @@ import {
   INCOME_DETAIL_TAX_DETAIL_ENTRY,
   INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE,
 } from './incomeDetailLayout';
+import {
+  PLAN_CHANGE_ENTRY,
+  PLAN_CHANGE_FIELD_LABEL,
+  PLAN_CHANGE_PANEL_TITLE,
+  PLAN_CHANGE_TIP,
+  filterPlanChangeFieldOptions,
+  formatPlanChangeListLine,
+  planChangeMarkLinesForAssetAxis,
+  planChangeMarkLinesForYearMonthAxis,
+} from './planChangeLayout';
+import {
+  activeFieldOverride,
+  createPlanChangeEvent,
+  parsePlanChanges,
+  planChangesToProfile,
+  yearMonthForAssetMonth,
+  yearMonthOffset,
+  type PlanChangeEvent,
+  type PlanChangeField,
+} from '../domain/planChange';
 
 type Expense = { id: string; name: string; category: string; mode: 'fixed' | 'percentage' | 'installment' | 'one_time'; amount: number; rate?: number; total?: number; downPayment?: number; term?: number; interest?: number; repaymentMode?: RepaymentMode; startDate?: string; endDate?: string; followRetirement?: boolean };
 /** max 可选：有则 blur clamp；一律原地 inline（不为 slider 弹窗） */
@@ -352,6 +372,31 @@ function computeFinanceResult({ salary, contributionBase, housingFundBase, socia
   const remainDisposablePct = remainDisposableSharePct(expensePct);
   return { socialRows, social, deductions, tax: Math.max(0, tax), net, detailNet: computedNet, investmentIncome, monthlyExpenses, recurringMonthlyExpenses: recurring, oneTimeTotal: oneTime, surplus, emergency: emergencySetting.monthsPlan.months, emergencyReserve: emergencyReserveAmount, emergencySetting, debt, remainDisposablePct, committedDownPayments, liquidAssets, adjustedAvailableAssets, totalLiabilities, netWorth };
 }
+
+/**
+ * 计划变更月度口径：按指标独立覆盖；主画像不改写。
+ * - grossSalary → salary + detail
+ * - takeHomeIncome → takeHomeIncome + takehome（与税前同月并存时净收入以到手为准）
+ * - annualReturn → returnRate（理财年化 / 投资收益）
+ * 无任何覆盖时与主卡 computeFinanceResult 一致。
+ */
+function financeAtPlanMonth(input: FinanceInput, events: PlanChangeEvent[], yearMonth: string): FinanceResult {
+  const salaryOverride = activeFieldOverride(events, 'grossSalary', yearMonth);
+  const takeHomeOverride = activeFieldOverride(events, 'takeHomeIncome', yearMonth);
+  const returnOverride = activeFieldOverride(events, 'annualReturn', yearMonth);
+  if (salaryOverride == null && takeHomeOverride == null && returnOverride == null) {
+    return computeFinanceResult(input);
+  }
+  const next: FinanceInput = { ...input };
+  if (salaryOverride != null) next.salary = salaryOverride;
+  if (takeHomeOverride != null) next.takeHomeIncome = takeHomeOverride;
+  if (returnOverride != null) next.returnRate = returnOverride;
+  // 到手覆盖优先决定净收入口径；否则有税前覆盖则走详细链
+  if (takeHomeOverride != null) next.incomeViewMode = 'takehome';
+  else if (salaryOverride != null) next.incomeViewMode = 'detail';
+  return computeFinanceResult(next);
+}
+
 // 年度对比复用月度资产内核，避免主图与消费分析使用不同收益/结余口径。
 function forecastYearlyTotals(cash: number, invest: number, returnRate: number, reinvest: ReinvestSetting, net: number, recurringMonthly: number, oneTime: number, committedDownPayments: number) {
   return yearlyTotalsFromMonthly({
@@ -370,17 +415,21 @@ function forecastYearlyTotals(cash: number, invest: number, returnRate: number, 
 /** 逐月支出占可支配收入占比（分母=税后净收入 net，与面板「可支配收入」一致） */
 function forecastExpenseShareByMonth(
   expenses: Expense[],
-  disposableIncome: number,
+  disposableIncome: number | ((index: number) => number),
   investmentIncome: number,
   months = 360,
   retirementDate?: string,
 ) {
+  const disposableAt = typeof disposableIncome === 'function'
+    ? disposableIncome
+    : (_index: number) => disposableIncome;
   const anchor = new Date().toISOString().slice(0, 10);
   return Array.from({ length: months }, (_, index) => {
     const date = new Date();
     date.setMonth(date.getMonth() + index);
     const dateKey = date.toISOString().slice(0, 10);
     const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const income = disposableAt(index);
     let debt = 0;
     let other = 0;
     for (const expense of expenses) {
@@ -390,12 +439,12 @@ function forecastExpenseShareByMonth(
       }
       if (!isActiveInMonth(expense, yearMonth, { retirementDate })) continue;
       if (expense.mode === 'percentage') {
-        other += (disposableIncome + investmentIncome) * (expense.rate || 0) / 100;
+        other += (income + investmentIncome) * (expense.rate || 0) / 100;
       } else {
         other += expense.amount;
       }
     }
-    const { expensePct } = cashFlowRatios({ debt, otherExpenses: other, income: disposableIncome });
+    const { expensePct } = cashFlowRatios({ debt, otherExpenses: other, income });
     return {
       label: yearMonth,
       pct: roundPct(expensePct),
@@ -505,6 +554,10 @@ export default function HomePage() {
     deleteAnchorRef.current = anchor;
     setPendingDelete(payload);
   };
+  // 计划变更：只影响预测；主卡税前不变
+  const [planChanges, setPlanChanges] = useState<PlanChangeEvent[]>([]);
+  const [planChangeOpen, setPlanChangeOpen] = useState(false);
+  const planChangeBtnRef = useRef<HTMLButtonElement>(null);
 
   const applyProfileData = (data: Record<string, unknown>) => {
       if (data.salary) setSalary(Number(data.salary)); if (data.cash !== undefined) setCash(Number(data.cash));
@@ -569,6 +622,7 @@ export default function HomePage() {
       if (data.elderlyEnabled !== undefined) setElderlyEnabled(Boolean(data.elderlyEnabled));
       // ponytail: 旧 profile.snapshots 忽略，不再 hydrate
       if (data.retirement) setRetirement({ ...retirementDefaults, ...(data.retirement as typeof retirementDefaults) });
+      setPlanChanges(parsePlanChanges(data));
   };
 
   useEffect(() => {
@@ -658,6 +712,7 @@ export default function HomePage() {
     ...(socialEnabled ? {} : { socialEnabled: false }),
     incomeViewMode,
     ...(takeHomeIncome != null ? { takeHomeIncome } : {}),
+    ...planChangesToProfile(planChanges),
   };
   const save = () => {
     localStorage.setItem('money-manage-profile', JSON.stringify(profile));
@@ -688,7 +743,7 @@ export default function HomePage() {
       void profileSyncRef.current?.enqueue({ profile, snapshots: [], scenarios: [] });
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [hydrated, authUser, salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, emergencyEnabled, emergencyMode, emergencyCashDirect, emergencyMonths, emergencyMonthsCash, emergencyAnnualSpend, totalAssets, invest, investRatio, returnRate, reinvestMode, reinvestRate, reinvestAmount, socialRates, expenses, rentEnabled, elderlyEnabled, retirement]);
+  }, [hydrated, authUser, salary, contributionBase, housingFundBase, socialEnabled, incomeViewMode, takeHomeIncome, cash, emergencyEnabled, emergencyMode, emergencyCashDirect, emergencyMonths, emergencyMonthsCash, emergencyAnnualSpend, totalAssets, invest, investRatio, returnRate, reinvestMode, reinvestRate, reinvestAmount, socialRates, expenses, rentEnabled, elderlyEnabled, retirement, planChanges]);
   const retirementDate = retirementDateFor(retirement.birthDate, retirement.identity);
   const updateRetirement = (patch: Partial<typeof retirement>) => setRetirement((current) => ({ ...current, ...patch }));
   // 现金 = 总资产 - 理财；改任一端同步另外两端
@@ -830,12 +885,15 @@ export default function HomePage() {
       message: expenseDeleteMessage(expense.name, formatExpenseMode(expense.mode), formatExpensePayment(expense)),
     });
   };
-  const today = new Date().toISOString().slice(0, 10);
+  // 计划变更：按月可支配收入（有覆盖走详细净收入）
+  const disposableAtChartIndex = useMemo(() => {
+    return (index: number) => financeAtPlanMonth(financeInput, planChanges, yearMonthOffset(index)).net;
+  }, [financeInput, planChanges]);
   // 剩余可支配占比曲线：与占比图同口径（分母=可支配收入）；逐月真实分期月供
   const remainForecast = useMemo(() => {
     const rows = forecastExpenseShareByMonth(
       expenses,
-      result.net,
+      disposableAtChartIndex,
       result.investmentIncome,
       360,
       retirement.enabled ? retirementDate : undefined,
@@ -844,16 +902,18 @@ export default function HomePage() {
       label: row.label,
       value: remainDisposableSharePct(row.pct),
     }));
-  }, [expenses, result.net, result.investmentIncome, retirement.enabled, retirementDate]);
-  // 现金流比率：逐月 DTI% / 支出率% / 储蓄率%；分期按当月真实月供
+  }, [expenses, disposableAtChartIndex, result.investmentIncome, retirement.enabled, retirementDate]);
+  // 现金流比率：逐月 DTI% / 支出率% / 储蓄率%；分期按当月真实月供；收入随计划变更
   const cashFlowForecast = useMemo(() => {
     const anchor = new Date().toISOString().slice(0, 10);
-    const income = result.net + result.investmentIncome;
-    const otherBase = nonInstallmentRecurring(expenses, result.net, result.investmentIncome);
     const oneTime = result.oneTimeTotal;
     return Array.from({ length: 360 }, (_, index) => {
       const date = new Date(); date.setMonth(date.getMonth() + index);
       const dateKey = date.toISOString().slice(0, 10);
+      const ym = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthFinance = financeAtPlanMonth(financeInput, planChanges, ym);
+      const income = monthFinance.net + monthFinance.investmentIncome;
+      const otherBase = nonInstallmentRecurring(expenses, monthFinance.net, monthFinance.investmentIncome);
       const debt = expenses
         .filter((expense) => expense.mode === 'installment')
         .reduce((sum, expense) => sum + installmentPaymentAsOf(expense, dateKey, anchor), 0);
@@ -862,14 +922,18 @@ export default function HomePage() {
       const ratios = cashFlowRatios({ debt, otherExpenses: other, income });
       return {
         dateKey,
-        label: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        label: ym,
         dtiPct: roundPct(ratios.dtiPct),
         expensePct: roundPct(ratios.expensePct),
         savingsPct: roundPct(ratios.savingsPct),
       };
     });
-  }, [expenses, result.net, result.investmentIncome, result.oneTimeTotal]);
+  }, [expenses, financeInput, planChanges, result.oneTimeTotal]);
   const monthlyAssetForecast = useMemo(() => {
+    const hasIncomePlan = planChanges.some(
+      (e) => e.enabled && (e.field === 'grossSalary' || e.field === 'takeHomeIncome'),
+    );
+    const hasReturnPlan = planChanges.some((e) => e.enabled && e.field === 'annualReturn');
     return buildMonthlyAssetForecast({
       cash,
       investment: invest,
@@ -881,11 +945,28 @@ export default function HomePage() {
       months: 360,
       committedDownPayments: result.committedDownPayments,
       emergencyReserve: result.emergencyReserve,
+      ...(hasIncomePlan
+        ? {
+            recurringSurplusAtMonth: (month: number) => {
+              const ym = yearMonthForAssetMonth(month);
+              const monthFinance = financeAtPlanMonth(financeInput, planChanges, ym);
+              return monthFinance.net - monthFinance.recurringMonthlyExpenses;
+            },
+          }
+        : {}),
+      ...(hasReturnPlan
+        ? {
+            annualReturnRateAtMonth: (month: number) => {
+              const ym = yearMonthForAssetMonth(month);
+              return activeFieldOverride(planChanges, 'annualReturn', ym) ?? returnRate;
+            },
+          }
+        : {}),
     }).map((row) => ({
       ...row,
       label: row.month === 0 ? '现在' : `${Math.floor(row.month / 12)}年${row.month % 12}个月`,
     }));
-  }, [cash, invest, returnRate, reinvestSetting, result.net, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments, result.emergencyReserve]);
+  }, [cash, invest, returnRate, reinvestSetting, result.net, result.recurringMonthlyExpenses, result.oneTimeTotal, result.committedDownPayments, result.emergencyReserve, financeInput, planChanges]);
   const assetChartOption = useMemo(() => {
     const labels = monthlyAssetForecast.map((row) => row.label);
     const idle = monthlyAssetForecast.map((row) => row.cash);
@@ -930,6 +1011,19 @@ export default function HomePage() {
         z: 3,
       });
     }
+    // 计划变更生效月竖线（仅 enabled；多指标分色短标签）
+    const planMarks = planChangeMarkLinesForAssetAxis(planChanges, labels);
+    if (planMarks.length && series.length) {
+      const last = series.length - 1;
+      series[last] = {
+        ...series[last],
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          data: planMarks,
+        },
+      } as typeof series[number] & { markLine: { silent: boolean; symbol: string; data: typeof planMarks } };
+    }
     return {
       animation: false,
       grid: { left: isNarrow ? 40 : 64, right: isNarrow ? 12 : 28, top: 40, bottom: isNarrow ? 72 : 96 },
@@ -957,7 +1051,7 @@ export default function HomePage() {
       dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', height: 18, bottom: 8, start: 0, end: 100 }],
       series,
     };
-  }, [monthlyAssetForecast, visibleAssetLines, isNarrow]);
+  }, [monthlyAssetForecast, visibleAssetLines, isNarrow, planChanges]);
   const remainShareChartOption = useMemo(() => {
     const values = remainForecast.map((point) => point.value);
     const current = values[0] ?? 0;
@@ -981,12 +1075,14 @@ export default function HomePage() {
       areaStyle: { color: 'rgba(240,127,98,0.12)' },
       markPoint: {
         symbol: 'pin',
-        symbolSize: 52,
+        symbolSize: isNarrow ? 44 : 52,
+        // 首点贴 Y 轴时 pin 会盖住刻度；略右移
+        symbolOffset: [isNarrow ? 18 : 28, 0],
         data: [{ name: '当前', coord: [remainForecast[0]?.label, current], value: current }],
-        label: { show: true, formatter: (p: { value?: number }) => `${Number(p.value ?? 0).toFixed(1)}%`, color: '#fff', fontSize: 12, fontWeight: 700 },
+        label: { show: true, formatter: (p: { value?: number }) => `${Number(p.value ?? 0).toFixed(1)}%`, color: '#fff', fontSize: isNarrow ? 11 : 12, fontWeight: 700 },
         itemStyle: { color: '#f07f62', borderColor: '#fff', borderWidth: 1 },
       },
-      // 对应占比图支出 100/110/120/150 → 剩余 0/−10/−20/−50；另标满额 100%
+      // 对应占比图支出 100/110/120/150 → 剩余 0/−10/−20/−50；另标满额 100%；竖线=计划变更生效月
       markLine: {
         silent: true,
         symbol: 'none',
@@ -996,11 +1092,12 @@ export default function HomePage() {
           { yAxis: -10, name: '警告 −10%', lineStyle: { color: '#f59e0b', type: 'dashed', width: 1 }, label: { formatter: '警告 −10%', color: '#b45309', fontSize: isNarrow ? 10 : 11 } },
           { yAxis: -20, name: '警告 −20%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 −20%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
           { yAxis: -50, name: '警告 −50%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 −50%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
+          ...planChangeMarkLinesForYearMonthAxis(planChanges),
         ],
       },
     }],
   };
-  }, [remainForecast, isNarrow]);
+  }, [remainForecast, isNarrow, planChanges]);
   const cashFlowChartOption = useMemo(() => {
     const labels = cashFlowForecast.map((point) => point.label);
     const dti = cashFlowForecast.map((point) => point.dtiPct);
@@ -1230,10 +1327,35 @@ export default function HomePage() {
       </div>
     )}
     </div>
-    <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_720px] lg:px-10">
+    {/* ponytail: 侧栏从 xl 起、宽 ≤520——lg+720 会把左栏压到 ~450，xl:grid-cols-3 再把「月结余再投入」挤成竖排字 */}
+    <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,520px)] xl:px-10">
       <div className="min-w-0 space-y-2">
         <section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6">
-          <div><SectionTitle title="财务参数" tip={"收入与资产配置。\n退休规划已整合到「五险一金和个税 → 退休与社保」；点字段改数即生效并自动保存。"} /></div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <SectionTitle title="财务参数" tip={"收入与资产配置。\n退休规划已整合到「五险一金和个税 → 退休与社保」；点字段改数即生效并自动保存。"} />
+            <button
+              ref={planChangeBtnRef}
+              type="button"
+              onClick={() => setPlanChangeOpen((current) => !current)}
+              className="text-sm font-semibold text-[#d9654a]"
+            >
+              {PLAN_CHANGE_ENTRY}
+            </button>
+            <InfoTip>{PLAN_CHANGE_TIP}</InfoTip>
+          </div>
+          <PlanChangePanel
+            open={planChangeOpen}
+            anchorRef={planChangeBtnRef}
+            onClose={() => setPlanChangeOpen(false)}
+            events={planChanges}
+            baseSalary={salary}
+            baseTakeHome={takeHomeIncome ?? result.net}
+            baseReturnRate={returnRate}
+            onChange={(next) => {
+              setPlanChanges(next);
+              window.dispatchEvent(new Event('money-manage-save'));
+            }}
+          />
           <div className="section-label flex flex-wrap items-center gap-2">
             收入信息
             <select aria-label="收入录入方式" className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700" value={incomeViewMode} onChange={(event) => setIncomeViewModeSafe(event.target.value as IncomeViewMode)}>
@@ -1242,7 +1364,7 @@ export default function HomePage() {
             </select>
           </div>
           {incomeViewMode === 'takehome' ? (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Editable label="到手收入" tip={"银行卡到账 / 月可支配收入，用于结余与资产预测。\n退休规划可切到「关心五险一金」后设置。"} value={takeHomeIncome ?? result.net} min={0} step={1} onChange={(value) => { setTakeHomeIncome(value); }} />
               {retirement.enabled && (
                 <button
@@ -1259,7 +1381,7 @@ export default function HomePage() {
               )}
             </div>
           ) : (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Editable label="税前工资" value={salary} min={0} step={1} onChange={setSalary} />
               <SocialTaxBreakdown
                 salary={salary}
@@ -1289,7 +1411,8 @@ export default function HomePage() {
             </div>
           )}
           <div className="section-label">资产配置</div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {/* 仅 sm:2 列；Asset/再投入用 col-span-2。勿加 xl:3——侧栏左栏不够宽会竖排字 */}
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <AssetLinkedEditor totalAssets={totalAssets} cash={cash} invest={invest} investRatio={investRatio} onTotal={updateTotalAssets} onCash={updateCash} onCashByMonths={updateCashByMonths} onAnnualSpend={updateAnnualSpend} onInvestAmount={updateInvestByAmount} onInvestRatio={updateInvestByRatio} emergency={emergencySetting} planMonthly={planMonthly} adjustedAvailableAssets={result.adjustedAvailableAssets} monthlyExpenses={result.monthlyExpenses} onMonthsPlanChecked={setMonthsPlanChecked} />
             <Editable label="年化收益率" value={returnRate} min={0} max={100} step={0.1} suffix="%" kind="rangedPercent" onChange={setReturnRate} />
             <ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} />
@@ -1330,7 +1453,7 @@ export default function HomePage() {
         ))}</div>
         <div className="mt-4"><ExpenseAddButton onConfirm={confirmAddExpense} retirementDate={retirement.enabled ? retirementDate : undefined} /></div>
       </section></div>
-      <div id="sec-charts" className="min-w-0 w-full scroll-mt-24 lg:sticky lg:top-4 lg:self-start"><section className="section-card mb-2 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="relative flex flex-wrap items-start justify-between gap-4"><SectionTitle title="资产走势" tip={"最终资产 = 理财 + 闲置资金。\n闲置 = 现金 + 结余中未投入闲钱投资的部分。\n理财含复利与闲钱投入；自当前起点按月预测。"} /><button ref={assetDetailBtnRef} type="button" onClick={() => setShowAssetDetails((current) => !current)} className="text-sm font-semibold text-[#d9654a]">查看明细</button>{showAssetDetails && <FloatPanel open={showAssetDetails} anchorRef={assetDetailBtnRef} onClose={() => setShowAssetDetails(false)} width={620} headerTitle="月度资产明细"><div className="table-wrap table-scroll"><table><thead><tr><th>月份</th><th>闲置资金</th><th>理财资产</th><th>最终资产</th><th><span className="inline-flex items-center gap-1">调整后可用资产<InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip></span></th></tr></thead><tbody>{monthlyAssetForecast.map((row) => <tr key={row.month}><td>{row.label}</td><td>{money(row.cash)}</td><td>{money(row.investment)}</td><td>{money(row.total)}</td><td>{money(row.available)}</td></tr>)}</tbody></table></div></FloatPanel>}</div><ChartHost className="mt-5" option={assetChartOption} /><div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500"><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, cash: !current.cash }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.cash ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-slate-400" />闲置资金</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, investment: !current.investment }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.investment ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#f07f62]" />理财资产</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, total: !current.total }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.total ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#17212b]" />最终资产</button></div></section><section className="section-card rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-2"><SectionTitle title="剩余可支配收入走势" tip={"自今日起模拟 30 年。\n剩余占比 = 100% − 当月总支出/可支配收入（分期按真实月供，可为负）。"} /><span className="hidden text-sm text-slate-500 sm:inline">当前方案 · 360 个月</span></div><ChartHost className="mx-auto mt-4 sm:mt-8" option={remainShareChartOption} /><div className="chart-year-labels mt-3 flex justify-between font-semibold text-slate-600 sm:mt-4 sm:text-base"><span>{forecastYearLabel(0)}</span><span>{forecastYearLabel(5)}</span><span>{forecastYearLabel(15)}</span><span>{forecastYearLabel(30)}</span></div></section>
+      <div id="sec-charts" className="min-w-0 w-full scroll-mt-24 xl:sticky xl:top-4 xl:self-start"><section className="section-card mb-2 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="relative flex flex-wrap items-start justify-between gap-4"><SectionTitle title="资产走势" tip={"最终资产 = 理财 + 闲置资金（备用金=闲置=现金）。\n闲置 = 现金 + 结余中未投入闲钱投资的部分。\n负结余先吃现金；现金低于备用金水位时从理财赎回补足（理财赎光仍不够才可穿零）。"} /><button ref={assetDetailBtnRef} type="button" onClick={() => setShowAssetDetails((current) => !current)} className="text-sm font-semibold text-[#d9654a]">查看明细</button>{showAssetDetails && <FloatPanel open={showAssetDetails} anchorRef={assetDetailBtnRef} onClose={() => setShowAssetDetails(false)} width={620} headerTitle="月度资产明细"><div className="table-wrap table-scroll"><table><thead><tr><th>月份</th><th>闲置资金</th><th>理财资产</th><th>最终资产</th><th><span className="inline-flex items-center gap-1">调整后可用资产<InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip></span></th></tr></thead><tbody>{monthlyAssetForecast.map((row) => <tr key={row.month}><td>{row.label}</td><td>{money(row.cash)}</td><td>{money(row.investment)}</td><td>{money(row.total)}</td><td>{money(row.available)}</td></tr>)}</tbody></table></div></FloatPanel>}</div><ChartHost className="mt-5" option={assetChartOption} /><div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500"><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, cash: !current.cash }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.cash ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-slate-400" />闲置资金</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, investment: !current.investment }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.investment ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#f07f62]" />理财资产</button><button type="button" onClick={() => setVisibleAssetLines((current) => ({ ...current, total: !current.total }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleAssetLines.total ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#17212b]" />最终资产</button></div></section><section className="section-card rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-2"><SectionTitle title="剩余可支配收入走势" tip={"自今日起模拟 30 年。\n剩余占比 = 100% − 当月总支出/可支配收入（分期按真实月供，可为负）。"} /><span className="hidden text-sm text-slate-500 sm:inline">当前方案 · 360 个月</span></div><ChartHost className="mx-auto mt-4 sm:mt-8" option={remainShareChartOption} /><div className="chart-year-labels mt-3 flex justify-between font-semibold text-slate-600 sm:mt-4 sm:text-base"><span>{forecastYearLabel(0)}</span><span>{forecastYearLabel(5)}</span><span>{forecastYearLabel(15)}</span><span>{forecastYearLabel(30)}</span></div></section>
         <section className="section-card mt-2 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div className="flex flex-wrap items-center justify-between gap-2"><SectionTitle title="逐月现金流比率" tip={"三条线：房贷/分期占收入、总支出占收入、结余占收入。分期按当月真实月供算。"} /><span className="hidden text-sm text-slate-500 sm:inline">DTI · 支出 · 储蓄</span></div><ChartHost className="mt-4 sm:mt-8" option={cashFlowChartOption} /><div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500"><button type="button" onClick={() => setVisibleCashFlowLines((current) => ({ ...current, dti: !current.dti }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleCashFlowLines.dti ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#f07f62]" />偿债比 DTI</button><button type="button" onClick={() => setVisibleCashFlowLines((current) => ({ ...current, expense: !current.expense }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleCashFlowLines.expense ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-slate-400" />支出率</button><button type="button" onClick={() => setVisibleCashFlowLines((current) => ({ ...current, savings: !current.savings }))} className={`flex items-center gap-1 rounded-lg px-2 py-1 ${visibleCashFlowLines.savings ? 'bg-slate-100 font-semibold text-slate-700' : 'opacity-40'}`}><i className="h-2 w-2 rounded-full bg-[#3d8f6e]" />储蓄率</button></div><div className="chart-year-labels mt-3 flex justify-between font-semibold text-slate-600 sm:mt-4 sm:text-base"><span>{forecastYearLabel(0)}</span><span>{forecastYearLabel(5)}</span><span>{forecastYearLabel(15)}</span><span>{forecastYearLabel(30)}</span></div></section></div>    </section><footer className="page-pad mx-auto max-w-[1920px] px-3 pb-8 text-xs text-slate-400 sm:px-6 lg:px-10">原型版 · 个税和五险一金为月度估算，结果仅用于个人财务规划参考</footer>
       <ConfirmDialog
         open={Boolean(pendingDelete)}
@@ -1919,6 +2042,238 @@ function ConfirmDialog({
   );
 }
 
+/** 计划变更：列表 + 同层编辑；多指标 / 同指标多时点；指标可搜索 */
+function PlanChangePanel({
+  open,
+  anchorRef,
+  onClose,
+  events,
+  baseSalary,
+  baseTakeHome,
+  baseReturnRate,
+  onChange,
+}: {
+  open: boolean;
+  anchorRef: RefObject<HTMLElement | null>;
+  onClose: () => void;
+  events: PlanChangeEvent[];
+  baseSalary: number;
+  baseTakeHome: number;
+  baseReturnRate: number;
+  onChange: (next: PlanChangeEvent[]) => void;
+}) {
+  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [draft, setDraft] = useState<PlanChangeEvent | null>(null);
+  const [fieldQuery, setFieldQuery] = useState('');
+  const [fieldMenuOpen, setFieldMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setView('list');
+      setDraft(null);
+      setFieldQuery('');
+      setFieldMenuOpen(false);
+    }
+  }, [open]);
+
+  const defaultValueForField = (field: PlanChangeField): number => {
+    if (field === 'takeHomeIncome') return Math.max(0, Math.round(baseTakeHome));
+    if (field === 'annualReturn') return Math.max(0, Number(baseReturnRate) || 0);
+    return Math.max(0, Math.round(baseSalary));
+  };
+
+  const startCreate = () => {
+    setDraft(createPlanChangeEvent({
+      field: 'grossSalary',
+      startYearMonth: yearMonthOffset(12),
+      value: defaultValueForField('grossSalary'),
+    }));
+    setFieldQuery('');
+    setFieldMenuOpen(false);
+    setView('edit');
+  };
+  const startEdit = (event: PlanChangeEvent) => {
+    setDraft({ ...event });
+    setFieldQuery('');
+    setFieldMenuOpen(false);
+    setView('edit');
+  };
+  const saveDraft = () => {
+    if (!draft) return;
+    const next = createPlanChangeEvent(draft);
+    const exists = events.some((item) => item.id === next.id);
+    onChange(exists ? events.map((item) => (item.id === next.id ? next : item)) : [...events, next]);
+    setView('list');
+    setDraft(null);
+    setFieldQuery('');
+    setFieldMenuOpen(false);
+  };
+  const removeEvent = (id: string) => {
+    onChange(events.filter((item) => item.id !== id));
+  };
+  const toggleEnabled = (id: string, enabled: boolean) => {
+    onChange(events.map((item) => (item.id === id ? { ...item, enabled } : item)));
+  };
+  const changeDraftField = (field: PlanChangeField) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      field,
+      value: defaultValueForField(field),
+    });
+    setFieldQuery('');
+    setFieldMenuOpen(false);
+  };
+
+  const filteredFields = filterPlanChangeFieldOptions(fieldQuery);
+  const headerTitle = view === 'list'
+    ? PLAN_CHANGE_PANEL_TITLE
+    : (draft && events.some((item) => item.id === draft.id) ? '编辑计划变更' : '新增计划变更');
+
+  return (
+    <FloatPanel
+      open={open}
+      anchorRef={anchorRef}
+      onClose={() => {
+        if (view === 'edit') {
+          setView('list');
+          setDraft(null);
+          setFieldQuery('');
+          setFieldMenuOpen(false);
+          return;
+        }
+        onClose();
+      }}
+      width={420}
+      maxHeightVh={78}
+      zIndex={Z_INDEX.panel}
+      headerTitle={headerTitle}
+      density="panel"
+      scrollResetKey={view}
+      footer={view === 'edit' ? (
+        <div className="flex gap-2">
+          <button type="button" className="touch-btn flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600" onClick={() => { setView('list'); setDraft(null); setFieldQuery(''); setFieldMenuOpen(false); }}>取消</button>
+          <button type="button" className="touch-btn flex-1 rounded-xl bg-[#f07f62] px-3 py-2.5 text-sm font-semibold text-white" onClick={saveDraft}>保存</button>
+        </div>
+      ) : undefined}
+    >
+      {view === 'list' ? (
+        <div className="space-y-3">
+          <p className="text-xs leading-relaxed text-slate-500">{PLAN_CHANGE_TIP}</p>
+          {events.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">暂无计划变更</p>
+          ) : (
+            <ul className="space-y-2">
+              {events.map((event) => (
+                <li key={event.id} className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700">
+                        {formatPlanChangeListLine(event.field, event.startYearMonth, event.value)}
+                      </p>
+                    </div>
+                    <label className="flex shrink-0 items-center gap-1 text-xs text-slate-500">
+                      <input
+                        type="checkbox"
+                        className="accent-[#f07f62]"
+                        checked={event.enabled}
+                        onChange={(e) => toggleEnabled(event.id, e.target.checked)}
+                      />
+                      启用
+                    </label>
+                  </div>
+                  <div className="mt-2 flex gap-3">
+                    <button type="button" className="text-xs font-semibold text-[#d9654a]" onClick={() => startEdit(event)}>编辑</button>
+                    <button type="button" className="text-xs text-red-500" onClick={() => removeEvent(event.id)}>删除</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button type="button" onClick={startCreate} className="touch-btn w-full rounded-xl border border-dashed border-[#f07f62]/60 px-3 py-2.5 text-sm font-semibold text-[#d9654a]">
+            新增计划变更
+          </button>
+        </div>
+      ) : draft ? (
+        <div className="space-y-3">
+          <div className="relative block text-sm text-slate-600">
+            <span className="block">改什么</span>
+            <p className="mt-1 text-xs text-slate-500">
+              已选：{PLAN_CHANGE_FIELD_LABEL[draft.field]}
+            </p>
+            <input
+              type="search"
+              aria-label="搜索指标"
+              placeholder="搜索指标…"
+              value={fieldQuery}
+              onChange={(e) => {
+                setFieldQuery(e.target.value);
+                setFieldMenuOpen(true);
+              }}
+              onFocus={() => setFieldMenuOpen(true)}
+              className="field-input mt-1"
+              autoComplete="off"
+            />
+            {fieldMenuOpen && (
+              <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                {filteredFields.length === 0 ? (
+                  <li className="px-3 py-2 text-xs text-slate-400">无匹配指标</li>
+                ) : (
+                  filteredFields.map((opt) => (
+                    <li key={opt.value}>
+                      <button
+                        type="button"
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${opt.value === draft.field ? 'font-semibold text-[#d9654a]' : 'text-slate-700'}`}
+                        onClick={() => changeDraftField(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+          </div>
+          <label className="block text-sm text-slate-600">
+            从何时
+            <input
+              type="month"
+              value={draft.startYearMonth}
+              onChange={(e) => setDraft({ ...draft, startYearMonth: e.target.value })}
+              className="field-input mt-1"
+            />
+          </label>
+          <label className="block text-sm text-slate-600">
+            变成多少{draft.field === 'annualReturn' ? '（%）' : ''}
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={draft.field === 'annualReturn' ? 100 : undefined}
+              step={draft.field === 'annualReturn' ? 0.1 : 1}
+              value={draft.value}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                setDraft({ ...draft, value: Number.isFinite(n) ? Math.max(0, n) : 0 });
+              }}
+              className="field-input mt-1"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              className="accent-[#f07f62]"
+              checked={draft.enabled}
+              onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+            />
+            启用
+          </label>
+        </div>
+      ) : null}
+    </FloatPanel>
+  );
+}
+
 function FloatPanel({
   open,
   anchorRef,
@@ -1932,6 +2287,7 @@ function FloatPanel({
   mode = 'auto',
   density = 'panel',
   footer,
+  scrollResetKey,
   children,
 }: {
   open: boolean;
@@ -1950,6 +2306,8 @@ function FloatPanel({
   density?: 'tip' | 'field' | 'panel';
   /** 固定底栏（不随内容滚动），如保存/取消 */
   footer?: ReactNode;
+  /** 切换列表/编辑等时重置内容区 scrollTop，避免上一屏残留 */
+  scrollResetKey?: string | number;
   children: ReactNode;
 }) {
   const isMobile = useIsMobile();
@@ -1958,7 +2316,7 @@ function FloatPanel({
   const liftFloor = asSheet && density === 'panel';
   const lockBody = asSheet && density === 'panel';
   const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const userDraggedRef = useRef(false);
   const dragRef = useRef<{ startX: number; startY: number; origTop: number; origLeft: number } | null>(null);
 
@@ -1976,8 +2334,17 @@ function FloatPanel({
       const viewW = vv?.width ?? window.innerWidth;
       const viewH = vv?.height ?? window.innerHeight;
       const vp = viewportBounds(vv, window.innerWidth, window.innerHeight, FLOAT_MARGIN, safe);
-      const maxH = viewH * ((liftFloor ? Math.max(maxHeightVh, 72) : maxHeightVh) / 100);
-      const panelH = Math.min(panelRef.current?.offsetHeight ?? 240, maxH);
+      const maxH = Math.min(
+        viewH * ((liftFloor ? Math.max(maxHeightVh, 72) : maxHeightVh) / 100),
+        Math.max(0, vp.bottom - vp.top),
+      );
+      const panel = panelRef.current;
+      const scrollEl = panel?.querySelector<HTMLElement>('[data-float-scroll]');
+      const natural = panel && scrollEl
+        ? measurePanelNaturalHeight(panel.offsetHeight, scrollEl.clientHeight, scrollEl.scrollHeight)
+        : (panel?.offsetHeight ?? 240);
+      // 显式用高：短内容随内容，超长卡在 VV 内，内层 [data-float-scroll] 才能滚到底
+      const panelH = calcPanelUsedHeight(natural, Math.max(maxH, 1));
       const panelW = asSheet && density === 'panel'
         ? viewW
         : Math.min(width, Math.max(0, vp.right - vp.left));
@@ -2005,7 +2372,7 @@ function FloatPanel({
         top = c.top;
         left = c.left;
       }
-      setPos({ top, left, width: nextW });
+      setPos({ top, left, width: nextW, height: panelH });
       // 键盘改 VV 后浮层已上移/贴底；若焦点在面板内再校正一次内部滚动
       const active = document.activeElement;
       if (active && panelRef.current?.contains(active)) {
@@ -2032,7 +2399,7 @@ function FloatPanel({
       vv?.removeEventListener('scroll', place);
       releaseBodyLock?.();
     };
-  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, liftFloor, lockBody]);
+  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, liftFloor, lockBody, footer, scrollResetKey]);
 
   useEffect(() => {
     if (!open) return;
@@ -2046,6 +2413,13 @@ function FloatPanel({
       trigger?.focus({ preventScroll: true });
     };
   }, [open, anchorRef]);
+
+  // 列表↔编辑切换：内容区回顶，避免底部字段仍被上一屏 scrollTop 挡住
+  useEffect(() => {
+    if (!open || scrollResetKey === undefined) return;
+    const scroll = panelRef.current?.querySelector<HTMLElement>('[data-float-scroll]');
+    if (scroll) scroll.scrollTop = 0;
+  }, [open, scrollResetKey]);
 
   const onPanelKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
@@ -2082,11 +2456,11 @@ function FloatPanel({
       const drag = dragRef.current;
       if (!drag) return;
       const panelW = Math.min(width, window.innerWidth - 32);
-      const panelH = Math.min(panelRef.current?.offsetHeight ?? 240, window.innerHeight * (maxHeightVh / 100));
+      const panelH = Math.min(pos.height || panelRef.current?.offsetHeight || 240, window.innerHeight * (maxHeightVh / 100));
       const nextLeft = clamp(drag.origLeft + (moveEvent.clientX - drag.startX), 8, Math.max(8, window.innerWidth - panelW - 8));
       const nextTop = clamp(drag.origTop + (moveEvent.clientY - drag.startY), 8, Math.max(8, window.innerHeight - Math.min(panelH, 80) - 8));
       userDraggedRef.current = true;
-      setPos((current) => ({ top: nextTop, left: nextLeft, width: current.width }));
+      setPos((current) => ({ top: nextTop, left: nextLeft, width: current.width, height: current.height }));
     };
     const onUp = () => {
       dragRef.current = null;
@@ -2105,6 +2479,9 @@ function FloatPanel({
     || (isPanelSheet
       ? (typeof window !== 'undefined' ? window.innerWidth : width)
       : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width));
+  const maxHCss = asSheet || density === 'field' || center
+    ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
+    : `min(${sheetMaxVh}vh, var(--vv-height, ${sheetMaxVh}vh))`;
   // PC：仅显式标题/可拖时出标题栏；移动 panel/field：标题+关闭
   const showHeader = asSheet || Boolean(headerTitle) || draggable;
   return createPortal(
@@ -2137,9 +2514,9 @@ function FloatPanel({
           left: pos.left,
           zIndex,
           width: panelWidth,
-          maxHeight: asSheet || density === 'field' || center
-            ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
-            : `${sheetMaxVh}vh`,
+          // place() 写入的用高：保证 flex 子项 min-h-0 出滚动条；maxHeight 作 CSS 兜底
+          height: pos.height > 0 ? pos.height : undefined,
+          maxHeight: maxHCss,
           // place() 已按 visualViewport 贴底/居中夹紧，勿再叠 --kb-inset
           paddingBottom: asSheet ? 'env(safe-area-inset-bottom, 0px)' : undefined,
         }}
@@ -2159,7 +2536,7 @@ function FloatPanel({
           {children}
         </div>
         {footer && (
-          <div className={`shrink-0 border-t border-slate-100 bg-white ${isFieldCard ? 'px-3 py-2.5' : 'px-4 py-3'}`}>
+          <div data-float-footer className={`shrink-0 border-t border-slate-100 bg-white ${isFieldCard ? 'px-3 py-2.5' : 'px-4 py-3'}`}>
             {footer}
           </div>
         )}
@@ -2194,7 +2571,7 @@ function ReinvestEditor({
     commit(switchReinvestMode(setting, mode, monthlySurplus));
   };
   return (
-    <div className="relative block">
+    <div className="relative block min-w-0 sm:col-span-2">
       <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex items-center gap-1">
@@ -2569,7 +2946,7 @@ function formatExpensePayment(expense: Expense) {
   const payment = installmentMonthlyPayment(expense);
   const mode = expense.repaymentMode || 'equal_principal_interest';
   const start = monthKey(expense.startDate || todayDateKey());
-  return mode === 'equal_principal' ? `${money(payment)} / 月（首月）·${start}起` : `${money(payment)} / 月·${start}起`;
+  return mode === 'equal_principal' ? `${money(payment)}/月（首月） · ${start}起` : `${money(payment)}/月 · ${start}起`;
 }
 function formatExpenseMode(mode: Expense['mode']) {
   return mode === 'installment' ? '分期' : mode === 'percentage' ? '按比例' : mode === 'one_time' ? '一次性' : '固定金额';

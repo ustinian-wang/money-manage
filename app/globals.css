@@ -122,8 +122,14 @@ html.kb-open .auth-gate-root {
 }
 [data-float-panel][data-ux='sheet'] {
   max-width: 100vw;
-  /* place() 已按 VV 贴底；max-height 只吃可见高度，勿再加 --kb-inset padding */
+  /* place() 写入显式 height + max-height；勿再叠 --kb-inset */
   max-height: min(92dvh, var(--vv-height, 92dvh));
+}
+/* 内容区：flex 子项可收缩，超高时滚到底；勿 touch-action:none */
+[data-float-scroll] {
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .sheet-handle {
   width: 2.5rem;
@@ -265,7 +271,16 @@ html.kb-open .auth-gate-root {
   }
   .expense-card-amount {
     min-width: 0;
-    max-width: 52%;
+    max-width: 62%;
+  }
+  .expense-card-amount > div {
+    text-align: right;
+  }
+  /* 分期长文案：按词/中文自然断行，避免「起」单独成行像裁切 */
+  .expense-card-amount p {
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.35;
   }
   .expense-card-amount .field-click {
     max-width: 100%;
