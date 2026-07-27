@@ -134,9 +134,15 @@ describe('guestDraft 本机草稿隔离', () => {
     assert.doesNotMatch(src, /\.enqueue\(/);
     assert.doesNotMatch(src, /以本机数据覆盖云端/);
     assert.doesNotMatch(src, /profileSyncAlert/);
-    // blur / 显式确认：money-manage-save；禁止对全量 state 做 400ms 防抖写盘
+    // blur / 显式确认：money-manage-save；延后 setTimeout(0) 再 save，避免 setState 未提交就存旧值
     assert.match(src, /addEventListener\(\s*['"]money-manage-save['"]/);
+    assert.match(src, /setTimeout\(\s*\(\)\s*=>\s*saveRef\.current\(\)\s*,\s*0\)/);
     assert.doesNotMatch(src, /setTimeout\(\s*\(\)\s*=>\s*\{\s*save\(\)/);
+    assert.doesNotMatch(src, /debounceMs:\s*400/);
+    // 登录 blur：本机 + PUT /api/profile（刷新从云端能读到）
+    assert.match(src, /method:\s*['"]PUT['"]/);
+    assert.match(src, /cloudRevisionRef/);
+    assert.match(src, /body:\s*JSON\.stringify\(\{\s*state:\s*\{\s*profile\s*\}\s*,\s*revision\s*\}\)/);
     // SoftNumber / Editable：blur 才提交父 state（联动）并 persist；change 只改 draft
     assert.match(src, /change 只改 draft；blur 才 onChange/);
     assert.match(src, /onChange=\{\(event\) => setDraft\(event\.target\.value\)\}/);
@@ -166,7 +172,7 @@ describe('guestDraft 本机草稿隔离', () => {
     assert.match(textEditableFn, /onChange=\{\(event\) => setDraft\(event\.target\.value\)\}/);
     assert.doesNotMatch(src, /TextEditable[^>]*onChange=\{\([^)]*\) => \{ updateExpense\([^)]*\); saveEvent\(\); \}\}/);
     // 登录写本机缓存带 userId；访客/认领读 guest
-    assert.match(src, /saveGuestDraft\(\s*profile\s*,\s*\{\s*userId:/);
+    assert.match(src, /saveGuestDraft\(\s*profile\s*,\s*\{\s*userId\s*\}\)/);
     // 登出：回到访客草稿，禁止把当前（登录）画像 save 进访客键
     assert.match(src, /handleLogout/);
     assert.match(src, /loadGuestDraft\(\)/);

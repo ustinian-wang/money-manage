@@ -491,6 +491,8 @@ export default function HomePage() {
   const elderlyShare = 100;
   const setElderlyShare = (_value: number) => undefined;
   const [savedAt, setSavedAt] = useState('');
+  /** 云端 revision；blur PUT 用，避免冲突 */
+  const cloudRevisionRef = useRef(0);
   const [hydrated, setHydrated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -716,11 +718,14 @@ export default function HomePage() {
         const response = await fetch('/api/profile');
         if (response.ok) {
           const state = await response.json();
+          if (!cancelled && typeof state?.revision === 'number') {
+            cloudRevisionRef.current = state.revision;
+          }
           if (!cancelled && state?.profile && Object.keys(state.profile).length > 0) {
             applyProfileData(state.profile as Record<string, unknown>);
           } else {
-            // 空账号：登录未绑定时可本地预览访客草稿；注册路径已写默认画像故通常不进此支
-            const saved = loadGuestDraft();
+            // 空账号：优先本账号本机缓存，再回落访客草稿
+            const saved = loadGuestDraft({ userId: me.id }) ?? loadGuestDraft();
             if (!cancelled && saved) applyProfileData(saved);
           }
         }
@@ -776,8 +781,25 @@ export default function HomePage() {
   };
   const save = () => {
     // 访客 → guest 键；登录 → 本账号键；仅 blur / 显式确认时调用
-    saveGuestDraft(profile, { userId: authUser?.id ?? null });
+    const userId = authUser?.id ?? null;
+    saveGuestDraft(profile, { userId });
     setSavedAt(new Date().toLocaleTimeString('zh-CN'));
+    // 登录：blur 同步写云端，刷新才能从 GET 拿到最新
+    if (userId) {
+      const revision = cloudRevisionRef.current;
+      void fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ state: { profile }, revision }),
+        keepalive: true,
+      })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const next = await res.json().catch(() => null);
+          if (next && typeof next.revision === 'number') cloudRevisionRef.current = next.revision;
+        })
+        .catch(() => { /* 离线保留本机 */ });
+    }
   };
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -789,6 +811,7 @@ export default function HomePage() {
       guestRaw = loadGuestDraft();
     } catch { /* ignore */ }
     setAuthUser(null);
+    cloudRevisionRef.current = 0;
     setSavedAt('');
     setHeaderMoreOpen(false);
     setHydrated(true);
@@ -808,11 +831,19 @@ export default function HomePage() {
   };
 
   // blur / 显式确认通过 money-manage-save 落盘；change 只改 React state
+  // 必须延后一拍：blur 里先 setState 再派发事件时，同步读到的仍是旧 profile
   useEffect(() => {
     if (!hydrated) return;
-    const onPersist = () => saveRef.current();
+    let timer = 0;
+    const onPersist = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => saveRef.current(), 0);
+    };
     window.addEventListener('money-manage-save', onPersist);
-    return () => window.removeEventListener('money-manage-save', onPersist);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('money-manage-save', onPersist);
+    };
   }, [hydrated]);
   const retirementDate = retirementDateFor(retirement.birthDate, retirement.identity);
   const updateRetirement = (patch: Partial<typeof retirement>) => setRetirement((current) => ({ ...current, ...patch }));
