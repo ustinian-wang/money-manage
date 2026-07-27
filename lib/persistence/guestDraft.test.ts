@@ -139,10 +139,12 @@ describe('guestDraft 本机草稿隔离', () => {
     assert.match(src, /setTimeout\(\s*\(\)\s*=>\s*saveRef\.current\(\)\s*,\s*0\)/);
     assert.doesNotMatch(src, /setTimeout\(\s*\(\)\s*=>\s*\{\s*save\(\)/);
     assert.doesNotMatch(src, /debounceMs:\s*400/);
-    // 登录 blur：本机 + PUT /api/profile（刷新从云端能读到）
-    assert.match(src, /method:\s*['"]PUT['"]/);
+    // 登录 blur：enqueueProfilePut 串行 + 409 重试
+    assert.match(src, /enqueueProfilePut/);
     assert.match(src, /cloudRevisionRef/);
-    assert.match(src, /body:\s*JSON\.stringify\(\{\s*state:\s*\{\s*profile\s*\}\s*,\s*revision\s*\}\)/);
+    assert.match(src, /revision_conflict|status === 409|putProfile/);
+    // SoftNumber 支持 persistOnBlur=false（支出草稿面板）
+    assert.match(src, /persistOnBlur/);
     // SoftNumber / Editable：blur 才提交父 state（联动）并 persist；change 只改 draft
     assert.match(src, /change 只改 draft；blur 才 onChange/);
     assert.match(src, /onChange=\{\(event\) => setDraft\(event\.target\.value\)\}/);
@@ -154,7 +156,7 @@ describe('guestDraft 本机草稿隔离', () => {
     assert.ok(softStart >= 0 && softEnd > softStart, 'SoftNumberInput block bounds');
     const softFn = src.slice(softStart, softEnd);
     assert.match(softFn, /onChange=\{\(event\) => setDraft\(event\.target\.value\)\}/);
-    assert.match(softFn, /onBlur=\{\(\) => \{\s*focusedRef\.current = false;\s*finish\(draft\);\s*window\.dispatchEvent\(new Event\(['"]money-manage-save['"]\)/);
+    assert.match(softFn, /onBlur=\{\(\) => \{\s*focusedRef\.current = false;\s*finish\(draft\);\s*if \(persistOnBlur\) window\.dispatchEvent\(new Event\(['"]money-manage-save['"]\)/);
     assert.doesNotMatch(softFn, /onChange=\{[^}]*onCommit/);
     // SoftNumber 父 onCommit 只改 state，禁止再挂 money-manage-save（否则 change 写盘）
     for (const key of ['onInsuranceBaseChange', 'onHousingFundBaseChange', 'onHousingPersonalChange'] as const) {

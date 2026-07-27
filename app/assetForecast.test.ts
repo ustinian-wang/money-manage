@@ -227,3 +227,31 @@ describe('buildMonthlyAssetForecast 资产恒等式与税前下调', () => {
     assert.ok(rows[3].total < rows[3].investment); // invest=0、cash 负 → total < invest
   });
 });
+
+describe('buildMonthlyAssetForecast 按月扣款 + 理财比例再平衡', () => {
+  it('首月扣首付后总资产下降，并按比例拆分', () => {
+    const rows = buildMonthlyAssetForecast({
+      cash: 562_500,
+      investment: 337_500,
+      annualReturnRate: 0,
+      disposableIncomeMonthly: 0,
+      recurringExpenseMonthly: 0,
+      oneTimeExpense: 0,
+      reinvest: noReinvestment,
+      months: 2,
+      investRatio: 50,
+      emergencyReserve: 0,
+      expenseOutflowAtMonth: (month) => (month === 1 ? 300_000 : month === 2 ? 1_945 : 0),
+      incomeAtMonth: () => 0,
+    });
+    // month0: 900k
+    assert.equal(rows[0].total, 900_000);
+    // month1: 900k - 300k = 600k，再 50/50
+    assert.equal(rows[1].total, 600_000);
+    assert.equal(rows[1].investment, 300_000);
+    assert.equal(rows[1].cash, 300_000);
+    // month2: 600k - 1945，再 50/50
+    assert.ok(Math.abs(rows[2].total - (600_000 - 1_945)) < 0.01);
+    assert.ok(Math.abs(rows[2].investment - rows[2].cash) < 0.01);
+  });
+});

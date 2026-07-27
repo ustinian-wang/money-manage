@@ -115,3 +115,25 @@ export function planChangeMarkLinesForAssetAxis(
   }
   return out;
 }
+
+/**
+ * 年度轴（如「现在」「2027年」）：startYear − baseYear 夹在 0..maxYearOffset，再交给 labelFn
+ * 用于消费分析资产对比等按年抽样图
+ */
+export function planChangeMarkLinesForYearLabelAxis(
+  events: Array<Pick<PlanChangeEvent, 'enabled' | 'field' | 'startYearMonth'>>,
+  yearLabelForOffset: (offsetYears: number) => string,
+  maxYearOffset = 30,
+  base = new Date(),
+): PlanChangeMarkLineItem[] {
+  const baseYear = base.getFullYear();
+  const out: PlanChangeMarkLineItem[] = [];
+  for (const event of events) {
+    if (!event.enabled || !isValidYearMonth(event.startYearMonth)) continue;
+    const startYear = Number(event.startYearMonth.slice(0, 4));
+    if (!Number.isFinite(startYear)) continue;
+    const offset = Math.min(maxYearOffset, Math.max(0, startYear - baseYear));
+    out.push(toMarkLineItem(event, yearLabelForOffset(offset)));
+  }
+  return out;
+}

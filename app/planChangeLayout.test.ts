@@ -12,6 +12,7 @@ import {
   filterPlanChangeFieldOptions,
   formatPlanChangeListLine,
   planChangeMarkLinesForAssetAxis,
+  planChangeMarkLinesForYearLabelAxis,
   planChangeMarkLinesForYearMonthAxis,
 } from './planChangeLayout';
 
@@ -54,6 +55,7 @@ describe('planChangeLayout 入口契约', () => {
     assert.match(pageSource, /aria-label="搜索指标"/);
     assert.match(pageSource, /planChangeMarkLinesForAssetAxis/);
     assert.match(pageSource, /planChangeMarkLinesForYearMonthAxis/);
+    assert.match(pageSource, /planChangeMarkLinesForYearLabelAxis/);
   });
 
   it('计划变更 FloatPanel：scrollResetKey + 显式用高路径', () => {
@@ -123,5 +125,26 @@ describe('planChangeLayout 图标记', () => {
     assert.equal(marks.length, 1);
     assert.equal(marks[0].xAxis, '0年2个月');
     assert.equal(marks[0].name, '到手');
+  });
+
+  it('年度标签轴：startYear−baseYear 夹 0..30 映到 labelFn', () => {
+    const base = new Date(2026, 6, 15);
+    const labelFn = (offset: number) => (offset === 0 ? '现在' : `${2026 + offset}年`);
+    const marks = planChangeMarkLinesForYearLabelAxis(
+      [
+        { enabled: true, field: 'grossSalary', startYearMonth: '2026-07' },
+        { enabled: true, field: 'takeHomeIncome', startYearMonth: '2028-03' },
+        { enabled: false, field: 'annualReturn', startYearMonth: '2029-01' },
+        { enabled: true, field: 'annualReturn', startYearMonth: '2099-01' },
+      ],
+      labelFn,
+      30,
+      base,
+    );
+    assert.equal(marks.length, 3);
+    assert.equal(marks[0].xAxis, '现在');
+    assert.equal(marks[1].xAxis, '2028年');
+    assert.equal(marks[2].xAxis, '2056年'); // 夹到 30
+    assert.equal(marks[1].name, '到手');
   });
 });
