@@ -1,0 +1,31 @@
+tests/mobile-smoke.md
+  s_3657e0e1fc4ba6::t_600ac80d505953 69-76
+lib/useVisualViewport.ts
+  s_3657e0e1fc4ba6::t_eedd55428577d0 28-41
+  s_3657e0e1fc4ba6::t_a651aa84b3081f 134-136,138
+lib/useVisualViewport.test.ts
+  s_3657e0e1fc4ba6::t_c3b6060ddd21b6 7,39-52
+  s_3657e0e1fc4ba6::t_4d0aad2ee32668 53
+lib/floatPlace.ts
+  s_3657e0e1fc4ba6::t_499fcfcc65a204 107-129
+lib/floatPlace.test.ts
+  s_3657e0e1fc4ba6::t_382b8868d25ce5 76-89
+  s_3657e0e1fc4ba6::t_71f5f9d17fcd5f 8-9
+  s_3657e0e1fc4ba6::t_64ae48d3202b20 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "084a55d49a83136de054b1c86b9627a85297238b",
+  "prompts": {},
+  "sessions": {
+    "s_3657e0e1fc4ba6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "300715c1-382f-4d09-bd23-ca8e6f577746",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
