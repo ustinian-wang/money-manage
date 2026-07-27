@@ -104,6 +104,29 @@ export function placeSheetAtBottom(
   return { top, left, width };
 }
 
+/**
+ * 面板用高 = min(内容自然高, 视口上限)。
+ * 显式写入 height，避免仅靠 max-height 时内容撑破 VV、body 锁死后无法滚到底。
+ */
+export function calcPanelUsedHeight(naturalHeight: number, maxHeight: number): number {
+  const nat = Math.max(0, Number.isFinite(naturalHeight) ? naturalHeight : 0);
+  const max = Math.max(0, Number.isFinite(maxHeight) ? maxHeight : 0);
+  return Math.min(nat, max);
+}
+
+/**
+ * 由 chrome（非滚动区）+ 滚动体 scrollHeight 还原自然总高。
+ * 在已施加 max-height 时仍可用：scrollHeight 反映内容，clientHeight 反映可视。
+ */
+export function measurePanelNaturalHeight(
+  panelOffsetHeight: number,
+  scrollClientHeight: number,
+  scrollScrollHeight: number,
+): number {
+  const chrome = Math.max(0, panelOffsetHeight - Math.max(0, scrollClientHeight));
+  return chrome + Math.max(0, scrollScrollHeight);
+}
+
 /** 读取 env(safe-area-inset-*)；失败则全 0（ponytail: 每次 place 轻量 probe，不缓存跨页） */
 export function readSafeAreaInsets(): SafeInsets {
   if (typeof document === 'undefined') return ZERO_SAFE;

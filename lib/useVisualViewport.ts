@@ -25,6 +25,20 @@ export function calcFocusScrollDelta(
   return 0;
 }
 
+/**
+ * 焦点可视底边：VV 底与浮层 footer 顶取更严者，避免滚进底栏后面仍判「已可见」。
+ * footerTop=null 时仅扣 margin。
+ */
+export function calcFocusVisibleBottom(
+  viewBottom: number,
+  margin: number,
+  footerTop: number | null,
+): number {
+  const vvCap = viewBottom - margin;
+  if (footerTop == null || !Number.isFinite(footerTop)) return vvCap;
+  return Math.min(vvCap, footerTop - margin);
+}
+
 export type VisualViewportState = {
   height: number;
   offsetTop: number;
@@ -117,13 +131,15 @@ export function ensureFocusedInVisualViewportNow(
   const vv = window.visualViewport;
   const viewTop = vv?.offsetTop ?? 0;
   const viewBottom = viewTop + (vv?.height ?? window.innerHeight);
+  const shell = target.closest<HTMLElement>('[data-float-panel], .auth-sheet-root, .auth-gate-root');
+  const footer = shell?.querySelector<HTMLElement>('[data-float-footer]');
+  const footerTop = footer ? footer.getBoundingClientRect().top : null;
   const visibleTop = viewTop + margin;
-  const visibleBottom = viewBottom - margin;
+  const visibleBottom = calcFocusVisibleBottom(viewBottom, margin, footerTop);
   const rect = target.getBoundingClientRect();
   const delta = calcFocusScrollDelta(rect.top, rect.bottom, visibleTop, visibleBottom);
   if (delta === 0) return;
 
-  const shell = target.closest<HTMLElement>('[data-float-panel], .auth-sheet-root, .auth-gate-root');
   const scroller = findScrollParent(target, shell);
   if (scroller) {
     scroller.scrollTop += delta;

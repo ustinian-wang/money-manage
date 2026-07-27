@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { calcFocusScrollDelta, calcKeyboardInset } from './useVisualViewport';
+import { calcFocusScrollDelta, calcFocusVisibleBottom, calcKeyboardInset } from './useVisualViewport';
 
 describe('calcKeyboardInset 键盘顶起', () => {
   test('visualViewport 变矮时得到正 inset', () => {
@@ -34,5 +34,20 @@ describe('calcFocusScrollDelta 焦点落在 VV 内', () => {
 
   test('顶边高于可视顶 → 负增量（向上滚）', () => {
     assert.equal(calcFocusScrollDelta(0, 40, 14, 386), -14);
+  });
+});
+
+describe('calcFocusVisibleBottom 计入 footer', () => {
+  test('无 footer 时仅扣 margin', () => {
+    assert.equal(calcFocusVisibleBottom(800, 14, null), 786);
+  });
+
+  test('footer 顶更严时取 footerTop - margin', () => {
+    // VV 底 800；footer 顶 720 → 可见底 706
+    assert.equal(calcFocusVisibleBottom(800, 14, 720), 706);
+  });
+
+  test('footer 低于 VV 扣边时仍用 VV', () => {
+    assert.equal(calcFocusVisibleBottom(800, 14, 900), 786);
   });
 });

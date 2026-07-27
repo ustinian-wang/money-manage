@@ -66,7 +66,14 @@ Browser 设备模式 **不能 100% 模拟 iOS 键盘**。可用下列方式近�
    // 若页面监听 visualViewport，可在 CDP 里改 metrics；否则依赖 FloatPanel place + scroll 校正
    ```
 2. **真机**：iOS Safari → 打开工资/资产 field 浮层或 `/login`/`/register` 表单 → 聚焦输入框；输入框应完整落在键盘上方（约 14px 边距）；浮层内部仍可手指滚动（未设 `touch-action: none`）。
-3. **代码路径**：`scrollFocusedFieldIntoView`（延迟 ~280ms）→ `ensureFocusedInVisualViewportNow`；VV `resize`/`scroll` 再校正；`FloatPanel.place` 在焦点仍在面板内时同步校正。
+3. **代码路径**：`scrollFocusedFieldIntoView`（延迟 ~280ms）→ `ensureFocusedInVisualViewportNow`（计入 `[data-float-footer]`）；VV `resize`/`scroll` 再校正；`FloatPanel.place` 用 `calcPanelUsedHeight` 写显式 height，内层 `[data-float-scroll]` 可滚到底。
+
+## FloatPanel 高度 / 滚到底（计划变更 · 新增支出）
+
+1. 390×844：打开「计划变更」→「新增」；面板高度应 ≤ 可视区；手指可把内容区滚到「变成多少」等底部字段，不被底栏挡住。
+2. 聚焦底部 number 输入：字段应滚入 footer 上方（非整页乱跳）。
+3. 「+ 新增支出」同验：长表单可滚到底，保存/取消底栏始终可见。
+4. 点遮罩仍不关（仅关闭 / Esc / 底栏按钮）。
 
 ## 鉴权页键盘（`/login` · `/register`）
 

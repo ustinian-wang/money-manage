@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
+  calcPanelUsedHeight,
+  measurePanelNaturalHeight,
   placeCenteredInViewport,
   placeNearAnchor,
   placeSheetAtBottom,
@@ -69,5 +71,20 @@ describe('floatPlace 视口夹紧', () => {
     assert.ok(placed.left >= kb.left);
     assert.ok(placed.top + 200 <= kb.bottom);
     assert.ok(placed.top >= kb.top);
+  });
+});
+
+describe('floatPlace 面板用高', () => {
+  test('短内容不拉满视口', () => {
+    assert.equal(calcPanelUsedHeight(320, 600), 320);
+  });
+
+  test('超长内容卡在上限，供内层滚动', () => {
+    assert.equal(calcPanelUsedHeight(1200, 560), 560);
+  });
+
+  test('自然高 = chrome + scrollScrollHeight', () => {
+    // offset 500、可视滚动区 400 → chrome 100；内容 900 → 自然 1000
+    assert.equal(measurePanelNaturalHeight(500, 400, 900), 1000);
   });
 });
