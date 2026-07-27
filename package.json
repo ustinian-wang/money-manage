@@ -3,11 +3,11 @@
   "version": "0.2.0",
   "private": true,
   "engines": {
-    "node": ">=20 <23",
+    "node": ">=22.6 <23",
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -20,10 +20,12 @@
     "pm2:restart": "npm run pm2:build && pm2 restart money-manage --update-env",
     "pm2:stop": "pm2 stop money-manage",
     "pm2:logs": "pm2 logs money-manage",
-    "test": "node --experimental-strip-types --import ./tests/ts-ext-resolve.mjs --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/income/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts domain/reinvest/*.test.ts domain/emergency/*.test.ts domain/planChange/*.test.ts lib/persistence/*.test.ts lib/auth/*.test.ts lib/scenario/*.test.ts lib/ui/*.test.ts lib/useVisualViewport.test.ts lib/floatPlace.test.ts lib/restartSite.test.ts lib/claimGate.test.ts lib/demoDefaults.test.ts app/assetForecast.test.ts app/installmentPayment.test.ts app/cashFlowRatios.test.ts app/sequentialImpact.test.ts app/expenseSpan.test.ts app/deleteConfirm.test.ts app/softNumber.test.ts app/numberFieldUi.test.ts app/textFieldUi.test.ts app/incomeDetailLayout.test.ts app/planChangeLayout.test.ts",
+    "test": "node --experimental-strip-types --import ./tests/ts-ext-resolve.mjs --test tests/*.test.ts domain/tax/*.test.ts domain/social-security/*.test.ts domain/income/*.test.ts domain/installment/*.test.ts domain/expense/*.test.ts domain/reinvest/*.test.ts domain/emergency/*.test.ts domain/planChange/*.test.ts lib/persistence/*.test.ts lib/auth/*.test.ts lib/scenario/*.test.ts lib/ui/*.test.ts lib/useVisualViewport.test.ts lib/floatPlace.test.ts lib/restartSite.test.ts lib/claimGate.test.ts lib/demoDefaults.test.ts app/assetForecast.test.ts app/installmentPayment.test.ts app/cashFlowRatios.test.ts app/sequentialImpact.test.ts app/expenseSpan.test.ts app/deleteConfirm.test.ts app/softNumber.test.ts app/numberFieldUi.test.ts app/textFieldUi.test.ts app/incomeDetailLayout.test.ts app/planChangeLayout.test.ts lib/decisionSummary.test.ts lib/sectionNav.test.ts lib/profileSyncAlert.test.ts lib/firstVisitChecklist.test.ts lib/chartAxis.test.ts app/monthlyExpenseAggregate.test.ts app/productNaming.test.ts app/draftBindConfirm.test.ts",
     "typecheck": "tsc --noEmit --pretty false",
     "check": "npm run typecheck && npm test && npm run build",
-    "test:mobile-smoke": "node tests/mobile-smoke.mjs"
+    "test:mobile-smoke": "node tests/mobile-smoke.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:dev": "playwright test"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.6.5",
@@ -34,6 +36,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@types/node": "^20.17.30",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

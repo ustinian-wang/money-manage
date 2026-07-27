@@ -4,7 +4,7 @@
 >
 > **能力边界**：Chromium / Cursor 设备模式 **不能 100% 等价 iOS Safari 键盘**（visualViewport、橡皮筋、`position: fixed` 与键盘顶起均可能不同）。真机仍需 Safari Web Inspector 复核键盘场景。
 
-未引入 Playwright/Puppeteer（`package.json` 无浏览器 E2E 依赖）。本冒烟分两层：
+另有最小 Playwright 访客冒烟：`npm run test:e2e`（见根目录 README「E2E 冒烟」）。本文件仍覆盖更细的移动端人工清单与轻量脚本，分两层：
 
 1. **可重复步骤**（人工 / Cursor Browser，设备模式 390×844）
 2. **可选脚本** `npm run test:mobile-smoke`：对已启动的本地服务做 HTTP + 可选 headless Chromium（系统自带，无则跳过交互断言）

@@ -5,10 +5,10 @@
 
 /** AuthBar page/gate：挂在 .auth-gate-root 上 */
 export function authGateRootClassName(): string {
-  return 'auth-gate-root flex min-h-0 flex-col items-center bg-[#f6f8f5] px-4 py-10 text-[#17212b]';
+  return 'auth-gate-root flex min-h-0 flex-col items-center bg-paper px-4 py-10 text-ink';
 }
 
 /** AuthPageShell 就绪态外层 main（fixed gate 自撑高，勿再叠 100vh） */
 export function authPageShellMainClassName(): string {
-  return 'bg-[#f6f8f5] text-[#17212b]';
+  return 'bg-paper text-ink';
 }

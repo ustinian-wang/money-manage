@@ -5,6 +5,14 @@ dist/
 *.tsbuildinfo
 data/backups
 data/user:*/
+data/user_*/
+data/user_*
+data/idx_*
+data/session_*
+data/ratelimit_*
 logs/
 .dev.vars
 .wrangler/
+playwright-report/
+test-results/
+blob-report/

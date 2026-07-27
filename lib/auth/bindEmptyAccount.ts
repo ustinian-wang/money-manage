@@ -3,6 +3,7 @@
  * 从主页 handleAuthed 抽出，供 /login · /register 复用
  */
 import { emptyClaimProfilePatch, parseClaimMode, type ClaimMode } from '../claimGate';
+import { loadGuestDraft } from '../persistence/guestDraft';
 
 export type AuthBindMeta = { from: 'login' | 'register'; claimMode?: ClaimMode };
 
@@ -12,22 +13,24 @@ export type BindEmptyAccountResult =
   | { status: 'skipped' }
   | { status: 'error' };
 
+/** 登录空账号：绑定访客草稿确认文案（供 ConfirmDialog） */
+export const EMPTY_LOGIN_BIND_MESSAGE =
+  '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。';
+
 type BindOpts = {
-  /** 登录空账号二次确认；默认 window.confirm */
-  confirmEmptyLogin?: () => boolean;
+  /**
+   * 登录空账号二次确认（ConfirmDialog / 测试注入）。
+   * 支持同步或 Promise；未提供则 skipped（不上传）。
+   */
+  confirmEmptyLogin?: () => boolean | Promise<boolean>;
   /** 覆盖本机草稿读取（测试用） */
   readDraft?: () => Record<string, unknown> | null;
   fetchImpl?: typeof fetch;
 };
 
 function readLocalDraft(): Record<string, unknown> | null {
-  try {
-    const saved = localStorage.getItem('money-manage-profile');
-    if (!saved) return null;
-    return JSON.parse(saved) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  // 认领始终读访客键，不读登录用户本机缓存
+  return loadGuestDraft();
 }
 
 /** 空账号：注册认领/清空，或登录确认后 PUT */
@@ -51,11 +54,10 @@ export async function bindEmptyAccountAfterAuth(
     if (meta.from === 'register' && parseClaimMode(meta.claimMode) === 'clear') {
       toBind = { ...draft, ...emptyClaimProfilePatch() };
     } else if (meta.from === 'login') {
-      const confirm = opts.confirmEmptyLogin
-        ?? (() => window.confirm(
-          '该账号云端暂无数据。是否将当前访客/本机草稿绑定到此账号？\n选「取消」则保留空账号（页面继续用当前示例/草稿，但不上传）。',
-        ));
-      if (!confirm()) return { status: 'skipped' };
+      const confirm = opts.confirmEmptyLogin;
+      if (!confirm) return { status: 'skipped' };
+      const ok = await confirm();
+      if (!ok) return { status: 'skipped' };
     }
 
     // ponytail: 剥离旧草稿 snapshots；云端固定空数组兼容 schema

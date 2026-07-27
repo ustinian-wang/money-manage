@@ -17,12 +17,12 @@
 | 项 | 约定 |
 | --- | --- |
 | 进门 | **默认访客进主界面**（示例 / 本机草稿）；顶栏有「访客」chip +「注册保存」；可选全屏门禁已弱化，不再强制登录 |
-| 访客写盘 | 只写 `localStorage`（`money-manage-profile`）；**不** PUT `/api/profile` |
+| 访客写盘 | 只写 `localStorage`（`money-manage-profile:guest`；旧键 `money-manage-profile` 首次读迁移）；**不** PUT `/api/profile` |
 | 注册认领 | 空账号 → 注册 sheet 展示摘要；可选「用当前数据认领」或「清空示例后再注册」后写入云端 |
 | 登录空账号 | 云端为空时 **二次确认**是否绑定访客草稿；取消则不上传 |
 | 登录有数据 | 用云端覆盖本地展示 |
 | API | `/api/profile` 等仍须登录 |
-| 隔离 | KV/本地键：`user:{id}` · `session:{token}` · `user:{id}/financial-profile.json` |
+| 隔离 | 服务端：`user:{id}` · `session:{token}` · `user:{id}/financial-profile.json`；本机：访客 `money-manage-profile:guest` / 登录 `money-manage-profile:{userId}` |
 | 密码 | PBKDF2-SHA256（Web Crypto），不明文存储 |
 | 重启网站 | **纯客户端**：确认后 unregister SW + 清 Cache Storage + 硬刷新；**不**清 localStorage / cookie，≠登出、≠清访客草稿、≠调后端 |
 
@@ -38,7 +38,7 @@
 | A | 三张主图可见且 canvas 非 0×0；走势跳转后仍渲染 | 已落地（`ChartHost` + `.chart-box`） |
 | B | `.field-row-mobile` Settings 式左右 tile；Metric/Breakdown 对齐 | 已落地 |
 | C | 支出卡去重摘要；标题+金额层级；meta chip | 已落地 |
-| D | 分区导航 sticky + active（IntersectionObserver） | 已落地 |
+| D | 分区导航 sticky + active（IntersectionObserver） | 已落地（`sectionNav` + chips；曾误删后恢复） |
 | E | Editable sheet `headerTitle` 带字段名 | 已落地 |
 | F | 保持 PC/移动分轨，无新依赖 | 保持 |
 | G | 注册 → 登录 → 改参 → 刷新仍在 → 登出后云端需登录再读 | 已落地 |
@@ -46,7 +46,7 @@
 | I | 「更多」→ 重启网站：确认框 → 仅清 SW/Cache → 刷新；草稿/登录仍在 | 已落地 |
 | J | **375 最小宽度**：单列 `minmax(0,1fr)`、field/支出金额 ellipsis，不横向撑破 | 已落地 |
 | K | 浮层键盘：`visualViewport` 夹紧 + 焦点滚入可视区 | 已落地 |
-| L | 列表删除：`ConfirmDialog`（FloatPanel），非裸 `window.confirm` | 已落地 |
+| L | 列表删除 / 登录空账号绑草稿：`ConfirmDialog`（FloatPanel），非裸 `window.confirm` | 已落地 |
 | M | 新增支出默认 0，滚到 `data-expense-anchor` 新项 | 已落地 |
 | N | 资产走势万元轴；可支配/现金流 `grid.right` 窄屏约 68px | 已落地 |
 | O | 等价联动 `LinkedFieldGroup`（资产四元组、首付、年↔期） | 已落地 |

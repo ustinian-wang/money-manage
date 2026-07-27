@@ -18,6 +18,7 @@ export type AuthMode = 'login' | 'register';
 export type AuthMeta = { from: AuthMode; claimMode?: ClaimMode };
 
 const USERNAME_MAX = 32;
+const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 72;
 
 type Props = {
@@ -76,9 +77,19 @@ export default function AuthBar({
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         setError('');
-        if (mode === 'register' && confirm && confirm !== password) {
-            setError('两次密码不一致');
-            return;
+        if (mode === 'register') {
+            if (password.length < PASSWORD_MIN) {
+                setError(`密码至少 ${PASSWORD_MIN} 位`);
+                return;
+            }
+            if (!confirm) {
+                setError('请确认密码');
+                return;
+            }
+            if (confirm !== password) {
+                setError('两次密码不一致');
+                return;
+            }
         }
         setBusy(true);
         try {
@@ -132,7 +143,7 @@ export default function AuthBar({
                     type="button"
                     disabled={busy}
                     onClick={() => void logout()}
-                    className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 hover:border-[#f07f62] hover:text-[#d9654a]"
+                    className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 hover:border-coral hover:text-coral-deep"
                 >
                     登出
                 </button>
@@ -160,7 +171,7 @@ export default function AuthBar({
             <div className="mt-3 flex gap-2 text-xs">
                 {lockMode ? (
                     <>
-                        <span className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                        <span className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`}>
                             {mode === 'login' ? '登录' : '注册'}
                         </span>
                         <Link
@@ -172,8 +183,8 @@ export default function AuthBar({
                     </>
                 ) : (
                     <>
-                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
-                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-[#17212b] text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); setClaimMode('keep'); }}>注册</button>
+                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
+                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); setClaimMode('keep'); }}>注册</button>
                     </>
                 )}
             </div>
@@ -211,7 +222,10 @@ export default function AuthBar({
                         />
                     </label>
                 )}
-                <label className="block text-xs text-slate-500">密码（最长 {PASSWORD_MAX} 位）
+                <label className="block text-xs text-slate-500">
+                    {mode === 'register'
+                        ? `密码（${PASSWORD_MIN}–${PASSWORD_MAX} 位）`
+                        : `密码（最长 ${PASSWORD_MAX} 位）`}
                     <input
                         className="field-input mt-1"
                         name="password"
@@ -220,11 +234,12 @@ export default function AuthBar({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        minLength={mode === 'register' ? PASSWORD_MIN : undefined}
                         maxLength={PASSWORD_MAX}
                     />
                 </label>
                 {mode === 'register' && (
-                    <label className="block text-xs text-slate-500">确认密码（可选）
+                    <label className="block text-xs text-slate-500">确认密码
                         <input
                             className="field-input mt-1"
                             name="new-password"
@@ -232,6 +247,8 @@ export default function AuthBar({
                             autoComplete="new-password"
                             value={confirm}
                             onChange={(e) => setConfirm(e.target.value)}
+                            required
+                            minLength={PASSWORD_MIN}
                             maxLength={PASSWORD_MAX}
                         />
                     </label>
@@ -251,7 +268,7 @@ export default function AuthBar({
                             <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
                                 <input
                                     type="radio"
-                                    className="mt-0.5 accent-[#f07f62]"
+                                    className="mt-0.5 accent-coral"
                                     name="claimMode"
                                     checked={claimMode === 'keep'}
                                     onChange={() => setClaimMode('keep')}
@@ -261,7 +278,7 @@ export default function AuthBar({
                             <label className="flex items-start gap-2 text-[11px] leading-snug text-slate-600">
                                 <input
                                     type="radio"
-                                    className="mt-0.5 accent-[#f07f62]"
+                                    className="mt-0.5 accent-coral"
                                     name="claimMode"
                                     checked={claimMode === 'clear'}
                                     onChange={() => setClaimMode('clear')}
@@ -272,7 +289,7 @@ export default function AuthBar({
                     </div>
                 )}
                 {error && <p className="text-xs text-red-600">{error}</p>}
-                <button type="submit" disabled={busy} className="touch-btn w-full rounded-xl bg-[#17212b] py-3 text-sm font-semibold text-white disabled:opacity-60">
+                <button type="submit" disabled={busy} className="touch-btn w-full rounded-xl bg-ink py-3 text-sm font-semibold text-white disabled:opacity-60">
                     {busy ? '处理中…' : mode === 'login' ? '登录' : (claimMode === 'clear' ? '注册并开空账号' : '注册并认领数据')}
                 </button>
             </form>
@@ -297,8 +314,8 @@ export default function AuthBar({
                 aria-label={mode === 'login' ? '登录' : '注册'}
             >
                 <div className="mb-6 flex flex-col items-center gap-2 text-center">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#17212b] text-lg font-bold text-white">M</div>
-                    <p className="text-lg font-semibold">财务管理</p>
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-ink text-lg font-bold text-white">M</div>
+                    <p className="text-lg font-semibold">财务规划</p>
                     <p className="text-xs text-slate-400">
                         {variant === 'page'
                             ? (mode === 'login' ? '登录同步云端，或返回继续访客体验' : '注册认领数据，或返回继续访客体验')
@@ -316,7 +333,7 @@ export default function AuthBar({
             <Link
                 href={authHref('register')}
                 onClick={() => onBeforeNavigate?.()}
-                className="touch-btn rounded-full bg-[#f07f62] px-3 text-[11px] font-semibold text-white hover:bg-[#df6e51]"
+                className="touch-btn rounded-full bg-coral px-3 text-[11px] font-semibold text-white hover:bg-coral-hover"
             >
                 注册保存
             </Link>
@@ -324,7 +341,7 @@ export default function AuthBar({
                 <Link
                     href={authHref('login')}
                     onClick={() => onBeforeNavigate?.()}
-                    className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-[#17212b] hover:border-[#f07f62] hover:text-[#d9654a]"
+                    className="touch-btn rounded-full border border-slate-200 bg-white px-3 text-[11px] font-semibold text-ink hover:border-coral hover:text-coral-deep"
                 >
                     登录
                 </Link>

@@ -57,10 +57,12 @@ describe('planChangeLayout 入口契约', () => {
   });
 
   it('计划变更 FloatPanel：scrollResetKey + 显式用高路径', () => {
+    // 入口仍在 page；用高/footer 标记在抽出的 FloatPanel 组件
     assert.match(pageSource, /scrollResetKey=\{view\}/);
-    assert.match(pageSource, /calcPanelUsedHeight/);
-    assert.match(pageSource, /data-float-footer/);
-    assert.match(pageSource, /data-float-scroll/);
+    const floatSource = fs.readFileSync(new URL('./components/FloatPanel.tsx', import.meta.url), 'utf8');
+    assert.match(floatSource, /calcPanelUsedHeight/);
+    assert.match(floatSource, /data-float-footer/);
+    assert.match(floatSource, /data-float-scroll/);
   });
 });
 

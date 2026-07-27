@@ -52,7 +52,7 @@ npm run test:mobile-smoke             # 终端 B：HTTP + 可选 headless Chromi
 
 | # | 检查项 | 通过标准 | 备注 |
 | --- | --- | --- | --- |
-| D1 | 禁止浮层叠浮层 | ≤639px：已开 FloatPanel/sheet 时，**不再**弹出第二个 FloatPanel；二级编辑在父 sheet 内展开/替换 | 契约 §4 |
+| D1 | 禁止浮层叠浮层 | ≤639px：已开 FloatPanel/sheet 时，**不再**弹出第二个 FloatPanel；二级编辑在父 sheet 内 push 子页（返回/Esc 先 pop） | 契约 §4 |
 | D2 | InfoTip 不锁滚动 | 移动点 `?` 为贴锚气泡，点遮罩关闭，页面仍可滚 | 契约 §3 |
 | D3 | 键盘 / visualViewport（可选） | 浮层或 `/login`/`/register` 聚焦输入框时，字段落在键盘上方；无白屏 | 见 `mobile-smoke.md` VV 近似步骤；真机 Safari 复核 |
 

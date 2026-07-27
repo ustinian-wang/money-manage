@@ -1,10 +1,12 @@
 /**
  * 财务状态持久化：按 userId 隔离
  * 键：user:{id}/financial-profile.json · user:{id}/backups/...
- * 本地 data/ 同路径；Cloudflare KV/R2 同名文本键
+ * 本地 data/ 经 localFs 消毒后落盘；Cloudflare KV/R2 仍用原文本键
  */
 import { emptyState, normalizeState } from './types';
 import type { PersistedState } from './types';
+import { listDataJsonKeys, readDataText, writeDataText } from './localFs';
+import { getMoneyDataBinding } from './cloudflareBinding';
 
 export const STATE_FILE = 'financial-profile.json';
 export const BACKUP_DIR = 'backups/';
@@ -25,56 +27,36 @@ type RemoteStore = {
 };
 
 async function getRemoteStore(): Promise<RemoteStore | null> {
-    try {
-        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-        const { env } = await getCloudflareContext({ async: true });
-        const bag = env as {
-            MONEY_DATA?: {
-                get(key: string, type?: string): Promise<unknown>;
-                put(key: string, value: string): Promise<unknown>;
-                list(options?: { prefix?: string }): Promise<{ keys?: { name: string }[]; objects?: { key: string }[] }>;
-            };
-        };
-        const binding = bag.MONEY_DATA;
-        if (!binding) return null;
+    const binding = await getMoneyDataBinding();
+    if (!binding) return null;
 
-        return {
-            async getText(key) {
-                const value = await binding.get(key, 'text');
-                if (value == null) return null;
-                if (typeof value === 'string') return value;
-                if (typeof (value as { text?: () => Promise<string> }).text === 'function') {
-                    return (value as { text: () => Promise<string> }).text();
-                }
-                return String(value);
-            },
-            async putText(key, body) {
-                await binding.put(key, body);
-            },
-            async listKeys(prefix) {
-                const listed = await binding.list({ prefix });
-                if (listed.objects) return listed.objects.map((item) => item.key).sort().reverse();
-                if (listed.keys) return listed.keys.map((item) => item.name).sort().reverse();
-                return [];
-            },
-        };
-    } catch {
-        return null;
-    }
+    return {
+        async getText(key) {
+            const value = await binding.get(key, 'text');
+            if (value == null) return null;
+            if (typeof value === 'string') return value;
+            if (typeof (value as { text?: () => Promise<string> }).text === 'function') {
+                return (value as { text: () => Promise<string> }).text();
+            }
+            return String(value);
+        },
+        async putText(key, body) {
+            await binding.put(key, body);
+        },
+        async listKeys(prefix) {
+            const listed = await binding.list?.({ prefix });
+            if (!listed) return [];
+            if (listed.objects) return listed.objects.map((item) => item.key).sort().reverse();
+            if (listed.keys) return listed.keys.map((item) => item.name).sort().reverse();
+            return [];
+        },
+    };
 }
 
 async function readText(key: string): Promise<string | null> {
     const remote = await getRemoteStore();
     if (remote) return remote.getText(key);
-    const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const file = path.join(process.cwd(), 'data', key);
-    try {
-        return await fs.readFile(file, 'utf8');
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-        throw error;
-    }
+    return readDataText(key);
 }
 
 async function writeText(key: string, body: string): Promise<void> {
@@ -83,28 +65,13 @@ async function writeText(key: string, body: string): Promise<void> {
         await remote.putText(key, body);
         return;
     }
-    const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const file = path.join(process.cwd(), 'data', key);
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
-    await fs.writeFile(temp, body, 'utf8');
-    await fs.rename(temp, file);
+    await writeDataText(key, body);
 }
 
 async function listKeys(prefix: string): Promise<string[]> {
     const remote = await getRemoteStore();
     if (remote) return remote.listKeys(prefix);
-    const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const dir = path.join(process.cwd(), 'data', prefix.replace(/\/$/, ''));
-    try {
-        const names = await fs.readdir(dir);
-        return names.filter((name) => name.endsWith('.json')).map((name) => `${prefix}${name}`).sort().reverse();
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-        throw error;
-    }
+    return listDataJsonKeys(prefix);
 }
 
 export async function readState(userId: string): Promise<PersistedState> {

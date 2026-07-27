@@ -4,6 +4,7 @@
  */
 import { buildClaimSummaryLines, type ClaimSnapshot } from '../claimGate';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES, lightDemoMonthlyExpenseTotal } from '../demoDefaults';
+import { loadGuestDraft } from '../persistence/guestDraft';
 
 type ExpenseLike = { name?: string; mode?: string; amount?: number };
 
@@ -38,10 +39,6 @@ export function claimSnapshotFromDraft(raw: Record<string, unknown> | null): Cla
 }
 
 export function claimSummaryLinesFromStorage(): string[] {
-  let raw: Record<string, unknown> | null = null;
-  try {
-    const saved = localStorage.getItem('money-manage-profile');
-    if (saved) raw = JSON.parse(saved) as Record<string, unknown>;
-  } catch { /* 用演示默认 */ }
-  return buildClaimSummaryLines(claimSnapshotFromDraft(raw));
+  // 鉴权页摘要只看访客草稿键
+  return buildClaimSummaryLines(claimSnapshotFromDraft(loadGuestDraft()));
 }

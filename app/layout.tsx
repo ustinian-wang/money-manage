@@ -1,15 +1,16 @@
 import type { Metadata, Viewport } from 'next';
+import { BRAND } from '../lib/ui/brandColors';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Money Manage · 财务管理系统',
-  description: '个人收入、支出与长期分期消费评估原型',
-  applicationName: '财务管理',
+  title: 'Money Manage · 财务规划',
+  description: '个人财务规划与消费承受力测算：调工资、资产与支出，即时看结余与长期走势',
+  applicationName: '财务规划',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '财务管理',
+    title: '财务规划',
   },
   icons: {
     icon: [
@@ -25,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // ponytail: 不设 maximumScale=1，避免妨碍无障碍缩放；iOS 输入缩放靠 ≥16px 字号
   viewportFit: 'cover',
-  themeColor: '#17212b',
+  themeColor: BRAND.ink,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

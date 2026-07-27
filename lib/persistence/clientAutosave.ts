@@ -3,9 +3,11 @@ import type { PersistedState } from './types';
 export const LOCAL_STATE_KEY = 'money-manage:state';
 export const LOCAL_REVISION_KEY = 'money-manage:local-revision';
 
-export function createAutosave(options: { apiPath?: string; debounceMs?: number } = {}) {
+export function createAutosave(options: { apiPath?: string; debounceMs?: number; localOnly?: boolean } = {}) {
     const apiPath = options.apiPath ?? '/api/profile';
     const debounceMs = options.debounceMs ?? 300;
+    // 访客：只写本机，不 PUT /api/profile
+    const localOnly = options.localOnly === true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let latest: PersistedState | undefined;
     let pending: Promise<unknown> | undefined;
@@ -20,6 +22,7 @@ export function createAutosave(options: { apiPath?: string; debounceMs?: number 
 
     const flush = () => {
         if (!latest || typeof window === 'undefined') return Promise.resolve();
+        if (localOnly) return Promise.resolve();
         const state = latest;
         pending = fetch(apiPath, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state, revision: state.revision }), keepalive: true })
             .then((response) => { if (!response.ok) throw new Error(`Autosave failed (${response.status})`); })

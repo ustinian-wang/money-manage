@@ -76,7 +76,7 @@ Jest/jsdom 只能覆盖业务逻辑与组件行为，**不能**可靠验证真�
 | Overlay portal | `FloatPanel` / 顶栏菜单 / InfoTip 已 `createPortal` | z-index 仍散落魔法数（59/60/70/80/100） |
 | z-index | `page.tsx` / `globals.css` / `InstallToDesktop` 硬编码 | 无统一常量 / 无单测锁定阶梯 |
 | Tailwind Token | 仅 `ink/paper/mint/coral` + `shadow.panel` | 无 zIndex / spacing 语义层；仍有任意值 class |
-| 公共 Dialog | `ConfirmDialog` 内嵌 `page.tsx`，复用 FloatPanel | 未抽成独立 primitive 文件（可选，ponytail 可后置） |
+| 公共 Dialog | `ConfirmDialog` + `FloatPanel` 在 `app/components/` | 已抽出；鉴权页空账号绑定复用 |
 | 测试 | 领域 Jest 较全；`tests/mobile-smoke` 人工+轻量脚本 | 已补 `docs/ui-checklist.md` 与冒烟交叉引用；zIndex 单测仍属流 A |
 | 领域层 | `domain/*` 已分税/社保/分期等 | 本轮 Notion 不要求大拆，保持即可 |
 
@@ -118,7 +118,7 @@ Jest/jsdom 只能覆盖业务逻辑与组件行为，**不能**可靠验证真�
 
 ### D. 测试与发布清单
 
-- [x] Jest：zIndex 阶梯 + 现有领域测保持绿（203 / 197 pass / 6 skip）
+- [x] Jest：zIndex 阶梯 + 现有领域测保持绿（stale skip 已清：资产/收益 clamp、场景对比、autosave 已接真实导出）
 - [x] `docs/ui-checklist.md`：弹层盖顶、菜单不被裁切、375 无横撑、sheet 键盘近似、图表非 0
 - [x] `mobile-smoke.md` 与清单交叉引用；保留登录/注册独立页步骤
 

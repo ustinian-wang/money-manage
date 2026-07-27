@@ -3,6 +3,7 @@
  * 每项固定颜色；时态图用堆叠 delta 面积（互不重叠），结余带垫高到最终前缀累计。
  */
 
+import { BRAND } from '../lib/ui/brandColors';
 import { calendarMonthsBetween } from './installmentPayment';
 import {
   monthToDate,
@@ -25,7 +26,7 @@ export type StackedLayerWithColor = {
 
 export const BASELINE_COLOR = '#94a3b8';
 /** 勾选项配色（不含基线灰） */
-export const ITEM_COLORS = ['#f07f62', '#3d8f6e', '#4f7cac', '#c9a227', '#8b5cf6', '#ef4444', '#14b8a6', '#ea580c'];
+export const ITEM_COLORS = [BRAND.coral, '#3d8f6e', '#4f7cac', '#c9a227', '#8b5cf6', '#ef4444', '#14b8a6', '#ea580c'];
 /** 结余填满至 100% 的柔和色（偏天蓝，避开 ITEM_COLORS 绿/橙系） */
 export const SAVINGS_COLOR = '#7dd3fc';
 /** 投资占比虚拟系列色（浅紫，避开结余天蓝与 ITEM_COLORS） */

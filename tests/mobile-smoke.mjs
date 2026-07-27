@@ -29,7 +29,7 @@ async function httpSmoke() {
   if (!res.ok) fail(`HTTP ${res.status} from ${BASE_URL}`);
   const html = await res.text();
   // 访客主界面：鉴权入口为跳转 /login · /register（SSR/CSR 均可能在 HTML 出现路径或 href）
-  const markers = ['财务管理', '访客', '注册保存', '剩余'];
+  const markers = ['财务规划', '访客', '注册保存', '剩余'];
   const hit = markers.some((m) => html.includes(m));
   if (!hit) {
     fail(`首页 HTML 未见主界面标记（试过: ${markers.join(', ')}）`);

@@ -1,6 +1,6 @@
 # money-manage
 
-个人财务管理**原型**：在浏览器里调工资、资产与支出，即时重算到手收入、月度结余、30 年资产走势与剩余可支配收入占比走势。
+个人财务规划 / 消费承受力测算**原型**：在浏览器里调工资、资产与支出，即时重算到手收入、月度结余、30 年资产走势与剩余可支配收入占比走势。
 
 主界面：`app/page.tsx`（Next.js App Router 单页）。仓库：<https://github.com/ustinian-wang/money-manage>
 
@@ -18,7 +18,7 @@
 | --- | --- |
 | 框架 | Next.js 15、React 18、TypeScript |
 | UI / 图 | Tailwind CSS；ECharts（`echarts-for-react`） |
-| Node | `>=20 <23`，npm `>=10`（见 `package.json` → `engines`） |
+| Node | `>=22.6 <23`，npm `>=10`（见 `package.json` → `engines`；单测依赖 `--experimental-strip-types`） |
 
 ```bash
 npm install
@@ -26,6 +26,7 @@ npm run dev      # next dev --turbopack，默认 http://localhost:3000
 npm run build
 npm run start    # 生产启动（需先 build）
 npm test         # 领域单测（可选）
+npm run test:e2e # Playwright 最小冒烟（需先 install chromium）
 ```
 
 可选 PM2：`npm run pm2:start` / `pm2:restart` / `pm2:stop` / `pm2:logs`（见 `ecosystem.config.cjs`）。
@@ -50,7 +51,7 @@ npm test         # 领域单测（可选）
 类型：`fixed` 固定 · `percentage` 按比例（相对可支配收入 + 理财月收益）· `installment` 分期 · `one_time` 一次性。
 
 - **新增**：默认金额 `0`；挂上 DOM 后滚到新项（`data-expense-anchor`，桌面行 / 移动卡双锚点）
-- **删除**：`ConfirmDialog`（FloatPanel field 矮卡）二次确认，**不用**裸 `window.confirm`
+- **删除 / 登录空账号绑草稿**：`ConfirmDialog`（FloatPanel field 矮卡）二次确认，**不用**裸 `window.confirm`
 
 操作列 **分析**：打开「消费影响分析」浮层。
 
@@ -74,9 +75,10 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 ### 4. 本地自动保存与云同步
 
-- **访客（未登录）**：改参约 400ms 防抖写入 `localStorage` 键 `money-manage-profile`（`schemaVersion: 4`）；**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。
-- **已登录**：同时写 localStorage，并串行 PUT `/api/profile` 到本人云端；UI 区分正在同步、已同步、失败和 revision 冲突。失败可重试；冲突会锁住普通同步，保留本机草稿，并要求用户明确选择是否用本机数据覆盖云端。
-- **注册认领**：注册成功且云端为空时，把当前内存/本机草稿写入该账号。
+- **访客（未登录）**：改参约 400ms 防抖写入 `localStorage` 键 `money-manage-profile:guest`（`schemaVersion: 4`）；**不**请求 `/api/profile`。UI 标明「访客 / 示例数据，仅本机临时」。若仅有旧键 `money-manage-profile`，首次读时迁移到 guest 键并删除旧键。
+- **已登录**：写本账号键 `money-manage-profile:{userId}`，并串行 PUT `/api/profile` 到本人云端；UI 区分正在同步、已同步、失败和 revision 冲突。失败可重试；冲突会锁住普通同步，保留本机草稿，并要求用户明确选择是否用本机数据覆盖云端。
+- **登出**：回到访客键；**不会**把当前账号云端/内存画像写入访客键（保留原访客草稿，无则回落轻演示）。
+- **注册认领**：注册成功且云端为空时，把当前内存/本机**访客**草稿写入该账号。
 - **登录空账号**：二次确认是否绑定当前访客草稿；已有云端数据则用云端。
 
 ### 5. 重启网站（纯客户端）
@@ -114,7 +116,7 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 
 - **访客可进**：打开即可用主界面（示例 / 本机草稿）；登出后回到访客，不强制全屏门禁
 - **多用户**：注册 / 登录后，服务端只读写当前会话用户的数据（HttpOnly cookie `mm_session`）
-- **本地缓存**：访客与登录都会写 `localStorage`（键 `money-manage-profile`）；`/api/profile` 须登录
+- **本地缓存**：按账号隔离 — 访客 `money-manage-profile:guest`（兼容旧键 `money-manage-profile` 迁移）；登录 `money-manage-profile:{userId}`。`/api/profile` 须登录
 - **注册认领 / 空账号绑定**：见上文「本地自动保存与云同步」；登录空账号有二次确认
 - **重启网站**：纯客户端清 SW/Cache 后刷新；不碰草稿与会话
 - **服务端键**：
@@ -131,7 +133,7 @@ remainDisposablePct  = 100 − expensePct   （允许负值，表示超支）
 | 字段 | 规则 |
 | --- | --- |
 | 账号 | 必填，最长 **32** 位；无最短、无字符集限制；全局唯一 |
-| 密码 | 必填，最长 **72** 位；无最短长度 |
+| 密码 | 必填；**注册**最短 **8**、最长 **72** 位；登录不复检最短（兼容既有短密码） |
 | 邮箱 | **不要求**（旧数据可兼容；新注册不填） |
 | 登录 | 账号 + 密码 |
 
@@ -151,6 +153,29 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 若要改用 R2（约 10GB）：在 [R2 Overview](https://dash.cloudflare.com/?to=/:account/r2) 开通后创建桶，把 `wrangler.jsonc` 的 `kv_namespaces` 换成 `r2_buckets`（binding 仍用 `MONEY_DATA`）。
 
+### GitHub Actions 自动部署
+
+`.github/workflows/ci.yml`：PR / 非 `main` 分支只跑 `npm run check`；**push 到 `main`** 且 check 通过后执行 `npm run deploy`（`opennextjs-cloudflare build && deploy`）。
+
+请在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置（变量名须与 workflow 一致，**不要**把 token 写入仓库或 commit）：
+
+| Secret | 说明 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（见下方创建步骤） |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID（Dashboard 右侧或 Workers 概览；须与 `wrangler.jsonc` 里 KV `id` 所属账号一致） |
+
+**创建 API Token（推荐）：**
+
+1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Token**
+2. 使用模板 **Edit Cloudflare Workers**，或自定义权限至少包含：
+   - Account → **Cloudflare Workers Scripts** → **Edit**
+   - Account → **Workers KV Storage** → **Edit**（本项目绑定了 `MONEY_DATA` KV）
+   - 如模板要求，再勾选 Account 资源范围到你的账号
+3. 创建后复制 token，只粘贴到 GitHub Secret `CLOUDFLARE_API_TOKEN`（只显示一次）
+4. 配好 Secrets 后，对 `main` 再 push 一次或在 Actions 里 **Re-run failed jobs**
+
+若 deploy 仍失败：看 job 日志里是否有 `Authentication error` / `Invalid account` / `KV namespace` / OpenNext build 报错，再分别查 token 权限、Account ID、KV id 或构建问题。
+
 ---
 
 ## 已知局限
@@ -162,6 +187,26 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 - 「重启网站」无法强制清掉浏览器 HTTP 磁盘缓存的全部条目（依赖 SW/Cache API + 硬刷新）
 
 ---
+
+
+## E2E 冒烟（Playwright）
+
+最小访客冒烟（`e2e/smoke.spec.ts`，1～3 条）：首页决策摘要、改到手收入后摘要仍在、分区 chip「走势」。
+
+```bash
+# 首次（或换机）只需 Chromium
+npx playwright install chromium
+
+# 推荐：先 build 再由 webServer 起 next start（省内存）
+npm run test:e2e
+
+# 已有本地服务时：先 npm run start（或 dev），再
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:dev
+```
+
+- 配置：`playwright.config.ts`（默认端口 `4173`，可用 `PLAYWRIGHT_PORT` 覆盖）
+- **CI**：尚未接入 workflow；后续可加独立 job（`continue-on-error` 或非 required），勿拖垮主 `check`
+- 更细的移动端人工清单仍见 [`tests/mobile-smoke.md`](tests/mobile-smoke.md)
 
 ## 目录速览
 
