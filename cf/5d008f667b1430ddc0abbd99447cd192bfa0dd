@@ -1,0 +1,27 @@
+app/incomeDetailLayout.test.ts
+  s_99f15b4da4efb8::t_32ec6829641acd 258,263-268,271-272
+  s_99f15b4da4efb8::t_aa75792a4489d4 91,100-102,104
+app/components/FloatPanel.tsx
+  s_99f15b4da4efb8::t_1f85c1b3c2df18 232-235,241,251-252,281,283
+  s_99f15b4da4efb8::t_c8984dd36c484f 5
+app/globals.css
+  s_99f15b4da4efb8::t_58e6065b92ea4a 137-138,141-142
+app/components/SheetPageShell.tsx
+  s_99f15b4da4efb8::t_84b2f33305e8da 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cf5d008f667b1430ddc0abbd99447cd192bfa0dd",
+  "prompts": {},
+  "sessions": {
+    "s_99f15b4da4efb8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3bdbc60a-2c7d-48e9-8704-db220464a6c8",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
