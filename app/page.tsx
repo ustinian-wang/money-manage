@@ -2676,11 +2676,11 @@ function ReinvestEditor({
           <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（不超过当月结余）。'}</InfoTip>
         </span>
         <SelectNumberField
-          className="shrink-0 self-start sm:self-auto"
+          className="min-w-[12rem] shrink-0 self-start sm:self-auto"
           select={(
             <select
               aria-label="再投入模式"
-              className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700"
+              className="field-input !mt-0 !w-auto max-w-[5.5rem] py-1 text-xs font-medium text-slate-700"
               value={setting.mode}
               onChange={(event) => switchMode(event.target.value as ReinvestMode)}
             >
@@ -2690,7 +2690,7 @@ function ReinvestEditor({
           )}
           input={isPercent ? (
             <SoftNumberInput
-              className="field-input !mt-0 w-24"
+              className="field-input !mt-0 min-w-[6.5rem] w-32"
               min={0}
               max={100}
               step={1}
@@ -2700,7 +2700,7 @@ function ReinvestEditor({
             />
           ) : (
             <SoftNumberInput
-              className="field-input !mt-0 w-28"
+              className="field-input !mt-0 min-w-[7.5rem] w-36"
               min={0}
               step={100}
               suffix="/月"

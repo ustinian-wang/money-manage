@@ -33,6 +33,13 @@ describe('SelectNumberField 组件契约', () => {
       /from ['"][^'"]*softNumber|from ['"][^'"]*SoftNumber|<SoftNumberInput\b/i,
     );
   });
+
+  // 数字槽优先可读：flex-1 + min-w；select 可 shrink，避免挤没 SoftNumberInput
+  it('input 槽 flex-1 + min-w；select 可 shrink', () => {
+    assert.match(selectNumberSrc, /min-w-\[6\.75rem\] flex-1/);
+    assert.match(selectNumberSrc, /min-w-0 shrink/);
+    assert.doesNotMatch(selectNumberSrc, /shrink-0/);
+  });
 });
 
 describe('ReinvestEditor 行内编辑', () => {
@@ -61,5 +68,14 @@ describe('ReinvestEditor 行内编辑', () => {
     assert.match(src, /switchReinvestMode\(/);
     assert.match(src, /<SoftNumberInput[\s\S]*?suffix="%"/);
     assert.match(src, /<SoftNumberInput[\s\S]*?suffix="\/月"/);
+  });
+
+  // 百分比 / 固定金额数字槽加宽，避免 field-row 右侧 select+input 把 SoftNumberInput 压窄
+  it('再投入 SoftNumberInput 加宽 min-w / w-，select 略限宽', () => {
+    const src = reinvestEditorSource();
+    assert.match(src, /min-w-\[6\.5rem\] w-32/);
+    assert.match(src, /min-w-\[7\.5rem\] w-36/);
+    assert.match(src, /max-w-\[5\.5rem\]/);
+    assert.match(src, /min-w-\[12rem\]/);
   });
 });
