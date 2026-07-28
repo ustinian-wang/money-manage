@@ -1,0 +1,19 @@
+domain/emergency/index.test.ts
+  s_419205fdb9e489::t_da1448c33cb808 158-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b7a1e4b7582f1c1b119e7e73c5c568ab5cabae49",
+  "prompts": {},
+  "sessions": {
+    "s_419205fdb9e489": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e3bc094a-9eab-4159-93a4-4f26edf9dcc0",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
