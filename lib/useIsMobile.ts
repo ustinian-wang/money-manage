@@ -8,7 +8,7 @@ export const MOBILE_MQ = '(max-width: 639px)';
 /**
  * PC vs 移动端交互规范（不要混用）
  * - PC：锚点浮层、悬停说明、密表、可拖拽大面板、无遮罩
- * - 移动：底部抽屉 + 遮罩、触控卡片、分区跳转、大触控区、锁滚动
+ * - 移动：panel 全屏内页 + 遮罩、触控卡片、大触控区、锁滚动
  */
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * 访客最小冒烟（1～3 条）：首页摘要 / 改收入后摘要仍在 / 走势 chip。
+ * 访客最小冒烟（1～2 条）：首页摘要 / 改收入后摘要仍在。
  * 不铺全旅程；不依赖登录。
  */
 test.describe('访客冒烟', () => {
@@ -29,14 +29,5 @@ test.describe('访客冒烟', () => {
 
     await expect(summary).toBeVisible();
     await expect(summary.locator('.tabular-nums').first()).toBeVisible();
-  });
-
-  test('分区 chip「走势」可点', async ({ page }) => {
-    await page.goto('/');
-    const charts = page.locator('#sec-charts');
-    await expect(charts).toBeAttached();
-
-    await page.getByRole('navigation', { name: '页面分区' }).getByRole('button', { name: '走势' }).click();
-    await expect(charts).toBeInViewport({ ratio: 0.05 });
   });
 });

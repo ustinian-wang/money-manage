@@ -2,15 +2,16 @@
 
 /**
  * 通用浮层：PC popover / 移动 sheet；field 矮卡居中
+ * 移动 density=panel：全屏内页（贴顶贴底）；field 仍矮卡
  * 供 ConfirmDialog、Editable、明细面板等复用
  */
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import PanelHeader from './PanelHeader';
+import SheetPageShell from './SheetPageShell';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../../lib/useVisualViewport';
-import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeNearAnchor, placeSheetAtBottom, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
+import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeFullscreenInViewport, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
 import { Z_INDEX } from '../../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent } from '../../lib/ui/overlayEvents';
 
@@ -28,9 +29,9 @@ export type FloatPanelProps = {
   /** PC 大面板可拖；移动 sheet 模式忽略 */
   draggable?: boolean;
   headerTitle?: string;
-  /** auto=按断点；popover=PC 锚点浮层；sheet=移动底部抽屉 */
+  /** auto=按断点；popover=PC 锚点浮层；sheet=移动底部抽屉 / 全屏内页 */
   mode?: 'auto' | 'popover' | 'sheet';
-  /** tip/field 轻量；panel 全套 sheet（仅 panel 抬升 maxHeight） */
+  /** tip/field 轻量；panel 移动端全屏内页 */
   density?: 'tip' | 'field' | 'panel';
   /** 固定底栏（不随内容滚动），如保存/取消 */
   footer?: ReactNode;
@@ -59,10 +60,10 @@ export default function FloatPanel({
   children,
 }: FloatPanelProps) {
   const isMobile = useIsMobile();
-  // tip：永不 sheet；field/panel：移动 auto→底卡；仅 panel 用全套抬升
+  // tip：永不 sheet；field/panel：移动 auto→sheet；panel 走全屏内页
   const asSheet = density !== 'tip' && (mode === 'sheet' || (mode === 'auto' && isMobile));
-  const liftFloor = asSheet && density === 'panel';
-  const lockBody = asSheet && density === 'panel';
+  const isPanelSheet = asSheet && density === 'panel';
+  const lockBody = isPanelSheet;
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const userDraggedRef = useRef(false);
@@ -78,12 +79,25 @@ export default function FloatPanel({
       if (userDraggedRef.current) return;
       const anchor = anchorRef.current;
       const vv = window.visualViewport;
-      const viewLeft = vv?.offsetLeft ?? 0;
-      const viewW = vv?.width ?? window.innerWidth;
       const viewH = vv?.height ?? window.innerHeight;
       const vp = viewportBounds(vv, window.innerWidth, window.innerHeight, FLOAT_MARGIN, safe);
+      // panel：直接贴满 VV（宽=VV宽、高=VV高）；safe 只走内 padding，勿预扣到 top/left/宽高
+      if (isPanelSheet) {
+        const full = placeFullscreenInViewport(vv, window.innerWidth, window.innerHeight);
+        setPos({
+          top: full.top,
+          left: full.left,
+          width: Math.max(full.width, 1),
+          height: Math.max(full.height, 1),
+        });
+        const active = document.activeElement;
+        if (active && panelRef.current?.contains(active)) {
+          ensureFocusedInVisualViewportNow(active);
+        }
+        return;
+      }
       const maxH = Math.min(
-        viewH * ((liftFloor ? Math.max(maxHeightVh, 72) : maxHeightVh) / 100),
+        viewH * (maxHeightVh / 100),
         Math.max(0, vp.bottom - vp.top),
       );
       const panel = panelRef.current;
@@ -91,21 +105,13 @@ export default function FloatPanel({
       const natural = panel && scrollEl
         ? measurePanelNaturalHeight(panel.offsetHeight, scrollEl.clientHeight, scrollEl.scrollHeight)
         : (panel?.offsetHeight ?? 240);
-      // 显式用高：短内容随内容，超长卡在 VV 内，内层 [data-float-scroll] 才能滚到底
+      // field/PC：短内容随内容，超长卡在 VV 内
       const panelH = calcPanelUsedHeight(natural, Math.max(maxH, 1));
-      const panelW = asSheet && density === 'panel'
-        ? viewW
-        : Math.min(width, Math.max(0, vp.right - vp.left));
+      const panelW = Math.min(width, Math.max(0, vp.right - vp.left));
       let left: number;
       let top: number;
       let nextW = panelW;
-      if (asSheet && density === 'panel') {
-        // panel sheet：贴底全宽，仅防左右溢出
-        const sheet = placeSheetAtBottom(panelH, vp, viewLeft, viewW, true);
-        top = sheet.top;
-        left = sheet.left;
-        nextW = sheet.width;
-      } else if (density === 'field' || center) {
+      if (density === 'field' || center) {
         // field 小编辑：默认视口居中；被键盘挡住则上移夹紧
         const c = placeCenteredInViewport(panelW, panelH, vp);
         top = c.top;
@@ -147,7 +153,7 @@ export default function FloatPanel({
       vv?.removeEventListener('scroll', place);
       releaseBodyLock?.();
     };
-  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, liftFloor, lockBody, footer, scrollResetKey]);
+  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, isPanelSheet, lockBody, footer, scrollResetKey]);
 
   useEffect(() => {
     if (!open) return;
@@ -220,13 +226,21 @@ export default function FloatPanel({
   };
 
   if (!open) return null;
-  const sheetMaxVh = liftFloor ? Math.max(maxHeightVh, 78) : maxHeightVh;
-  const isPanelSheet = asSheet && density === 'panel';
+  // panel 全屏内页用满视口；field 仍跟调用方 maxHeightVh
+  const sheetMaxVh = isPanelSheet ? 100 : maxHeightVh;
   const isFieldCard = asSheet && density === 'field';
+  // panel：place 前用 VV CSS 变量兜底，避免 height=0 时 hug 内容露底
   const panelWidth = pos.width
     || (isPanelSheet
-      ? (typeof window !== 'undefined' ? window.innerWidth : width)
+      ? '100%'
       : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width));
+  const panelHeight = isPanelSheet
+    ? (pos.height || 'var(--vv-height, 100dvh)')
+    : (pos.height || undefined);
+  const panelTop = isPanelSheet && !pos.height
+    ? 'var(--vv-offset-top, 0px)'
+    : pos.top;
+  const panelLeft = isPanelSheet && !pos.width ? 0 : pos.left;
   // PC：仅显式标题/可拖时出标题栏；移动 panel/field：标题+关闭
   const showHeader = asSheet || Boolean(headerTitle) || draggable;
   return createPortal(
@@ -245,7 +259,7 @@ export default function FloatPanel({
       <div
         ref={panelRef}
         data-float-panel
-        data-ux={isPanelSheet ? 'sheet' : isFieldCard ? 'field-card' : 'popover'}
+        data-ux={isPanelSheet ? 'sheet-page' : isFieldCard ? 'field-card' : 'popover'}
         data-density={density}
         role="dialog"
         aria-modal={asSheet ? 'true' : undefined}
@@ -253,40 +267,39 @@ export default function FloatPanel({
         tabIndex={-1}
         onKeyDown={onPanelKeyDown}
         onFocusCapture={(event) => { scrollFocusedFieldIntoView(event.target); }}
-        className={`fixed flex flex-col overscroll-contain border border-slate-200 bg-white ${isPanelSheet ? 'rounded-t-3xl rounded-b-none border-b-0 shadow-2xl' : 'rounded-2xl shadow-xl'} overflow-hidden`}
+        className={`fixed flex flex-col overscroll-contain bg-white ${isPanelSheet ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-slate-200 shadow-xl'} overflow-hidden`}
         style={{
-          top: pos.top,
-          left: pos.left,
+          top: panelTop,
+          left: panelLeft,
           zIndex,
           width: panelWidth,
-          height: pos.height || undefined,
-          maxHeight: asSheet || density === 'field' || center
-            ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
-            : `${sheetMaxVh}vh`,
-          // place() 已按 visualViewport 贴底/居中夹紧，勿再叠 --kb-inset
+          height: panelHeight,
+          // panel：maxHeight 跟显式 height，勿再 min(dvh) 裁切导致四周露遮罩
+          maxHeight: isPanelSheet
+            ? (pos.height ? `${pos.height}px` : 'var(--vv-height, 100dvh)')
+            : asSheet || density === 'field' || center
+              ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
+              : `${sheetMaxVh}vh`,
+          maxWidth: isPanelSheet ? '100%' : undefined,
+          boxSizing: 'border-box',
+          // place() 已按 visualViewport 贴顶贴底/居中；safe-area 由 padding 消化
+          paddingTop: isPanelSheet ? 'env(safe-area-inset-top, 0px)' : undefined,
           paddingBottom: asSheet ? 'env(safe-area-inset-bottom, 0px)' : undefined,
         }}
       >
-        {isPanelSheet && <div className="sheet-handle" aria-hidden />}
-        {showHeader && (
-          <PanelHeader
-            title={headerTitle || '编辑'}
-            onClose={onClose}
-            onBack={onBack}
-            density={isFieldCard ? 'field' : 'panel'}
-            touchClose={asSheet}
-            draggable={draggable && !asSheet}
-            onMouseDown={onHeaderMouseDown}
-          />
-        )}
-        <div data-float-scroll className={`min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain ${isFieldCard ? 'p-3' : 'p-4'}`}>
+        <SheetPageShell
+          title={headerTitle}
+          onClose={onClose}
+          onBack={onBack}
+          footer={footer}
+          density={isFieldCard ? 'field' : 'panel'}
+          touchClose={asSheet}
+          draggable={draggable && !asSheet}
+          onHeaderMouseDown={onHeaderMouseDown}
+          showHeader={showHeader}
+        >
           {children}
-        </div>
-        {footer && (
-          <div data-float-footer className={`shrink-0 border-t border-slate-100 bg-white ${isFieldCard ? 'px-3 py-2.5' : 'px-4 py-3'}`}>
-            {footer}
-          </div>
-        )}
+        </SheetPageShell>
       </div>
     </>,
     document.body,

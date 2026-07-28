@@ -88,6 +88,7 @@ export function placeCenteredInViewport(
 
 /**
  * sheet 贴 visualViewport 底边；fullBleed 铺满视口宽，否则水平居中并夹紧。
+ * 调用方应对 panel sheet 传入「底边不吃 margin/safe」的盒子，否则会露出底部空隙。
  */
 export function placeSheetAtBottom(
   panelH: number,
@@ -102,6 +103,64 @@ export function placeSheetAtBottom(
     : clamp(viewLeft + (viewWidth - width) / 2, vp.left, Math.max(vp.left, vp.right - width));
   const top = Math.max(vp.top, vp.bottom - panelH);
   return { top, left, width };
+}
+
+/**
+ * panel sheet 贴底用视口：顶仍用夹紧盒（避顶栏/margin），底贴 VV 真底。
+ * safe-area 由面板 paddingBottom 消化，勿再从 bottom 预扣，否则遮罩会从底缝漏出。
+ * 半高 sheet 仍可用；移动 density=panel 全屏内页改走 sheetFullscreenViewport。
+ */
+export function sheetFlushViewport(
+  vv: { offsetTop: number; height: number } | null | undefined,
+  clamped: ViewportBox,
+  viewLeft: number,
+  viewWidth: number,
+  fallbackHeight: number,
+): ViewportBox {
+  const top0 = vv?.offsetTop ?? 0;
+  const h = vv?.height ?? fallbackHeight;
+  return {
+    left: viewLeft,
+    top: clamped.top,
+    right: viewLeft + Math.max(0, viewWidth),
+    bottom: top0 + Math.max(0, h),
+  };
+}
+
+/**
+ * 移动 panel 全屏内页：顶底均贴 VV 真边（不预扣 margin/safe）。
+ * safe-area 由面板 paddingTop/Bottom 消化；优先用 placeFullscreenInViewport 拿 top/left/宽高。
+ */
+export function sheetFullscreenViewport(
+  vv: { offsetTop: number; height: number } | null | undefined,
+  viewLeft: number,
+  viewWidth: number,
+  fallbackHeight: number,
+): ViewportBox {
+  const top0 = vv?.offsetTop ?? 0;
+  const h = vv?.height ?? fallbackHeight;
+  return {
+    left: viewLeft,
+    top: top0,
+    right: viewLeft + Math.max(0, viewWidth),
+    bottom: top0 + Math.max(0, h),
+  };
+}
+
+/**
+ * 移动 panel 全屏内页：宽高与 top/left 一次性贴满 visualViewport（不吃 margin/safe）。
+ * 勿再经 placeSheetAtBottom 拼装，避免半高语义残留；safe-area 只走面板内 padding。
+ */
+export function placeFullscreenInViewport(
+  vv: { offsetLeft: number; offsetTop: number; width: number; height: number } | null | undefined,
+  fallbackW: number,
+  fallbackH: number,
+): { top: number; left: number; width: number; height: number } {
+  const left = vv?.offsetLeft ?? 0;
+  const top = vv?.offsetTop ?? 0;
+  const width = Math.max(0, vv?.width ?? fallbackW);
+  const height = Math.max(0, vv?.height ?? fallbackH);
+  return { top, left, width, height };
 }
 
 /**

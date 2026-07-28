@@ -37,3 +37,51 @@ export function formatYearMonthChartAxisLabel(value: string, narrow: boolean): s
   if (!match) return value;
   return `${match[1]}年`;
 }
+
+/** 占比 Y 轴最多分段数（约 6 个刻度标签） */
+export const PERCENT_SHARE_Y_MAX_SPLITS = 5;
+
+/** 正常 0～100% 默认步长 */
+export const PERCENT_SHARE_Y_BASE_INTERVAL = 20;
+
+/**
+ * 1-2-5 nice ceil：把 raw 抬到可读步长。
+ * ponytail: 仅服务百分比轴；非正数回落到 BASE_INTERVAL
+ */
+export function niceCeilInterval(raw: number): number {
+  if (!(raw > 0) || !Number.isFinite(raw)) return PERCENT_SHARE_Y_BASE_INTERVAL;
+  const exp = Math.floor(Math.log10(raw));
+  const base = 10 ** exp;
+  const frac = raw / base;
+  const nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10;
+  return nice * base;
+}
+
+/**
+ * 占比图 Y 轴：按跨度抬高 interval，避免固定 20 在极端超支时刷出过多刻度。
+ * @param extentMin / extentMax 已含业务兜底（如 0～100、warn 档）
+ */
+export function percentShareYAxis(
+  extentMin: number,
+  extentMax: number,
+): { min: number; max: number; interval: number } {
+  const lo = Number.isFinite(extentMin) ? extentMin : 0;
+  const hi = Number.isFinite(extentMax) ? extentMax : 100;
+  // 先按 10 对齐，与历史 floor/ceil 行为一致
+  let min = Math.floor(lo / 10) * 10;
+  let max = Math.ceil(hi / 10) * 10;
+  if (max <= min) max = min + PERCENT_SHARE_Y_BASE_INTERVAL;
+  const span = max - min;
+  let interval = niceCeilInterval(
+    Math.max(PERCENT_SHARE_Y_BASE_INTERVAL, span / PERCENT_SHARE_Y_MAX_SPLITS),
+  );
+  // nice 仍可能偏小：抬到下一级直到段数不超上限
+  while (span / interval > PERCENT_SHARE_Y_MAX_SPLITS + 1e-9) {
+    interval = niceCeilInterval(interval * 1.01);
+  }
+  // 按最终 interval 重对齐端点
+  min = Math.floor(lo / interval) * interval;
+  max = Math.ceil(hi / interval) * interval;
+  if (max <= min) max = min + interval;
+  return { min, max, interval };
+}

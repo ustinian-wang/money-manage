@@ -8,8 +8,11 @@ import {
   calcPanelUsedHeight,
   measurePanelNaturalHeight,
   placeCenteredInViewport,
+  placeFullscreenInViewport,
   placeNearAnchor,
   placeSheetAtBottom,
+  sheetFlushViewport,
+  sheetFullscreenViewport,
   viewportBounds,
   ZERO_SAFE,
 } from './floatPlace';
@@ -45,6 +48,91 @@ describe('floatPlace 视口夹紧', () => {
     assert.equal(sheet.left, 0);
     assert.equal(sheet.width, 390);
     assert.equal(sheet.top, vp.bottom - 400);
+  });
+
+  test('sheetFlushViewport 底贴 VV 真底，不吃 margin/safe', () => {
+    const clamped = viewportBounds(
+      { offsetLeft: 0, offsetTop: 0, width: 390, height: 700 },
+      390,
+      700,
+      10,
+      { top: 0, right: 0, bottom: 34, left: 0 },
+    );
+    // 夹紧盒底 = 700 - 10 - 34 = 656，真底应为 700
+    assert.equal(clamped.bottom, 656);
+    const flush = sheetFlushViewport(
+      { offsetTop: 0, height: 700 },
+      clamped,
+      0,
+      390,
+      700,
+    );
+    assert.equal(flush.bottom, 700);
+    assert.equal(flush.top, clamped.top);
+    const sheet = placeSheetAtBottom(400, flush, 0, 390, true);
+    assert.equal(sheet.top, 300);
+    assert.equal(sheet.top + 400, 700);
+  });
+
+  test('sheetFullscreenViewport 顶底贴 VV，满高即全屏内页', () => {
+    const full = sheetFullscreenViewport(
+      { offsetTop: 0, height: 700 },
+      0,
+      390,
+      700,
+    );
+    assert.equal(full.top, 0);
+    assert.equal(full.bottom, 700);
+    assert.equal(full.left, 0);
+    assert.equal(full.right, 390);
+    const h = full.bottom - full.top;
+    const sheet = placeSheetAtBottom(h, full, 0, 390, true);
+    assert.equal(sheet.top, 0);
+    assert.equal(sheet.width, 390);
+    assert.equal(sheet.top + h, 700);
+  });
+
+  test('placeFullscreenInViewport 宽高贴满 VV，不预扣 margin/safe', () => {
+    // 契约：top/left/width/height 直接等于 VV 真边，四周不露底
+    const placed = placeFullscreenInViewport(
+      { offsetLeft: 0, offsetTop: 0, width: 390, height: 700 },
+      390,
+      844,
+    );
+    assert.equal(placed.top, 0);
+    assert.equal(placed.left, 0);
+    assert.equal(placed.width, 390);
+    assert.equal(placed.height, 700);
+    assert.equal(placed.left + placed.width, 390);
+    assert.equal(placed.top + placed.height, 700);
+  });
+
+  test('键盘抬高时 sheetFullscreenViewport 跟随 VV', () => {
+    const full = sheetFullscreenViewport(
+      { offsetTop: 120, height: 400 },
+      0,
+      390,
+      700,
+    );
+    assert.equal(full.top, 120);
+    assert.equal(full.bottom, 520);
+    const h = full.bottom - full.top;
+    const sheet = placeSheetAtBottom(h, full, 0, 390, true);
+    assert.equal(sheet.top, 120);
+    assert.equal(sheet.top + h, 520);
+  });
+
+  test('键盘抬高时 placeFullscreenInViewport 宽高跟随 VV', () => {
+    const placed = placeFullscreenInViewport(
+      { offsetLeft: 12, offsetTop: 120, width: 366, height: 400 },
+      390,
+      700,
+    );
+    assert.equal(placed.top, 120);
+    assert.equal(placed.left, 12);
+    assert.equal(placed.width, 366);
+    assert.equal(placed.height, 400);
+    assert.equal(placed.top + placed.height, 520);
   });
 
   test('键盘抬高 offsetTop 时 viewportBounds 跟随', () => {

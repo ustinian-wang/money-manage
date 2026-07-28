@@ -1,14 +1,13 @@
 /**
- * 鉴权壳 class 决策：高度跟 CSS --vv-height，禁止 Tailwind min-h-screen
- * （min-height:100vh 会盖住 height:var(--vv-height)，键盘态无法滚焦点入视）
+ * 鉴权页布局 class：普通文档流居中，不用 fixed overflow 壳
  */
 
-/** AuthBar page/gate：挂在 .auth-gate-root 上 */
+/** AuthBar page/gate：内容区居中 */
 export function authGateRootClassName(): string {
-  return 'auth-gate-root flex min-h-0 flex-col items-center bg-paper px-4 py-10 text-ink';
+  return 'flex flex-1 flex-col items-center justify-center px-4 py-10';
 }
 
-/** AuthPageShell 就绪态外层 main（fixed gate 自撑高，勿再叠 100vh） */
+/** AuthPageShell 外层 main：相对定位 + 撑满视口，供左上角 logo 锚点 */
 export function authPageShellMainClassName(): string {
-  return 'bg-paper text-ink';
+  return 'relative flex min-h-screen flex-col bg-paper text-ink';
 }

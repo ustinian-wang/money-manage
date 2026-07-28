@@ -251,13 +251,24 @@ describe('移动禁浮层叠浮层契约', () => {
     assert.match(panelHeaderSource, /返回/);
   });
 
-  it('SocialTaxBreakdown / AssetLinkedEditor 移动不 portal nestedPanel', () => {
-    // nestedPanel 仅包在 !isMobile
+  it('移动 density=panel 走全屏内页（sheet-page），非半高抽屉', () => {
+    // 契约：panel → data-ux=sheet-page + placeFullscreenInViewport 宽高贴满 VV；field 仍矮卡
+    assert.match(floatPanelSource, /data-ux=\{isPanelSheet \? 'sheet-page'/);
+    assert.match(floatPanelSource, /placeFullscreenInViewport/);
+    assert.match(floatPanelSource, /paddingTop: isPanelSheet \? 'env\(safe-area-inset-top/);
+    assert.match(floatPanelSource, /shadow-none/);
+    // 全屏 maxHeight 跟显式像素高，不靠半高 dvh 裁切
+    assert.match(floatPanelSource, /pos\.height \? `\$\{pos\.height\}px`/);
+    assert.doesNotMatch(floatPanelSource, /sheet-handle/);
+    assert.doesNotMatch(floatPanelSource, /rounded-t-3xl/);
+  });
+
+  it('SocialTaxBreakdown 移动不 portal nestedPanel（资产配置见 assetConfigLayout.test）', () => {
+    // nestedPanel 仅包在 !isMobile；应急已扁平进资产内页，不再断言 emergency 子页
     assert.match(socialTaxSource, /\{!isMobile && \([\s\S]*zIndex=\{Z_INDEX\.nestedPanel\}/);
-    assert.match(assetSource, /\{!isMobile && \([\s\S]*zIndex=\{Z_INDEX\.nestedPanel\}/);
     assert.match(socialTaxSource, /data-sheet-subview=/);
-    assert.match(assetSource, /data-sheet-subview=\"emergency\"/);
     assert.match(socialTaxSource, /onBack=\{mobileSubView \? popSub : undefined\}/);
-    assert.match(assetSource, /onBack=\{isMobile && emergencyOpen \? popEmergency : undefined\}/);
+    assert.doesNotMatch(assetSource, /data-sheet-subview=\"emergency\"/);
+    assert.doesNotMatch(assetSource, /emergencyOpen|popEmergency/);
   });
 });

@@ -3,8 +3,8 @@
 /**
  * 顶栏账号入口 + 鉴权表单
  * variant=bar：顶栏 Link（主页访客改走「访客」圆形菜单，一般不再用）
- * variant=page：独立鉴权页表单（lockMode 时不在本页切 mode）
- * variant=gate：保留全屏门禁形态（可选）
+ * variant=page：独立鉴权页（左上角 logo + 居中表单）
+ * variant=gate：同 page 的居中表单（可选，非 lockMode 可页内切 mode）
  */
 import Link from 'next/link';
 import { FormEvent, FocusEvent, useEffect, useState } from 'react';
@@ -50,7 +50,7 @@ export default function AuthBar({
     showLoggedInControls = true,
     onBeforeNavigate,
 }: Props) {
-    // 同步 --vv-height / --kb-inset，供门禁与 auth 页 CSS 使用
+    // 同步 --vv-height / --kb-inset；键盘弹起时滚入焦点字段
     useVisualViewport();
     const [mode, setMode] = useState<AuthMode>(initialMode);
     const [login, setLogin] = useState('');
@@ -144,39 +144,17 @@ export default function AuthBar({
     };
 
     const formCard = (
-        <div className={variant === 'bar'
-            ? 'relative z-10 w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl'
-            : 'relative z-10 w-full max-w-md rounded-3xl bg-white p-5 shadow-xl sm:p-6'}
-        >
-            <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold sm:text-lg">{mode === 'login' ? '登录' : '注册账号'}</h2>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
-                {mode === 'register'
-                    ? '新账号使用系统默认数据起步；当前访客测算草稿不会绑定到账号。'
-                    : '登录后读取你的云端数据；若账号为空，可选择绑定当前访客草稿。'}
-            </p>
-            <div className="mt-3 flex gap-2 text-xs">
-                {lockMode ? (
-                    <>
-                        <span className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`}>
-                            {mode === 'login' ? '登录' : '注册'}
-                        </span>
-                        <Link
-                            href={authHref(mode === 'login' ? 'register' : 'login')}
-                            className="touch-btn rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"
-                        >
-                            {mode === 'login' ? '去注册' : '去登录'}
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
-                        <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); }}>注册</button>
-                    </>
-                )}
-            </div>
-            <form className="mt-4 space-y-3" onSubmit={(event) => void submit(event)} onFocusCapture={onFormFocusCapture}>
+        <div className="w-full max-w-sm">
+            <h1 className="text-xl font-semibold">
+                {mode === 'login' ? '登录' : '注册'}
+            </h1>
+            {!lockMode && (
+                <div className="mt-3 flex gap-2 text-xs">
+                    <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'login' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('login'); setError(''); }}>登录</button>
+                    <button type="button" className={`touch-btn rounded-full px-3 py-1.5 ${mode === 'register' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => { setMode('register'); setError(''); }}>注册</button>
+                </div>
+            )}
+            <form className="mt-5 space-y-3" onSubmit={(event) => void submit(event)} onFocusCapture={onFormFocusCapture}>
                 {mode === 'login' ? (
                     <label className="block text-xs text-slate-500">账号
                         <input
@@ -194,7 +172,7 @@ export default function AuthBar({
                         />
                     </label>
                 ) : (
-                    <label className="block text-xs text-slate-500">账号（最长 {USERNAME_MAX} 位）
+                    <label className="block text-xs text-slate-500">账号
                         <input
                             className="field-input mt-1"
                             name="username"
@@ -210,10 +188,7 @@ export default function AuthBar({
                         />
                     </label>
                 )}
-                <label className="block text-xs text-slate-500">
-                    {mode === 'register'
-                        ? `密码（${PASSWORD_MIN}–${PASSWORD_MAX} 位）`
-                        : `密码（最长 ${PASSWORD_MAX} 位）`}
+                <label className="block text-xs text-slate-500">密码
                     <input
                         className="field-input mt-1"
                         name="password"
@@ -246,36 +221,39 @@ export default function AuthBar({
                     {busy ? '处理中…' : mode === 'login' ? '登录' : '注册'}
                 </button>
             </form>
-            {(variant === 'gate' || variant === 'page') && (
-                <button
-                    type="button"
-                    className="mt-3 w-full text-center text-xs text-slate-500 underline"
-                    onClick={() => onLogout()}
-                >
-                    继续访客体验
-                </button>
-            )}
+            {lockMode ? (
+                <p className="mt-4 text-center text-sm text-slate-500">
+                    <Link
+                        href={authHref(mode === 'login' ? 'register' : 'login')}
+                        className="underline hover:text-ink"
+                    >
+                        {mode === 'login' ? '去注册' : '去登录'}
+                    </Link>
+                </p>
+            ) : null}
         </div>
     );
 
     if (variant === 'gate' || variant === 'page') {
         return (
-            <div
-                className={authGateRootClassName()}
-                role="dialog"
-                aria-modal="true"
-                aria-label={mode === 'login' ? '登录' : '注册'}
-            >
-                <div className="mb-6 flex flex-col items-center gap-2 text-center">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-ink text-lg font-bold text-white">M</div>
-                    <p className="text-lg font-semibold">财务规划</p>
-                    <p className="text-xs text-slate-400">
-                        {variant === 'page'
-                            ? (mode === 'login' ? '登录同步云端，或返回继续访客体验' : '注册默认数据起步，或返回继续访客体验')
-                            : '登录同步云端，或继续访客体验'}
-                    </p>
+            <div className="relative flex min-h-0 flex-1 flex-col">
+                {/* 左上角站点 logo：回首页 */}
+                <Link
+                    href="/"
+                    className="absolute left-3 top-3 z-10 flex items-center gap-2 sm:left-6 sm:top-4"
+                    aria-label="返回首页"
+                >
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink text-sm font-bold text-white">M</span>
+                    <span className="text-sm font-semibold">财务规划</span>
+                </Link>
+                <div
+                    className={authGateRootClassName()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={mode === 'login' ? '登录' : '注册'}
+                >
+                    {formCard}
                 </div>
-                {formCard}
             </div>
         );
     }

@@ -26,6 +26,6 @@ test('blur 保存：不允许空 → 空恢复原值', () => {
   assert.equal(commitTextField(' 新名 ', '房租', { allowEmpty: false }), '新名');
 });
 
-test('默认 allowEmpty=true（支出名称/分类可空）', () => {
+test('默认 allowEmpty=true（支出名称等可空）', () => {
   assert.equal(commitTextField('', '原值'), '');
 });

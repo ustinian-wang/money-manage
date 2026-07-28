@@ -7,6 +7,8 @@ import ReactECharts from 'echarts-for-react';
 import InstallToDesktop from './InstallToDesktop';
 import ConfirmDialog from './components/ConfirmDialog';
 import FloatPanel from './components/FloatPanel';
+import LinkedNumberFields, { LinkLockIcon } from './components/LinkedNumberFields';
+import SelectNumberField from './components/SelectNumberField';
 import { useRouter } from 'next/navigation';
 import { logoutSession, type AuthUser } from './AuthBar';
 import { authHref } from '../lib/auth/authHref';
@@ -18,24 +20,14 @@ import {
   formatYearMonthChartAxisLabel,
   monthAxisInterval,
   monthAxisRotate,
+  percentShareYAxis,
 } from '../lib/chartAxis';
 import { FLOAT_MARGIN, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
 import { BRAND } from '../lib/ui/brandColors';
 import { Z_INDEX } from '../lib/ui/zIndex';
 import { LIGHT_DEMO_ASSETS, LIGHT_DEMO_EXPENSES } from '../lib/demoDefaults';
 import { buildDecisionSummary } from '../lib/decisionSummary';
-import {
-  FIRST_VISIT_CHECKLIST_STEPS,
-  canDismissChecklist,
-  loadChecklistDismissed,
-  loadCompletedSteps,
-  markStepComplete,
-  saveChecklistDismissed,
-  saveCompletedSteps,
-  shouldShowChecklist,
-  type ChecklistStepId,
-} from '../lib/firstVisitChecklist';
-import { pickActiveSection, stickyAwareScrollY } from '../lib/sectionNav';
+import { pickCashFlowGuideFlags, pickExpenseShareWarnYAxes, pickRemainShareWarnYAxes } from '../lib/shareWarnMarkLines';
 import { loadGuestDraft, resolveGuestProfile, saveGuestDraft } from '../lib/persistence/guestDraft';
 import { enqueueProfilePut } from '../lib/persistence/putProfile';
 import { explainInstallmentPayment, installmentMonthlyPayment, installmentPaymentAsOf, migrateInstallmentTerms, type PageRepaymentMode as RepaymentMode } from './installmentPayment';
@@ -176,7 +168,7 @@ const addMonths = (date: string, months: number) => { const next = new Date(`${d
 const retirementDateFor = (birthDate: string, identity: string) => { const birth = new Date(`${birthDate}T00:00:00`); if (Number.isNaN(birth.getTime())) return ''; const age = identity === 'female-worker' ? 55 : identity === 'female-cadre' ? 58 : 63; birth.setFullYear(birth.getFullYear() + age); return birth.toISOString().slice(0, 10); };
 const defaultSocialRates: Record<string, SocialRate> = { 养老保险: { personal: 8, company: 16 }, 医疗保险: { personal: 2, company: 6 }, 失业保险: { personal: 0.5, company: 0.5 }, 工伤保险: { personal: 0, company: 0.4 }, 生育保险: { personal: 0, company: 0.8 }, 住房公积金: { personal: 5, company: 5 } };
 const ADJUSTED_AVAILABLE_ASSETS_TIP = '手里还能动用的钱：流动资产扣未付分期首付与现金备用金（走势里首付在开始月真实扣除，次月起扣月供；每月按理财比例再平衡）。';
-const EMERGENCY_CASH_MODE_TIP = '「默认」：一级直接改现金。「应急月数」：点「设置」填往年支出（÷12 得月均）和月数，推算现金并联动理财。';
+const EMERGENCY_CASH_MODE_TIP = '「固定值」：直接填备用金金额。「公式计算」：用往年支出÷12×应急月数推算现金并联动理财。';
 const EMERGENCY_ANNUAL_SPEND_TIP = '填大概一年花多少。系统自动 ÷12 得到每月支出，用来算备用金。';
 const EMERGENCY_MONTHS_FIELD_TIP = '想留几个月生活费。现金 = 每月支出 × 应急月数；改了会同步理财（现金+理财=总资产）。';
 /** 消费分析：勾选说明（点开会怎样） */
@@ -600,77 +592,6 @@ export default function HomePage() {
       vv?.removeEventListener('scroll', place);
     };
   }, [headerMoreOpen]);
-  // 分区 chips scroll spy：滚动高亮 + 点击立即切（P1-4）
-  const SECTION_IDS = ['sec-params', 'sec-expenses', 'sec-charts'] as const;
-  const [activeSection, setActiveSection] = useState('sec-params');
-  const stickyTopRef = useRef<HTMLDivElement | null>(null);
-  const spyLockUntilRef = useRef(0);
-  // 首访三步 checklist（P2-6）：完成态 + 收起 flag 写 localStorage
-  const [checklistCompleted, setChecklistCompleted] = useState<ChecklistStepId[]>([]);
-  const [checklistDismissed, setChecklistDismissed] = useState(false);
-  const [checklistReady, setChecklistReady] = useState(false);
-  useEffect(() => {
-    setChecklistCompleted(loadCompletedSteps(window.localStorage));
-    setChecklistDismissed(loadChecklistDismissed(window.localStorage));
-    setChecklistReady(true);
-  }, []);
-  const showFirstVisitChecklist = checklistReady
-    && shouldShowChecklist({ dismissed: checklistDismissed, isGuest: !authUser });
-  const scrollToSection = (id: string) => {
-    setActiveSection(id);
-    spyLockUntilRef.current = Date.now() + 1200;
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const stickyPx = stickyTopRef.current?.getBoundingClientRect().height
-      ?? (isNarrow ? 168 : 72);
-    window.requestAnimationFrame(() => {
-      const top = el.getBoundingClientRect().top;
-      if (Math.abs(top - stickyPx) > 24) {
-        window.scrollTo({
-          top: stickyAwareScrollY(top, window.scrollY, stickyPx),
-          behavior: 'smooth',
-        });
-      }
-    });
-  };
-  useEffect(() => {
-    if (!hydrated) return;
-    const ids = [...SECTION_IDS];
-    const ratios: Record<string, number> = Object.fromEntries(ids.map((id) => [id, 0]));
-    const readDistances = () => {
-      const mid = window.innerHeight / 2;
-      const distances: Record<string, number> = {};
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        distances[id] = Math.abs(rect.top + rect.height / 2 - mid);
-      }
-      return distances;
-    };
-    const applySpy = () => {
-      if (Date.now() < spyLockUntilRef.current) return;
-      setActiveSection(pickActiveSection(ids, ratios, readDistances()));
-    };
-    const rootMargin = isNarrow ? '-22% 0px -48% 0px' : '-10% 0px -55% 0px';
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        ratios[entry.target.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
-      }
-      applySpy();
-    }, { rootMargin, threshold: [0, 0.1, 0.25, 0.4, 0.55, 0.75] });
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-    window.addEventListener('scroll', applySpy, { passive: true });
-    applySpy();
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('scroll', applySpy);
-    };
-  }, [isNarrow, hydrated]);
   // 列表删除二次确认（支出桌面/移动）；复用 FloatPanel field 矮卡
   const [pendingDelete, setPendingDelete] = useState<null | { kind: 'expense'; id: string; title: string; message: string }>(null);
   const deleteAnchorRef = useRef<HTMLElement | null>(null);
@@ -1223,15 +1144,19 @@ export default function HomePage() {
   const remainShareChartOption = useMemo(() => {
     const values = remainForecast.map((point) => point.value);
     const current = values[0] ?? 0;
-    const yMin = Math.min(0, ...values, -50);
+    const dataMin = values.length ? Math.min(...values) : 0;
+    const remainWarnAxes = pickRemainShareWarnYAxes(dataMin);
+    const warnFloor = Math.min(0, ...remainWarnAxes);
+    const yMin = Math.min(0, dataMin, warnFloor);
     const yMax = Math.max(100, ...values);
+    const yAxisRange = percentShareYAxis(yMin, yMax);
     return {
     animation: false,
     // 右侧留白给 markLine；375 下 10%≈32px 仍裁字，窄屏用 68px
     grid: { left: isNarrow ? 40 : 72, right: isNarrow ? 68 : '10%', top: 40, bottom: isNarrow ? 72 : 96 },
     tooltip: { trigger: 'axis', textStyle: { fontSize: isNarrow ? 11 : 16 }, valueFormatter: (value: number) => `${Number(value).toFixed(1)}%` },
     xAxis: { type: 'category', boundaryGap: false, data: remainForecast.map((point) => point.label), axisLabel: { color: '#334155', fontSize: isNarrow ? 11 : 16, fontWeight: 600, interval: monthAxisInterval(isNarrow), rotate: monthAxisRotate(isNarrow), hideOverlap: true, margin: 14, formatter: (value: string) => formatYearMonthChartAxisLabel(value, isNarrow) }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { lineStyle: { color: '#64748b', width: 2 } }, name: '未来月份', nameLocation: 'middle', nameGap: isNarrow ? 36 : 56, nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 } },
-    yAxis: { type: 'value', min: Math.floor(yMin / 10) * 10, max: Math.ceil(yMax / 10) * 10, interval: 20, name: '剩余可支配 %', nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 }, axisLabel: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600, formatter: '{value}%' }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { show: true, lineStyle: { color: '#64748b', width: 2 } }, splitLine: { lineStyle: { color: '#cbd5e1', type: 'dashed', width: 1.5 } } },
+    yAxis: { type: 'value', min: yAxisRange.min, max: yAxisRange.max, interval: yAxisRange.interval, name: '剩余可支配 %', nameTextStyle: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600 }, axisLabel: { color: '#334155', fontSize: isNarrow ? 12 : 18, fontWeight: 600, formatter: '{value}%' }, axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } }, axisLine: { show: true, lineStyle: { color: '#64748b', width: 2 } }, splitLine: { lineStyle: { color: '#cbd5e1', type: 'dashed', width: 1.5 } } },
     dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', height: 18, bottom: 8, start: 0, end: 100 }],
     series: [{
       name: '剩余可支配占比',
@@ -1250,16 +1175,21 @@ export default function HomePage() {
         label: { show: true, formatter: (p: { value?: number }) => `${Number(p.value ?? 0).toFixed(1)}%`, color: '#fff', fontSize: isNarrow ? 11 : 12, fontWeight: 700 },
         itemStyle: { color: BRAND.coral, borderColor: '#fff', borderWidth: 1 },
       },
-      // 对应占比图支出 100/110/120/150 → 剩余 0/−10/−20/−50；另标满额 100%；竖线=计划变更生效月
+      // 对应占比图支出档位 → 剩余负区；严重超支时稀疏中间警告线；竖线=计划变更
       markLine: {
         silent: true,
         symbol: 'none',
         data: [
-          { yAxis: 100, name: '满额 100%', lineStyle: { color: BRAND.ink, type: 'solid', width: 1.5 }, label: { formatter: '满额 100%', color: BRAND.ink, fontSize: isNarrow ? 10 : 12, fontWeight: 600 } },
-          { yAxis: 0, name: '打满 0%', lineStyle: { color: '#64748b', type: 'dashed', width: 2 }, label: { formatter: '打满 0%', color: '#334155', fontSize: isNarrow ? 10 : 12, fontWeight: 600 } },
-          { yAxis: -10, name: '警告 −10%', lineStyle: { color: '#f59e0b', type: 'dashed', width: 1 }, label: { formatter: '警告 −10%', color: '#b45309', fontSize: isNarrow ? 10 : 11 } },
-          { yAxis: -20, name: '警告 −20%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 −20%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
-          { yAxis: -50, name: '警告 −50%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 −50%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
+          ...(() => {
+            const remainWarnMeta: Record<number, { name: string; lineStyle: { color: string; type: 'solid' | 'dashed'; width: number }; label: { formatter: string; color: string; fontSize: number; fontWeight?: number } }> = {
+              100: { name: '满额 100%', lineStyle: { color: BRAND.ink, type: 'solid', width: 1.5 }, label: { formatter: '满额 100%', color: BRAND.ink, fontSize: isNarrow ? 10 : 12, fontWeight: 600 } },
+              0: { name: '打满 0%', lineStyle: { color: '#64748b', type: 'dashed', width: 2 }, label: { formatter: '打满 0%', color: '#334155', fontSize: isNarrow ? 10 : 12, fontWeight: 600 } },
+              [-10]: { name: '警告 −10%', lineStyle: { color: '#f59e0b', type: 'dashed', width: 1 }, label: { formatter: '警告 −10%', color: '#b45309', fontSize: isNarrow ? 10 : 11 } },
+              [-20]: { name: '警告 −20%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 −20%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
+              [-50]: { name: '警告 −50%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 −50%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
+            };
+            return remainWarnAxes.map((yAxis) => ({ yAxis, ...remainWarnMeta[yAxis] }));
+          })(),
           ...planChangeMarkLinesForYearMonthAxis(planChanges),
         ],
       },
@@ -1276,8 +1206,23 @@ export default function HomePage() {
       ...(visibleCashFlowLines.expense ? expense : []),
       ...(visibleCashFlowLines.savings ? savings : []),
     ];
-    const yMin = visibleValues.length ? Math.min(0, ...visibleValues) : 0;
-    const yMax = visibleValues.length ? Math.max(100, ...visibleValues) : 100;
+    const dataMin = visibleValues.length ? Math.min(...visibleValues) : 0;
+    const dataMax = visibleValues.length ? Math.max(...visibleValues) : 100;
+    const expensePeak = expense.length ? Math.max(...expense) : 0;
+    const expenseWarnAxes = visibleCashFlowLines.expense
+      ? pickExpenseShareWarnYAxes(expensePeak)
+      : [];
+    const expenseWarnCeil = expenseWarnAxes.length ? Math.max(...expenseWarnAxes) : 0;
+    const yMin = Math.min(0, dataMin);
+    const yMax = Math.max(100, dataMax, expenseWarnCeil);
+    const yAxisRange = percentShareYAxis(yMin, yMax);
+    const guideFlags = pickCashFlowGuideFlags({ peakPct: dataMax, troughPct: dataMin });
+    const expenseWarnMeta: Record<number, { name: string; lineStyle: { color: string; type: 'solid' | 'dashed'; width: number }; label: { formatter: string; color: string; fontSize: number } }> = {
+      100: { name: '支出 100%', lineStyle: { color: BRAND.ink, type: 'solid', width: 1.5 }, label: { formatter: '支出 100%', color: BRAND.ink, fontSize: isNarrow ? 10 : 12 } },
+      110: { name: '警告 110%', lineStyle: { color: '#f59e0b', type: 'dashed', width: 1 }, label: { formatter: '警告 110%', color: '#b45309', fontSize: isNarrow ? 10 : 11 } },
+      120: { name: '警告 120%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 120%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
+      150: { name: '警告 150%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 150%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
+    };
     const series: Array<{
       name: string;
       type: string;
@@ -1285,26 +1230,56 @@ export default function HomePage() {
       symbol: string;
       data: number[];
       lineStyle: { color: string; width: number };
-      markLine?: { silent: boolean; data: Array<{ yAxis: number; name: string }>; lineStyle: { color: string; type: string; width: number }; label: { color: string; fontSize: number } };
+      markLine?: {
+        silent: boolean;
+        symbol?: string;
+        data: Array<{ yAxis: number; name: string; lineStyle?: { color: string; type: string; width: number }; label?: { formatter?: string; color: string; fontSize: number } }>;
+        lineStyle?: { color: string; type: string; width: number };
+        label?: { color: string; fontSize: number };
+      };
     }> = [];
     if (visibleCashFlowLines.dti) {
       series.push({
         name: '偿债比 DTI', type: 'line', smooth: true, symbol: 'none', data: dti,
         lineStyle: { color: BRAND.coral, width: 3 },
-        markLine: { silent: true, data: [{ yAxis: 35, name: '建议≤35%' }], lineStyle: { color: BRAND.coral, type: 'dashed', width: 1.5 }, label: { color: BRAND.coralDeep, fontSize: isNarrow ? 10 : 12 } },
+        ...(guideFlags.showDti
+          ? {
+            markLine: {
+              silent: true,
+              data: [{ yAxis: 35, name: '建议≤35%' }],
+              lineStyle: { color: BRAND.coral, type: 'dashed', width: 1.5 },
+              label: { color: BRAND.coralDeep, fontSize: isNarrow ? 10 : 12 },
+            },
+          }
+          : {}),
       });
     }
     if (visibleCashFlowLines.expense) {
       series.push({
         name: '支出率', type: 'line', smooth: true, symbol: 'none', data: expense,
         lineStyle: { color: '#64748b', width: 2.5 },
+        // 与分析占比图同档；峰值过高时已由 pickExpenseShareWarnYAxes 稀疏
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          data: expenseWarnAxes.map((yAxis) => ({ yAxis, ...expenseWarnMeta[yAxis] })),
+        },
       });
     }
     if (visibleCashFlowLines.savings) {
       series.push({
         name: '储蓄率', type: 'line', smooth: true, symbol: 'none', data: savings,
         lineStyle: { color: '#3d8f6e', width: 3 },
-        markLine: { silent: true, data: [{ yAxis: 20, name: '建议≥20%' }], lineStyle: { color: '#3d8f6e', type: 'dashed', width: 1.5 }, label: { color: '#2f6f56', fontSize: isNarrow ? 10 : 12 } },
+        ...(guideFlags.showSavings
+          ? {
+            markLine: {
+              silent: true,
+              data: [{ yAxis: 20, name: '建议≥20%' }],
+              lineStyle: { color: '#3d8f6e', type: 'dashed', width: 1.5 },
+              label: { color: '#2f6f56', fontSize: isNarrow ? 10 : 12 },
+            },
+          }
+          : {}),
       });
     }
     return {
@@ -1325,7 +1300,7 @@ export default function HomePage() {
         nameTextStyle: { color: '#334155', fontSize: isNarrow ? 11 : 16, fontWeight: 600 },
       },
       yAxis: {
-        type: 'value', min: Math.floor(yMin / 10) * 10, max: Math.ceil(yMax / 10) * 10, interval: 20,
+        type: 'value', min: yAxisRange.min, max: yAxisRange.max, interval: yAxisRange.interval,
         name: '占比 %', nameTextStyle: { color: '#334155', fontSize: isNarrow ? 11 : 16, fontWeight: 600 },
         axisLabel: { color: '#334155', fontSize: 14, fontWeight: 600, formatter: '{value}%' },
         axisTick: { show: true, length: 8, lineStyle: { color: '#64748b', width: 2 } },
@@ -1389,7 +1364,7 @@ export default function HomePage() {
   }
   // 访客与登录均可进主应用；未登录用示例/本机草稿
   return <main className="min-h-screen bg-paper text-ink pb-[env(safe-area-inset-bottom,0px)]">
-    <div className="mobile-sticky-top" ref={stickyTopRef}>
+    <div className="mobile-sticky-top">
     <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink text-sm font-bold text-white">M</div>
@@ -1516,11 +1491,6 @@ export default function HomePage() {
         <p className="guest-demo-banner">访客 / 示例数据，仅本机临时 · 点数字改成你的</p>
       </div>
     )}
-    <nav className="mobile-section-nav page-pad mx-auto flex max-w-[1920px] gap-2 px-3 pb-1 pt-2 sm:max-w-md sm:justify-start lg:max-w-[1920px]" aria-label="页面分区">
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-params' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-params' ? 'true' : undefined} onClick={() => scrollToSection('sec-params')}>参数</button>
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-expenses' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-expenses' ? 'true' : undefined} onClick={() => scrollToSection('sec-expenses')}>支出</button>
-      <button type="button" className={`mobile-nav-chip${activeSection === 'sec-charts' ? ' is-active' : ''}`} aria-current={activeSection === 'sec-charts' ? 'true' : undefined} onClick={() => scrollToSection('sec-charts')}>走势</button>
-    </nav>
     </div>
     {/* ponytail: 侧栏从 xl 起、宽 ≤520——lg+720 会把左栏压到 ~450，xl:grid-cols-3 再把「月结余再投入」挤成竖排字 */}
     <section className="page-pad mx-auto grid max-w-[1920px] grid-cols-1 gap-2 px-3 pb-12 pt-3 sm:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,520px)] xl:px-10">
@@ -1548,46 +1518,6 @@ export default function HomePage() {
             <p className="mt-2 text-[11px] font-medium leading-snug text-amber-800 sm:text-xs" role="status">{decisionSummary.riskLine}</p>
           )}
         </section>
-        {showFirstVisitChecklist && (
-          <div className="first-visit-checklist section-card rounded-3xl bg-white p-3 shadow-lg sm:p-4" aria-label="首次规划引导">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-slate-500 sm:text-xs">三步上手 · 改收入 → 改支出 → 看走势</p>
-              {canDismissChecklist(checklistCompleted) && (
-                <button
-                  type="button"
-                  className="touch-btn shrink-0 rounded-full border border-[#e3eae5] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500"
-                  onClick={() => {
-                    saveChecklistDismissed(window.localStorage);
-                    setChecklistDismissed(true);
-                  }}
-                >
-                  收起引导
-                </button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {FIRST_VISIT_CHECKLIST_STEPS.map((step) => {
-                const done = checklistCompleted.includes(step.id);
-                return (
-                  <button
-                    key={step.id}
-                    type="button"
-                    className={`first-visit-check-chip${done ? ' is-done' : ''}`}
-                    aria-pressed={done}
-                    onClick={() => {
-                      const next = markStepComplete(checklistCompleted, step.id);
-                      setChecklistCompleted(next);
-                      saveCompletedSteps(next, window.localStorage);
-                      scrollToSection(step.sectionId);
-                    }}
-                  >
-                    {done ? `✓ ${step.label}` : step.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
         <section id="sec-params" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SectionTitle title="财务参数" tip={"收入与资产配置。\n退休规划已整合到「五险一金和个税 → 退休与社保」；点字段改数即生效并自动保存。"} />
@@ -1677,12 +1607,12 @@ export default function HomePage() {
             <ReinvestEditor setting={reinvestSetting} monthlySurplus={Math.max(0, result.surplus)} onChange={(next) => { setReinvestMode(next.mode); setReinvestRate(next.rate); setReinvestAmount(next.amount); }} />
           </div>
         </section>
-      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="支出管理" tip={"表格上只改名称、分类；类型和金额点「编辑」。\n点「分析」打开对比面板，勾选任意支出看叠在一起的影响。"} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>分类</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); }} /></td><td><TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" onChange={(category) => { updateExpense(expense.id, { category }); }} /></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} planChanges={planChanges} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
+      <section id="sec-expenses" className="section-card scroll-mt-24 rounded-3xl bg-white p-4 shadow-lg sm:p-6"><div><SectionTitle title="支出管理" tip={"名称、类型、金额等一律点「编辑」修改。\n点「分析」打开对比面板，勾选任意支出看叠在一起的影响。"} /></div><div className="table-wrap mt-5 hidden md:block"><table><thead><tr><th>名称</th><th>类型</th><th>金额 / 月付</th><th className="cell-wrap">分期信息</th><th>操作</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id} data-expense-anchor={expense.id}><td><span className="text-sm text-slate-700">{formatTextFieldDisplay(expense.name, '未命名')}</span></td><td><span className="text-sm text-slate-600">{formatExpenseMode(expense.mode)}</span></td><td><span className="font-mono text-sm tabular-nums text-slate-700">{formatExpensePayment(expense)}</span></td><td className="cell-wrap"><span className="text-sm text-slate-500">{expense.mode === 'installment' ? formatExpenseInstallment(expense) : '—'}</span></td><td className="whitespace-nowrap"><div className="flex items-center gap-2"><ExpenseEditButton expense={expense} onChange={(patch) => { updateExpense(expense.id, patch); saveEvent(); }} retirementDate={retirement.enabled ? retirementDate : undefined} /><ExpenseAnalyzeButton expense={expense} financeInput={financeInput} reinvest={reinvestSetting} retirementDate={retirement.enabled ? retirementDate : undefined} planChanges={planChanges} /><button type="button" onClick={(event) => requestRemoveExpense(expense, event.currentTarget)} className="text-xs text-red-500 hover:underline">删除</button></div></td></tr>)}</tbody></table></div>
 <div className="mt-4 space-y-3 md:hidden">{expenses.map((expense) => (
           <div key={expense.id} data-expense-anchor={expense.id} className="expense-card space-y-2">
             <div className="expense-card-head">
               <div className="expense-card-title min-w-0 flex-1">
-                <TextEditable value={expense.name} emptyLabel="未命名" allowEmpty ariaLabel="名称" onChange={(name) => { updateExpense(expense.id, { name }); }} />
+                <span className="truncate text-sm font-semibold text-slate-800">{formatTextFieldDisplay(expense.name, '未命名')}</span>
               </div>
               <div className="expense-card-amount min-w-0 shrink">
                 <div className="text-right">
@@ -1693,7 +1623,6 @@ export default function HomePage() {
             </div>
             <div className="expense-card-meta">
               <span className="expense-meta-chip text-xs text-slate-600">{formatExpenseMode(expense.mode)}</span>
-              <TextEditable value={expense.category} emptyLabel="未分类" allowEmpty ariaLabel="分类" className="expense-meta-chip" onChange={(category) => { updateExpense(expense.id, { category }); }} />
             </div>
             {expense.mode === 'installment' && (
               <div className="field-row-mobile">
@@ -1778,10 +1707,7 @@ function ExpenseSettingsFields({
   ];
   return (
     <div className="expense-settings-form grid gap-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="block text-xs text-slate-500">名称<input ref={nameRef} autoFocus={autoFocusName} className="field-input mt-1" value={value.name} onChange={(event) => onChange({ name: event.target.value })} /></label>
-        <label className="block text-xs text-slate-500">分类<input className="field-input mt-1" value={value.category} onChange={(event) => onChange({ category: event.target.value })} /></label>
-      </div>
+      <label className="block text-xs text-slate-500">名称<input ref={nameRef} autoFocus={autoFocusName} className="field-input mt-1" value={value.name} onChange={(event) => onChange({ name: event.target.value })} /></label>
       <div>
         <p className="text-xs text-slate-500">类型</p>
         {/* 移动：大触控分段；桌面：下拉 */}
@@ -1897,7 +1823,7 @@ function ExpenseEditButton({
             </div>
           )}
         >
-          <p className="text-xs text-slate-400">类型、金额、分期等在此修改；点「保存」写回列表。名称/分类也可在表格直接改。</p>
+          <p className="text-xs text-slate-400">名称、类型、金额、分期等在此修改；点「保存」写回列表。</p>
           <div className="mt-3">
             <ExpenseSettingsFields value={draft} onChange={patchDraft} retirementDate={retirementDate} />
           </div>
@@ -1921,7 +1847,7 @@ function ExpenseAddButton({
     setDraft({
       id: 'draft-new',
       name: '新支出',
-      category: '其他',
+      category: '',
       mode: 'fixed',
       amount: 0,
       startDate: todayDateKey(),
@@ -1955,7 +1881,7 @@ function ExpenseAddButton({
       ...draft,
       id: uid(),
       name: (draft.name || '').trim() || '新支出',
-      category: (draft.category || '').trim() || '其他',
+      category: (draft.category || '').trim(),
     });
     closePanel();
   };
@@ -2096,23 +2022,29 @@ function ExpenseAnalyzeButton({ expense, financeInput, reinvest, retirementDate,
     const seriesValues = series.flatMap((row) =>
       (Array.isArray(row.data) ? row.data : []).filter((value): value is number => value !== null && Number.isFinite(Number(value))).map(Number),
     );
-    // ponytail: y 至少盖到重度警告线 150%；数据更高时仍跟 series
-    const yMax = Math.max(150, seriesValues.length ? Math.max(100, ...seriesValues) : 100);
+    // 用真实峰值稀疏警告线；yMax 再盖住所选档位（首月重度超支时省略中间档）
+    const dataPeak = seriesValues.length ? Math.max(...seriesValues) : 0;
+    const expenseWarnAxes = pickExpenseShareWarnYAxes(dataPeak);
+    const warnCeil = expenseWarnAxes.length ? Math.max(...expenseWarnAxes) : 100;
+    const yMax = Math.max(warnCeil, seriesValues.length ? Math.max(100, ...seriesValues) : 100);
     const yMin = seriesValues.length ? Math.min(0, ...seriesValues) : 0;
     const legendNames = [
       ...layers.map((layer) => layer.name),
       ...(includeInvestShare ? [INVEST_SHARE_NAME, SPENDABLE_REMAIN_NAME] : [savingsName]),
     ];
-    // 可支配 100% + 超支警告线 + 计划变更竖线；挂最后一条 series
+    // 可支配 100% + 按峰值稀疏的超支警告线 + 计划变更竖线；挂最后一条 series
+    const expenseWarnMeta: Record<number, { name: string; lineStyle: { type: 'solid' | 'dashed'; color: string; width: number }; label: { formatter: string; color: string } }> = {
+      100: { name: '可支配 100%', lineStyle: { type: 'solid', color: BRAND.ink, width: 1.5 }, label: { formatter: '可支配 100%', color: BRAND.ink } },
+      110: { name: '警告 110%', lineStyle: { type: 'dashed', color: '#f59e0b', width: 1 }, label: { formatter: '警告 110%', color: '#b45309' } },
+      120: { name: '警告 120%', lineStyle: { type: 'dashed', color: '#f97316', width: 1 }, label: { formatter: '警告 120%', color: '#c2410c' } },
+      150: { name: '警告 150%', lineStyle: { type: 'dashed', color: '#dc2626', width: 1 }, label: { formatter: '警告 150%', color: '#b91c1c' } },
+    };
     const shareWarnMarkLine = {
       silent: true,
       symbol: 'none' as const,
       label: { position: 'insideEndTop' as const, fontSize: 10, distance: 2 },
       data: [
-        { yAxis: 100, name: '可支配 100%', lineStyle: { type: 'solid' as const, color: BRAND.ink, width: 1.5 }, label: { formatter: '可支配 100%', color: BRAND.ink } },
-        { yAxis: 110, name: '警告 110%', lineStyle: { type: 'dashed' as const, color: '#f59e0b', width: 1 }, label: { formatter: '警告 110%', color: '#b45309' } },
-        { yAxis: 120, name: '警告 120%', lineStyle: { type: 'dashed' as const, color: '#f97316', width: 1 }, label: { formatter: '警告 120%', color: '#c2410c' } },
-        { yAxis: 150, name: '警告 150%', lineStyle: { type: 'dashed' as const, color: '#dc2626', width: 1 }, label: { formatter: '警告 150%', color: '#b91c1c' } },
+        ...expenseWarnAxes.map((yAxis) => ({ yAxis, ...expenseWarnMeta[yAxis] })),
         ...planChangeMarkLinesForYearMonthAxis(planChanges),
       ],
     };
@@ -2658,7 +2590,7 @@ function PlanChangePanel({
   );
 }
 
-/** 闲钱投资：百分比 / 固定金额，风格对齐 Editable + SoftNumberInput */
+/** 闲钱投资：行内 select + SoftNumberInput；不为切模式/改数值单独开 FloatPanel */
 function ReinvestEditor({
   setting,
   monthlySurplus,
@@ -2668,14 +2600,7 @@ function ReinvestEditor({
   monthlySurplus: number;
   onChange: (next: ReinvestSetting) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const anchorRef = useRef<HTMLButtonElement>(null);
   const isPercent = setting.mode === 'percent';
-  // 单位外置：展示框只含数值；% / /月 旁侧（与 Editable 一致）
-  const displayNum = isPercent
-    ? (Number.isInteger(setting.rate) ? String(setting.rate) : setting.rate.toFixed(1))
-    : formatEditableNumber(setting.amount);
-  const unit = isPercent ? '%' : '/月';
   const apply = (next: ReinvestSetting) => {
     onChange(next);
   };
@@ -2688,46 +2613,27 @@ function ReinvestEditor({
   };
   return (
     <div className="relative block min-w-0 sm:col-span-2">
-      <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex items-center gap-1">
-            月结余再投入
-            <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（不超过当月结余）。'}</InfoTip>
-          </span>
-          <span className="text-[11px] font-normal leading-snug text-slate-400">
-            {isPercent ? `结余的 ${displayNum}% 进理财` : '每月固定额进理财'}
-          </span>
+      <div className="flex flex-col gap-1.5 text-sm text-slate-600">
+        <span className="flex items-center gap-1">
+          月结余再投入
+          <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（不超过当月结余）。'}</InfoTip>
         </span>
-        <span className="field-value-with-unit self-start sm:self-auto">
-          <button
-            ref={anchorRef}
-            type="button"
-            onClick={() => setOpen((current) => !current)}
-            onDoubleClick={() => setOpen(true)}
-            title="点击打开编辑"
-            className="field-click"
-          >
-            {displayNum}
-          </button>
-          <span className="field-unit">{unit}</span>
-        </span>
-      </span>
-      <FloatPanel open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} width={300} maxHeightVh={52} headerTitle="月结余再投入" density="field">
-        <label className="block text-xs text-slate-500">
-          模式
-          <select
-            className="field-input mt-1"
-            value={setting.mode}
-            onChange={(event) => switchMode(event.target.value as ReinvestMode)}
-          >
-            <option value="percent">月结余再投入 · 百分比</option>
-            <option value="amount">月结余再投入 · 固定金额</option>
-          </select>
-        </label>
-        {isPercent ? (
-          <label className="mt-3 block text-xs text-slate-500">
-            结余百分比
+        {/* ponytail: 全端统一行内；SelectNumberField 强制 select+数字同行 */}
+        <SelectNumberField
+          select={(
+            <select
+              aria-label="再投入模式"
+              className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700"
+              value={setting.mode}
+              onChange={(event) => switchMode(event.target.value as ReinvestMode)}
+            >
+              <option value="percent">百分比</option>
+              <option value="amount">固定金额</option>
+            </select>
+          )}
+          input={isPercent ? (
             <SoftNumberInput
+              className="field-input !mt-0 w-24"
               min={0}
               max={100}
               step={1}
@@ -2735,25 +2641,23 @@ function ReinvestEditor({
               value={Number.isInteger(setting.rate) ? setting.rate : Number(setting.rate.toFixed(1))}
               onCommit={(n) => apply({ ...setting, rate: n })}
             />
-          </label>
-        ) : (
-          <label className="mt-3 block text-xs text-slate-500">
-            每月金额
+          ) : (
             <SoftNumberInput
+              className="field-input !mt-0 w-28"
               min={0}
               step={100}
               suffix="/月"
               value={setting.amount}
               onCommit={(n) => apply({ ...setting, amount: n })}
             />
-          </label>
-        )}
-        <p className="mt-2 text-[11px] leading-snug text-slate-400">
+          )}
+        />
+        <p className="text-[11px] leading-snug text-slate-400">
           {isPercent
             ? `当前约投入 ${money(Math.round(monthlySurplus * clamp(setting.rate, 0, 100) / 100))}/月（按月度剩余估算）`
             : `不超过当月结余；当前结余约 ${money(Math.round(monthlySurplus))}`}
         </p>
-      </FloatPanel>
+      </div>
     </div>
   );
 }
@@ -3072,57 +2976,10 @@ function formatExpenseInstallment(expense: Expense) {
   const yearLabel = Number.isInteger(years) ? `${years}` : years.toFixed(1);
   return `${repaymentModeLabel(expense.repaymentMode)} · ${money(total)} · 首付 ${money(down)}（${pct.toFixed(1)}%）· ${term} 期 / ${yearLabel} 年 · ${expense.interest || 0}%`;
 }
-/** PS 锁比风格链标：表示等价联动（不可解锁） */
-function LinkLockIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  );
-}
-
 /**
- * 等价联动字段组：左右并排，中间链标；hint 只读说明（不提供解锁）。
- * alwaysRow：窄弹层内也强制一行（如资产配置）；分期等宽表单仍默认可竖排。
- * ponytail: 仅布局/信息架构，不改联动公式本身
+ * 资产配置：FloatPanel density=panel → 移动 sheet-page 全屏内页（SheetPageShell）。
+ * 备用金：固定值 | 公式计算；公式字段铺在内页下方，不套二级弹窗。
  */
-function LinkedFieldGroup({ hint, children, alwaysRow = false }: { hint?: string; children: [ReactNode, ReactNode]; alwaysRow?: boolean }) {
-  return (
-    <div className="linked-field-group rounded-xl border border-slate-200/90 bg-slate-50/70 px-2.5 py-2">
-      <div className={alwaysRow ? 'flex flex-row items-stretch gap-1' : 'flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-1'}>
-        <div className="min-w-0 flex-1">{children[0]}</div>
-        <div
-          className={alwaysRow
-            ? 'flex w-7 shrink-0 flex-col items-center justify-center text-coral'
-            : 'flex h-6 shrink-0 flex-row items-center justify-center gap-1 text-coral sm:h-auto sm:w-7 sm:flex-col sm:gap-0'}
-          title="联动"
-          aria-label="联动"
-        >
-          {alwaysRow ? (
-            <>
-              <span className="mb-0.5 h-2 w-px bg-coral/30" />
-              <LinkLockIcon className="h-3.5 w-3.5" />
-              <span className="mt-0.5 h-2 w-px bg-coral/30" />
-            </>
-          ) : (
-            <>
-              <span className="hidden h-2 w-px bg-coral/30 sm:mb-0.5 sm:block" />
-              <span className="h-px w-6 bg-coral/30 sm:hidden" />
-              <LinkLockIcon className="h-3.5 w-3.5" />
-              <span className="h-px w-6 bg-coral/30 sm:hidden" />
-              <span className="hidden h-2 w-px bg-coral/30 sm:mt-0.5 sm:block" />
-            </>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">{children[1]}</div>
-      </div>
-      {hint ? <p className="mt-1.5 text-[11px] leading-snug text-slate-500">{hint}</p> : null}
-    </div>
-  );
-}
-
-/** 默认：总资产 / 理财 / 现金 直接填；现金行右侧 select 切「默认/应急月数」，细节进二级「应急设置」 */
 function AssetLinkedEditor({
   totalAssets,
   cash,
@@ -3156,28 +3013,15 @@ function AssetLinkedEditor({
   monthlyExpenses: number;
   onMonthsPlanChecked: (checked: boolean) => void;
 }) {
-  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [emergencyOpen, setEmergencyOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const emergencyBtnRef = useRef<HTMLButtonElement>(null);
   const monthsPlan = emergency.mode === 'months';
   const plan = emergency.monthsPlan;
   const cashSummary = monthsPlan
-    ? (plan.months > 0 ? `应急月数 · ${plan.months} 月` : '应急月数 · 去设置')
-    : '默认';
-  // 移动：子页返回；Esc/关闭先 pop 再关一级（禁浮层叠浮层）
-  const popEmergency = () => setEmergencyOpen(false);
-  const closeAsset = () => {
-    if (emergencyOpen) {
-      popEmergency();
-      return;
-    }
-    setOpen(false);
-  };
+    ? (plan.months > 0 ? `公式计算 · ${plan.months} 月` : '公式计算 · 去设置')
+    : '固定值';
   const setCashMode = (mode: 'amount' | 'months') => {
     onMonthsPlanChecked(mode === 'months');
-    if (mode !== 'months') setEmergencyOpen(false);
   };
   const autoMonthly = monthlyFromAnnual(plan.annualSpend) || planMonthly;
   return (
@@ -3189,10 +3033,10 @@ function AssetLinkedEditor({
             <span className="inline-flex items-center gap-0.5 rounded-full bg-coral/10 px-1.5 py-0.5 text-[10px] font-semibold text-coral-deep" title="现金+理财=总资产">
               <LinkLockIcon className="h-3 w-3" />联动
             </span>
-            <InfoTip>{`默认直接填：总资产、理财、现金（备用金=现金）。\n现金行选「应急月数」后，点「设置」用往年支出÷12×月数推算现金。`}</InfoTip>
+            <InfoTip>{`总资产 / 理财 / 备用金在同一内页编辑。\n备用金可选「固定值」或「公式计算」（往年支出÷12×应急月数）。`}</InfoTip>
           </span>
           <span className="text-[11px] font-normal leading-snug text-slate-400">
-            总资产 / 理财 / 现金 · {cashSummary}
+            总资产 / 理财 / 备用金 · {cashSummary}
           </span>
         </span>
         <button
@@ -3200,40 +3044,54 @@ function AssetLinkedEditor({
           type="button"
           onClick={() => setOpen((current) => !current)}
           onDoubleClick={() => setOpen(true)}
-          title="点击打开编辑（资产联动）"
+          title="点击打开资产配置内页"
           className="field-click min-w-0 max-w-full self-start truncate sm:self-auto"
         >
           {money(totalAssets)}
         </button>
       </span>
+      {/* density=panel：移动全屏 sheet-page；PC 仍居中大面板；壳走 SheetPageShell */}
       <FloatPanel
         open={open}
         anchorRef={anchorRef}
-        onClose={closeAsset}
-        onBack={isMobile && emergencyOpen ? popEmergency : undefined}
-        width={340}
-        maxHeightVh={72}
-        headerTitle={isMobile && emergencyOpen ? '应急设置' : '资产配置'}
-        density="field"
+        onClose={() => setOpen(false)}
+        width={400}
+        maxHeightVh={90}
+        headerTitle="资产配置"
+        density="panel"
       >
-        {isMobile && emergencyOpen ? (
-          <div className="space-y-3" data-sheet-subview="emergency">
-            <label className="block text-xs text-slate-500">
-              <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
-              <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
+        <label className="mb-2 block text-xs text-slate-500">总资产
+          <SoftNumberInput min={0} step={1000} value={totalAssets} onCommit={onTotal} />
+        </label>
+        <div className="mb-3">
+          <LinkedNumberFields alwaysRow hint="理财金额 ↔ 占比（相对总资产）">
+            <label className="block text-xs text-slate-500">理财资产
+              <SoftNumberInput min={0} max={totalAssets} step={1000} value={invest} onCommit={onInvestAmount} />
             </label>
-            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-              <span>每月支出（自动）</span>
-              <span className="font-mono font-semibold tabular-nums text-ink">
-                {money(autoMonthly)}
-                <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
-              </span>
-            </div>
-            {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
-              <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
+            <label className="block text-xs text-slate-500">理财占比
+              <SoftNumberInput min={0} max={100} step={1} suffix="%" value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
+            </label>
+          </LinkedNumberFields>
+        </div>
+        <div className="mb-3">
+          <div className="mb-1 flex items-center gap-1 text-xs text-slate-500">
+            备用金（现金）
+            <InfoTip>{EMERGENCY_CASH_MODE_TIP}</InfoTip>
+          </div>
+          {/* select 切固定值/公式；固定值同行填金额，公式同行填月数 */}
+          <SelectNumberField
+            select={(
+              <select
+                aria-label="备用金方式"
+                className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700"
+                value={monthsPlan ? 'months' : 'amount'}
+                onChange={(event) => setCashMode(event.target.value === 'months' ? 'months' : 'amount')}
+              >
+                <option value="amount">固定值</option>
+                <option value="months">公式计算</option>
+              </select>
             )}
-            <label className="block text-xs text-slate-500">
-              <span className="inline-flex items-center gap-1">应急月数<InfoTip>{EMERGENCY_MONTHS_FIELD_TIP}</InfoTip></span>
+            input={monthsPlan ? (
               <SoftNumberInput
                 min={0}
                 max={36}
@@ -3242,124 +3100,54 @@ function AssetLinkedEditor({
                 value={plan.months}
                 onCommit={onCashByMonths}
               />
-            </label>
-            <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              <div className="flex items-center justify-between gap-2">
-                <span>推算现金（备用金）</span>
-                <span className="font-mono font-semibold tabular-nums text-ink">{money(cash)}</span>
-              </div>
-              <p className="leading-snug text-slate-400">现金 = 每月支出 × 应急月数；理财 = 总资产 − 现金</p>
-            </div>
-          </div>
-        ) : (
-        <>
-        <label className="mb-2 block text-xs text-slate-500">总资产
-          <SoftNumberInput min={0} step={1000} value={totalAssets} onCommit={onTotal} />
-        </label>
-        {/* 理财金额 ↔ 占比同行；改一端同步总资产恒等式内的现金/理财 */}
-        <div className="mb-3">
-          <LinkedFieldGroup alwaysRow hint="理财金额 ↔ 占比（相对总资产）">
-            <label className="block text-xs text-slate-500">理财资产
-              <SoftNumberInput min={0} max={totalAssets} step={1000} value={invest} onCommit={onInvestAmount} />
-            </label>
-            <label className="block text-xs text-slate-500">理财占比
-              <SoftNumberInput min={0} max={100} step={1} suffix="%" value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
-            </label>
-          </LinkedFieldGroup>
-        </div>
-        <div className="mb-3">
-          {/* 现金行：左侧标签，右侧 native select 切默认 / 应急月数 */}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1">
-              现金（备用金）
-              <InfoTip>{EMERGENCY_CASH_MODE_TIP}</InfoTip>
-            </span>
-            <select
-              aria-label="现金备用金方式"
-              className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700"
-              value={monthsPlan ? 'months' : 'amount'}
-              onChange={(event) => setCashMode(event.target.value === 'months' ? 'months' : 'amount')}
-            >
-              <option value="amount">默认</option>
-              <option value="months">应急月数</option>
-            </select>
-          </div>
-          {!monthsPlan && (
-            <SoftNumberInput min={0} max={totalAssets} step={1000} value={cash} onCommit={onCash} />
-          )}
+            ) : (
+              <SoftNumberInput min={0} max={totalAssets} step={1000} value={cash} onCommit={onCash} />
+            )}
+          />
           <p className="mt-1 text-[11px] leading-snug text-slate-500">现金 + 理财 = 总资产（改一端同步其它）</p>
           {monthsPlan && (
-            <div className="relative mt-2">
-              <button
-                ref={emergencyBtnRef}
-                type="button"
-                onClick={() => setEmergencyOpen((current) => !current)}
-                className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-300"
-              >
-                <span className="font-medium text-slate-700">设置</span>
-                <span className="tabular-nums text-slate-500">
-                  {plan.months > 0 ? `${plan.months} 月 · ${money(cash)}` : '往年支出 / 月数'}
+            <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+              <label className="block text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
+                <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
+              </label>
+              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span>每月支出（自动）</span>
+                <span className="font-mono font-semibold tabular-nums text-ink">
+                  {money(autoMonthly)}
+                  <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
                 </span>
-              </button>
-              {!isMobile && (
-              <FloatPanel
-                open={emergencyOpen}
-                anchorRef={emergencyBtnRef}
-                onClose={popEmergency}
-                width={320}
-                maxHeightVh={64}
-                zIndex={Z_INDEX.nestedPanel}
-                headerTitle="应急设置"
-                density="field"
-              >
-                <div className="space-y-3">
-                  <label className="block text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
-                    <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
-                  </label>
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                    <span>每月支出（自动）</span>
-                    <span className="font-mono font-semibold tabular-nums text-ink">
-                      {money(autoMonthly)}
-                      <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
-                    </span>
-                  </div>
-                  {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
-                    <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
-                  )}
-                  <label className="block text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1">应急月数<InfoTip>{EMERGENCY_MONTHS_FIELD_TIP}</InfoTip></span>
-                    <SoftNumberInput
-                      min={0}
-                      max={36}
-                      step={0.5}
-                      suffix="个月"
-                      value={plan.months}
-                      onCommit={onCashByMonths}
-                    />
-                  </label>
-                  <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>推算现金（备用金）</span>
-                      <span className="font-mono font-semibold tabular-nums text-ink">{money(cash)}</span>
-                    </div>
-                    <p className="leading-snug text-slate-400">现金 = 每月支出 × 应急月数；理财 = 总资产 − 现金</p>
-                  </div>
-                </div>
-              </FloatPanel>
+              </div>
+              {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
+                <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
               )}
+              <label className="block text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1">应急月数<InfoTip>{EMERGENCY_MONTHS_FIELD_TIP}</InfoTip></span>
+                <SoftNumberInput
+                  min={0}
+                  max={36}
+                  step={0.5}
+                  suffix="个月"
+                  value={plan.months}
+                  onCommit={onCashByMonths}
+                />
+              </label>
+              <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                <div className="flex items-center justify-between gap-2">
+                  <span>推算现金（备用金）</span>
+                  <span className="font-mono font-semibold tabular-nums text-ink">{money(cash)}</span>
+                </div>
+                <p className="leading-snug text-slate-400">现金 = 每月支出 × 应急月数；理财 = 总资产 − 现金</p>
+              </div>
             </div>
           )}
         </div>
-
         <div className="border-t border-slate-100 pt-3">
           <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1">调整后可用资产<InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip></span>
             <span className="font-mono tabular-nums text-ink">{money(adjustedAvailableAssets)}</span>
           </div>
         </div>
-        </>
-        )}
       </FloatPanel>
     </div>
   );
@@ -3441,14 +3229,14 @@ function InstallmentSettingsPanel({ expense, onChange, retirementDate }: { expen
         退休日 {retirementDate || '未设置'} · 有效期数 {term} · 预计还清 {span.end}
       </p>
     )}
-    <LinkedFieldGroup hint="首付金额 ↔ 比例（相对总价）；改一边另一边跟">
+    <LinkedNumberFields hint="首付金额 ↔ 比例（相对总价）；改一边另一边跟">
       <label className="block text-xs text-slate-500">首付金额<SoftNumberInput min={0} step={1000} value={down} persistOnBlur={false} onCommit={patchDownAmount} /></label>
       <label className="block text-xs text-slate-500">首付比例<SoftNumberInput min={0} max={100} step={0.1} suffix="%" value={downPercent} persistOnBlur={false} onCommit={patchDownPercent} /></label>
-    </LinkedFieldGroup>
-    <LinkedFieldGroup hint="年数 ↔ 期数：1 年 = 12 期；贷款计算一律用月数">
+    </LinkedNumberFields>
+    <LinkedNumberFields hint="年数 ↔ 期数：1 年 = 12 期；贷款计算一律用月数">
       <label className="block text-xs text-slate-500">年数<SoftNumberInput min={0.1} max={30} step={0.1} suffix="年" value={years} persistOnBlur={false} onCommit={patchTermYears} /></label>
       <label className="block text-xs text-slate-500">期数<SoftNumberInput min={1} max={360} step={1} suffix="月" value={term} persistOnBlur={false} onCommit={patchTermMonths} /></label>
-    </LinkedFieldGroup>
+    </LinkedNumberFields>
     <label className="block text-xs text-slate-500">年化利率<SoftNumberInput min={0} max={100} step={0.1} suffix="%" value={expense.interest || 0} persistOnBlur={false} onCommit={(n) => onChange({ interest: n })} /></label>
     {isNarrow ? (
       <div className="rounded-xl border border-slate-100 bg-slate-50">

@@ -191,7 +191,7 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 ## E2E 冒烟（Playwright）
 
-最小访客冒烟（`e2e/smoke.spec.ts`，1～3 条）：首页决策摘要、改到手收入后摘要仍在、分区 chip「走势」。
+最小访客冒烟（`e2e/smoke.spec.ts`，1～2 条）：首页决策摘要、改到手收入后摘要仍在。
 
 ```bash
 # 首次（或换机）只需 Chromium
