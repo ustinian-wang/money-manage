@@ -1,0 +1,207 @@
+lib/chartAxis.ts
+  s_ca46ad20bcba77::t_dc0f5ba2ce2e08 40-87
+lib/floatPlace.test.ts
+  s_3cd9d0dcbe3a49::t_029ad977c0c64e 11
+  s_5a61ee087fcc93::t_fca0888f5d0e83 14
+  s_e80f472d585b17::t_04a84e888e2125 15
+  s_5a61ee087fcc93::t_45d6aff1bb1522 53-76
+  s_e80f472d585b17::t_c63458a2b7ec29 77-94,110-122,136-137
+  s_3cd9d0dcbe3a49::t_4072e8fd27ffd0 95-109,123-135
+app/authPageUi.test.ts
+  s_7a92595e17c477::t_62ea53b1dbef45 2-3,6,9-10,12-15,18-21,24-30,33-36
+app/components/LinkedNumberFields.tsx
+  s_2591b40ebad1a5::t_f89ca8e2f52891 1-65
+app/AuthBar.tsx
+  s_7a92595e17c477::t_42354e08dff058 6-7,53,147-157,175,191,224-233,239-255
+app/textFieldUi.test.ts
+  s_2591b40ebad1a5::t_c83ab34ab3180d 29
+lib/chartAxis.test.ts
+  s_ca46ad20bcba77::t_b1864f748adce4 66-107
+  s_ca46ad20bcba77::t_462000e4eda3d0 10-11,16-17
+app/components/SheetPageShell.tsx
+  s_419205fdb9e489::t_579dbdd3435d63 1-69
+lib/ui/authGateShell.test.ts
+  s_7a92595e17c477::t_7f37151b371370 2,8-9,11-14,17-20
+app/incomeDetailLayout.test.ts
+  s_e80f472d585b17::t_5a4ad2841a0dd5 254,256,258,262-265
+  s_3cd9d0dcbe3a49::t_0cf59f538c1b3e 260-261
+  s_419205fdb9e489::t_91b35b64309262 266-267,271-272
+  s_3cd9d0dcbe3a49::t_8114842dda7570 255,257,259
+app/reinvestEditorLayout.test.ts
+  s_110d926914cd51::t_6d689f11656b2f 2-3,8-9,11-13,25-37,45,47-49
+  s_8bae84881dd93f::t_af015aac814d06 1,4-7,10,14-24,38-44,46,50-57
+lib/shareWarnMarkLines.test.ts
+  s_5a61ee087fcc93::t_25e380de540856 53-58,61-77,82,87
+  s_5a61ee087fcc93::t_8cd4a15cf6221f 10
+  s_5a61ee087fcc93::t_6ad59aabb342b2 2,11-13,17-21,24-28,31-34,38-41,44-49
+  s_5a61ee087fcc93::t_40b7cefa23c232 51,84-86
+lib/floatPlace.ts
+  s_5a61ee087fcc93::t_ef5241a519a1aa 91,108-110,112-124,145-147
+  s_3cd9d0dcbe3a49::t_e6f485331fa899 132,148-164
+  s_e80f472d585b17::t_618eebffd58c4b 111,125-131,133-144
+  s_3cd9d0dcbe3a49::t_7a9f882203e445 165
+app/page.tsx
+  s_5a61ee087fcc93::t_1eebc9d279ddd9 30
+  s_5a61ee087fcc93::t_09f1d87ea7b12e 1191
+  s_ca46ad20bcba77::t_bee9ae059cd093 23
+  s_ca46ad20bcba77::t_e6c13712c8922c 1152,1159
+  s_8bae84881dd93f::t_af9b126cf4c69b 2593,2616-2619,2636,2644,2646,2653,2655,2660
+  s_5a61ee087fcc93::t_89ed6479482da5 2025-2029,2047
+  s_ca46ad20bcba77::t_7d5d5daaa36a41 1218
+  s_110d926914cd51::t_4228d776505a1a 2621-2634,2654
+  s_5a61ee087fcc93::t_0a10413f561fd3 1147-1150
+  s_110d926914cd51::t_e21a7fce8ef985 11
+  s_419205fdb9e489::t_bcf8d682aab2e1 171
+  s_5a61ee087fcc93::t_c63144cdd0c9a5 1209-1217,1219-1225,1233-1239,1245-1254,1261-1266,1273-1282
+  s_419205fdb9e489::t_98e81a06b1b2a7 2980-2981,3021-3022,3036,3039,3047,3053,3057-3061,3067,3074,3077-3079,3081-3106,3109-3118,3120-3122,3124-3141
+  s_aab4d0f27496f5::t_51feedbdce4afa 1303
+  s_5a61ee087fcc93::t_1d8200a8bbc681 2035-2041
+  s_110d926914cd51::t_407b2c3cd55d2c 10
+  s_5a61ee087fcc93::t_f3b77f59fa3555 1188-1190
+  s_5a61ee087fcc93::t_fb6afdf546afd8 1192
+  s_419205fdb9e489::t_8624698faf1042 1178,1183-1187,1367,1610,1615,1710,1826,1850,1884,3232,3235-3236,3239
+app/components/FloatPanel.tsx
+  s_3cd9d0dcbe3a49::t_eb6160a469a30a 84-98,100,108,110,114
+  s_3cd9d0dcbe3a49::t_fc7c7e9b22b0f3 232,235,237-243,270,272-273,276-284
+  s_419205fdb9e489::t_ec6c70520453a2 11
+  s_419205fdb9e489::t_e758f1f5071266 290-300,302
+  s_3cd9d0dcbe3a49::t_68371494c8d5b4 14
+  s_e80f472d585b17::t_847cc4a2df5b7e 5,32,34,63,65-66,156,229-230,262,285-286
+app/components/SelectNumberField.tsx
+  s_110d926914cd51::t_7c9dda7d145631 1-30
+lib/ux-contract.ts
+  s_3cd9d0dcbe3a49::t_0536534716453b 20
+  s_e80f472d585b17::t_a1e03f3f7a7037 4,8,19
+  s_d17885e7117e7a::t_7bece423b897f5 23
+e2e/smoke.spec.ts
+  s_d17885e7117e7a::t_6f626d8c26e5d4 4
+app/globals.css
+  s_d17885e7117e7a::t_b47fd63476bdf0 235
+  s_3cd9d0dcbe3a49::t_538f913fde1d4c 137-142
+  s_419205fdb9e489::t_b0845d290d8cb8 329
+README.md
+  s_d17885e7117e7a::t_bf302f4d5e491a 194
+app/assetConfigLayout.test.ts
+  s_419205fdb9e489::t_17a94bc3a86c00 1-56
+lib/useIsMobile.ts
+  s_d17885e7117e7a::t_a6fff2bbe85b04 11
+app/sheetPageShell.test.ts
+  s_419205fdb9e489::t_72b5dc06b1251a 31-33
+  s_419205fdb9e489::t_227d77f830213d 1-30,34-35
+app/expenseListLayout.test.ts
+  s_2591b40ebad1a5::t_f04eb8ffaf8bc1 2-3,16-29,44,53-54,56-58,61-69,73
+  s_2591b40ebad1a5::t_3161f2c4c1b833 40
+  s_2591b40ebad1a5::t_748432587c146d 1,4-15,30-36,38,41-43,45-52,55,59-60,70-72,74-79
+  s_2591b40ebad1a5::t_96e859b53fd7f8 37,39
+lib/shareWarnMarkLines.ts
+  s_5a61ee087fcc93::t_09b56ae870ad26 2,5-38
+  s_5a61ee087fcc93::t_4e8eb01208f8c6 42-43,45-53
+lib/ui/authGateShell.ts
+  s_7a92595e17c477::t_30a72faa2b238d 2,5,7,10,12
+next-env.d.ts
+  s_fb07669f830d2e::t_d79a7c74801790 3,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8d02df1d285870a9348da4309d543a74a281400b",
+  "prompts": {},
+  "sessions": {
+    "s_110d926914cd51": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "41405c8b-e374-4534-90bd-8de3a1dbf098",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_2591b40ebad1a5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f3878031-abde-432e-b172-2115de6e10cb",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_3cd9d0dcbe3a49": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e883469d-4776-48a3-a34e-845fb8deca57",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_419205fdb9e489": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e3bc094a-9eab-4159-93a4-4f26edf9dcc0",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_5a61ee087fcc93": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b3b26b5-7d43-4da1-9576-6d94637e10f6",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_7a92595e17c477": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "05aa1039-af04-4db7-bbe0-f2783e1f834e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_8bae84881dd93f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "225c48db-02fc-4101-a064-f884dc95e471",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_aab4d0f27496f5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e5f2a83b-5e33-4334-a956-31ba7e065dec",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_ca46ad20bcba77": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8982e362-f756-4f1f-968e-e795ce084f66",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_d17885e7117e7a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e8a57a2d-83cb-46de-84de-1a7cc176dbef",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_e80f472d585b17": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ce4f32fc-a452-4a8d-8c49-f5903f031007",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_fb07669f830d2e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "29553806-8f9e-4576-9cf8-32d661ad469e",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
