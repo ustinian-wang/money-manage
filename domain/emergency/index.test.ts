@@ -155,7 +155,8 @@ describe('现金 ↔ 月数换算', () => {
     );
     assert.equal(next.cashDirect, 24000);
     assert.equal(next.monthsPlan.cash, 24000);
-    assert.equal(next.monthsPlan.months, 3);
+    // 月均取往年÷12=10000，24000/10000=2.5；第三参 liveMonthly 不覆盖已有往年
+    assert.equal(next.monthsPlan.months, 2.5);
     assert.equal(next.monthsPlan.annualSpend, 120000);
   });
 
