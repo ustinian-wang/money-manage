@@ -1,0 +1,37 @@
+app/components/SelectNumberField.tsx
+  s_b6dc91a86fb77f::t_d0ffd2d40f44b2 4-5,25,27-32
+lib/chartAxis.ts
+  s_a1a9118fd934b1::t_a3234e7eeb4253 47-53,68-69,76-79,98-124
+  s_a1a9118fd934b1::t_2f043772a78bf7 125
+app/page.tsx
+  s_b6dc91a86fb77f::t_800cb029015334 1155,1157-1167,1189-1192,1209,1236,1238-1244,1251-1271,1279-1285,1298,1315-1316,1320,1328
+  s_a1a9118fd934b1::t_97d5282454f18d 23-25
+lib/chartAxis.test.ts
+  s_a1a9118fd934b1::t_d4b49ccd529b71 100,104
+  s_a1a9118fd934b1::t_e36010babd508f 4,12-13,20,71,79,86,88,93,95-98,102-103,109-128
+  s_a1a9118fd934b1::t_bed631962bbe44 129-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cfa818e14b62e743eb76321cdd260d1be81a1c18",
+  "prompts": {},
+  "sessions": {
+    "s_a1a9118fd934b1": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f99752b1-cf2f-49e9-a949-a6b9e898aaf7",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    },
+    "s_b6dc91a86fb77f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "307a873b-fd2c-473b-b101-82d01acb76e2",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
