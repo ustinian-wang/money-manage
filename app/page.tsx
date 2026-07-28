@@ -2700,7 +2700,7 @@ function ReinvestEditor({
             />
           ) : (
             <SoftNumberInput
-              className="field-input !mt-0 min-w-[7.5rem] w-36"
+              className="field-input !mt-0 min-w-[6.5rem] w-32"
               min={0}
               step={100}
               suffix="/月"

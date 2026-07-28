@@ -70,11 +70,12 @@ describe('ReinvestEditor 行内编辑', () => {
     assert.match(src, /<SoftNumberInput[\s\S]*?suffix="\/月"/);
   });
 
-  // 百分比 / 固定金额数字槽加宽，避免 field-row 右侧 select+input 把 SoftNumberInput 压窄
-  it('再投入 SoftNumberInput 加宽 min-w / w-，select 略限宽', () => {
+  // 百分比 / 固定金额共用同一套数字槽宽度（以百分比为准），避免切模式时输入框跳动
+  it('再投入 SoftNumberInput 两种模式同宽，select 略限宽', () => {
     const src = reinvestEditorSource();
-    assert.match(src, /min-w-\[6\.5rem\] w-32/);
-    assert.match(src, /min-w-\[7\.5rem\] w-36/);
+    const widthMatches = src.match(/min-w-\[6\.5rem\] w-32/g) ?? [];
+    assert.equal(widthMatches.length, 2, '百分比与固定金额应同用 min-w-[6.5rem] w-32');
+    assert.doesNotMatch(src, /min-w-\[7\.5rem\] w-36/);
     assert.match(src, /max-w-\[5\.5rem\]/);
     assert.match(src, /min-w-\[12rem\]/);
   });
