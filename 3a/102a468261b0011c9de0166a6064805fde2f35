@@ -1,0 +1,21 @@
+app/reinvestEditorLayout.test.ts
+  s_b6dc91a86fb77f::t_ef845af10ad673 36-42,72-80
+app/page.tsx
+  s_b6dc91a86fb77f::t_49c2cd92c6acdc 2679,2683,2693,2703
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3a102a468261b0011c9de0166a6064805fde2f35",
+  "prompts": {},
+  "sessions": {
+    "s_b6dc91a86fb77f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "307a873b-fd2c-473b-b101-82d01acb76e2",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
