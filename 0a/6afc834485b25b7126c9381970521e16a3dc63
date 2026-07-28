@@ -1,0 +1,32 @@
+domain/emergency/index.ts
+  s_419205fdb9e489::t_1beda93d2bc9a8 249-250,260,267
+  s_419205fdb9e489::t_24a7b62827df2a 4
+  s_419205fdb9e489::t_ede4b9d9bc951c 5-6
+  s_419205fdb9e489::t_6b4135b212f2a3 160-163,173,183-184,205
+domain/emergency/index.test.ts
+  s_419205fdb9e489::t_6e5baffea52b90 303,308,311,315-316,319
+  s_419205fdb9e489::t_6a602151228be6 291,297
+  s_419205fdb9e489::t_47b47ed5fc6cce 96,111-129
+  s_419205fdb9e489::t_7fa699bcd05461 145,147-152,157-159,162,173,176,179,186,196-197,200,202-207,214-215
+app/assetConfigLayout.test.ts
+  s_419205fdb9e489::t_cf7a83e8ae15c4 2-3,30-31,41-43,46-51,53-63
+  s_419205fdb9e489::t_6f9c77c098b289 44-45
+app/page.tsx
+  s_419205fdb9e489::t_9f934254fa09a5 2980-2981,3018,3020-3023,3037,3040,3063-3068,3070-3087,3091,3097-3111,3113-3115,3127-3136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0a6afc834485b25b7126c9381970521e16a3dc63",
+  "prompts": {},
+  "sessions": {
+    "s_419205fdb9e489": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e3bc094a-9eab-4159-93a4-4f26edf9dcc0",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
