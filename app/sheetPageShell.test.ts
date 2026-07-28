@@ -32,4 +32,9 @@ describe('SheetPageShell 内页外壳契约', () => {
     assert.doesNotMatch(floatSrc, /<div data-float-scroll/);
     assert.doesNotMatch(floatSrc, /<div[^>]*data-float-footer/);
   });
+
+  it('滚动区保留 overscroll-contain，供内页单独滚动', () => {
+    assert.match(shellSrc, /data-float-scroll/);
+    assert.match(shellSrc, /overscroll-contain/);
+  });
 });

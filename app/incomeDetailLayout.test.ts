@@ -15,7 +15,7 @@ import {
   INCOME_DETAIL_TAX_DETAIL_PANEL_TITLE,
   isIncomeDetailMainOnlyLabel,
 } from './incomeDetailLayout';
-import { acquireSheetBodyLock, blockOverlayEvent } from '../lib/ui/overlayEvents';
+import { acquireSheetBodyLock, blockOverlayEvent, isolateOverlayEvent } from '../lib/ui/overlayEvents';
 
 const pageSource = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 const floatPanelModuleSource = fs.readFileSync(new URL('./components/FloatPanel.tsx', import.meta.url), 'utf8');
@@ -110,6 +110,10 @@ describe('FloatPanel sheet mask 交互契约', () => {
     assert.match(floatPanelSource, /onKeyDown=\{onPanelKeyDown\}/);
     assert.match(floatPanelSource, /aria-modal=\{asSheet \? 'true' : undefined\}/);
     assert.doesNotMatch(floatPanelSource, /document\.addEventListener\('keydown'/);
+    // panel 无 mask：内页本身 isolate 点击/指针，避免冒泡到背后页
+    assert.match(floatPanelSource, /onPointerDown=\{isPanelSheet \? isolateOverlayEvent/);
+    assert.match(floatPanelSource, /onClick=\{isPanelSheet \? isolateOverlayEvent/);
+    assert.equal(typeof isolateOverlayEvent, 'function');
   });
 
   it('多个 sheet 共用 body 锁，最后一个关闭后才释放', () => {

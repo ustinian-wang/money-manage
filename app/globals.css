@@ -40,7 +40,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 /* ponytail: 勿用 touch-action:none——iOS 键盘弹出后 sheet 内滚动易失效 */
-body.sheet-open { overflow: hidden; overscroll-behavior: none; }
+/* 无 mask 时靠 overflow + overscroll + overlayEvents capture 拦背后页滚 */
+body.sheet-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: relative;
+}
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
 .section-label { border-top: 1px solid #edf1ee; color: #52605b; font-size: .75rem; font-weight: 700; margin-top: .5rem; padding-top: 1.25rem; }
@@ -142,12 +147,16 @@ html.kb-open .auth-gate-root {
   max-height: var(--vv-height, 100vh);
   border-radius: 0;
   box-sizing: border-box;
+  pointer-events: auto;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 /* 内容区：flex 子项可收缩，超高时滚到底；勿 touch-action:none */
 [data-float-scroll] {
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
 }
 .sheet-handle {
   width: 2.5rem;

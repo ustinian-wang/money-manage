@@ -13,7 +13,7 @@ import { useIsMobile } from '../../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../../lib/useVisualViewport';
 import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeFullscreenInViewport, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
 import { Z_INDEX } from '../../lib/ui/zIndex';
-import { acquireSheetBodyLock, blockOverlayEvent } from '../../lib/ui/overlayEvents';
+import { acquireSheetBodyLock, blockOverlayEvent, isolateOverlayEvent } from '../../lib/ui/overlayEvents';
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
@@ -271,6 +271,10 @@ export default function FloatPanel({
         tabIndex={-1}
         onKeyDown={onPanelKeyDown}
         onFocusCapture={(event) => { scrollFocusedFieldIntoView(event.target); }}
+        // panel 无 mask：点击/指针不冒泡到背后页；wheel/touch 由 body 锁上的 capture 隔离
+        onPointerDown={isPanelSheet ? isolateOverlayEvent : undefined}
+        onPointerUp={isPanelSheet ? isolateOverlayEvent : undefined}
+        onClick={isPanelSheet ? isolateOverlayEvent : undefined}
         className={`fixed flex flex-col overscroll-contain bg-white ${isPanelSheet ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-slate-200 shadow-xl'} overflow-hidden`}
         style={{
           top: panelTop,
