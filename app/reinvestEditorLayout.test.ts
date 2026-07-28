@@ -1,5 +1,5 @@
 /**
- * 月结余再投入：SelectNumberField（select + SoftNumberInput 同行），不为切模式/改数值单独开 FloatPanel
+ * 月结余再投入：与「年化收益率」同 field-row 左右节奏；SelectNumberField 同行；不为切模式/改数值单独开 FloatPanel
  * 需求：移动端去掉仅为该字段的弹窗；复用 switchReinvestMode；全端强制同行
  */
 import assert from 'node:assert/strict';
@@ -40,6 +40,14 @@ describe('ReinvestEditor 行内编辑', () => {
     const src = reinvestEditorSource();
     assert.doesNotMatch(src, /<FloatPanel/);
     assert.doesNotMatch(src, /\bsetOpen\b|\banchorRef\b/);
+  });
+
+  it('与年化收益率同 field-row 左右节奏，不竖排标签+控件', () => {
+    const src = reinvestEditorSource();
+    // Editable 同款：field-row-mobile + justify-between；左标签右 SelectNumberField
+    assert.match(src, /field-row-mobile flex items-center justify-between/);
+    assert.match(src, /月结余再投入[\s\S]*?<SelectNumberField/);
+    assert.doesNotMatch(src, /flex-col gap-1\.5/);
   });
 
   it('走 SelectNumberField：select 切模式 + SoftNumberInput，并走 switchReinvestMode', () => {

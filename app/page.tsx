@@ -2613,13 +2613,14 @@ function ReinvestEditor({
   };
   return (
     <div className="relative block min-w-0 sm:col-span-2">
-      <div className="flex flex-col gap-1.5 text-sm text-slate-600">
+      {/* 与 Editable「年化收益率」同一套 field-row 左右节奏；右侧仍为 select+数字同行 */}
+      <span className="field-row-mobile flex items-center justify-between gap-2 text-sm text-slate-600 sm:flex-row sm:items-center">
         <span className="flex items-center gap-1">
           月结余再投入
           <InfoTip>{'每月结余里再投入理财的部分。\n百分比 = 结余的 x% 进理财；也可改固定月额（不超过当月结余）。'}</InfoTip>
         </span>
-        {/* ponytail: 全端统一行内；SelectNumberField 强制 select+数字同行 */}
         <SelectNumberField
+          className="shrink-0 self-start sm:self-auto"
           select={(
             <select
               aria-label="再投入模式"
@@ -2652,12 +2653,12 @@ function ReinvestEditor({
             />
           )}
         />
-        <p className="text-[11px] leading-snug text-slate-400">
-          {isPercent
-            ? `当前约投入 ${money(Math.round(monthlySurplus * clamp(setting.rate, 0, 100) / 100))}/月（按月度剩余估算）`
-            : `不超过当月结余；当前结余约 ${money(Math.round(monthlySurplus))}`}
-        </p>
-      </div>
+      </span>
+      <p className="mt-1.5 text-[11px] leading-snug text-slate-400">
+        {isPercent
+          ? `当前约投入 ${money(Math.round(monthlySurplus * clamp(setting.rate, 0, 100) / 100))}/月（按月度剩余估算）`
+          : `不超过当月结余；当前结余约 ${money(Math.round(monthlySurplus))}`}
+      </p>
     </div>
   );
 }
