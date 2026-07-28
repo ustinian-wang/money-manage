@@ -1,6 +1,7 @@
 /**
  * 窄屏图轴：少刻度 +「第 N 年」/年标签
  * 需求：first-visit-audit P2-2 / 多视角评估 #8
+ * 占比 Y：关注带 ±100，带外只标数值
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -8,12 +9,15 @@ import {
   DESKTOP_MONTH_AXIS_INTERVAL,
   NARROW_MONTH_AXIS_INTERVAL,
   PERCENT_SHARE_Y_BASE_INTERVAL,
+  PERCENT_SHARE_Y_FOCUS_MAX,
+  PERCENT_SHARE_Y_FOCUS_MIN,
   PERCENT_SHARE_Y_MAX_SPLITS,
   formatAssetChartAxisLabel,
   formatYearMonthChartAxisLabel,
   monthAxisInterval,
   monthAxisRotate,
   niceCeilInterval,
+  percentShareOverflowMarks,
   percentShareYAxis,
 } from './chartAxis';
 
@@ -64,7 +68,7 @@ describe('formatYearMonthChartAxisLabel', () => {
   });
 });
 
-// 占比 Y 轴：正常 / 轻度超支 / 极端首月 —— 段数 ≤ MAX_SPLITS
+// 占比 Y 轴：正常 / 带内轻度 / 带外极端 —— 轴夹 ±100，段数 ≤ MAX_SPLITS
 describe('percentShareYAxis', () => {
   it('正常 0～100：步长 20，端点贴齐', () => {
     const axis = percentShareYAxis(0, 100);
@@ -72,28 +76,56 @@ describe('percentShareYAxis', () => {
     assert.ok((axis.max - axis.min) / axis.interval <= PERCENT_SHARE_Y_MAX_SPLITS);
   });
 
-  it('轻度超支（剩余 −20～100 / 支出至 120）：抬高步长且刻度不多', () => {
+  it('关注带内轻度超支（剩余 −20～100 / 支出至 120 夹到 100）：刻度不多', () => {
     const remain = percentShareYAxis(-20, 100);
     assert.ok(remain.interval >= PERCENT_SHARE_Y_BASE_INTERVAL);
     assert.ok(remain.min <= -20);
     assert.ok(remain.max >= 100);
     assert.ok((remain.max - remain.min) / remain.interval <= PERCENT_SHARE_Y_MAX_SPLITS);
 
+    // 120 超出 FOCUS_MAX → 轴仍顶在 100，不拉到 120
     const expense = percentShareYAxis(0, 120);
+    assert.equal(expense.max, PERCENT_SHARE_Y_FOCUS_MAX);
     assert.ok(expense.interval >= PERCENT_SHARE_Y_BASE_INTERVAL);
-    assert.ok(expense.max >= 120);
     assert.ok((expense.max - expense.min) / expense.interval <= PERCENT_SHARE_Y_MAX_SPLITS);
   });
 
-  it('极端首月超支：大跨度仍 ≤5 段，避免上百个 20% 小格', () => {
+  it('极端超支/深度负区：轴夹在 ±100，不把跨度拉到上千', () => {
     const cash = percentShareYAxis(0, 2000);
-    assert.ok(cash.interval >= 100);
-    assert.equal((cash.max - cash.min) / cash.interval <= PERCENT_SHARE_Y_MAX_SPLITS, true);
+    assert.equal(cash.min, 0);
+    assert.equal(cash.max, PERCENT_SHARE_Y_FOCUS_MAX);
+    assert.equal(cash.interval, PERCENT_SHARE_Y_BASE_INTERVAL);
+    assert.ok((cash.max - cash.min) / cash.interval <= PERCENT_SHARE_Y_MAX_SPLITS);
 
+    // −100～100 跨度 200 → nice 步长 50（约 4 段），而非上千跨度
     const remain = percentShareYAxis(-800, 100);
-    assert.ok(remain.interval >= 100);
-    assert.ok(remain.min <= -800);
+    assert.equal(remain.min, PERCENT_SHARE_Y_FOCUS_MIN);
+    assert.equal(remain.max, PERCENT_SHARE_Y_FOCUS_MAX);
+    assert.equal(remain.interval, 50);
     assert.ok((remain.max - remain.min) / remain.interval <= PERCENT_SHARE_Y_MAX_SPLITS);
+  });
+});
+
+describe('percentShareOverflowMarks', () => {
+  it('带内点不产出；带外点 coord.y 贴边、value 为真实值', () => {
+    const marks = percentShareOverflowMarks([
+      { label: '2026-01', value: 80 },
+      { label: '2026-02', value: 250 },
+      { label: '2026-03', value: -150 },
+      { label: '2026-04', value: -100 },
+      { label: '2026-05', value: 100 },
+    ]);
+    assert.equal(marks.length, 2);
+    assert.deepEqual(marks[0], {
+      name: '溢出',
+      coord: ['2026-02', PERCENT_SHARE_Y_FOCUS_MAX],
+      value: 250,
+    });
+    assert.deepEqual(marks[1], {
+      name: '溢出',
+      coord: ['2026-03', PERCENT_SHARE_Y_FOCUS_MIN],
+      value: -150,
+    });
   });
 });
 

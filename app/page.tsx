@@ -20,6 +20,9 @@ import {
   formatYearMonthChartAxisLabel,
   monthAxisInterval,
   monthAxisRotate,
+  PERCENT_SHARE_Y_FOCUS_MAX,
+  PERCENT_SHARE_Y_FOCUS_MIN,
+  percentShareOverflowMarks,
   percentShareYAxis,
 } from '../lib/chartAxis';
 import { FLOAT_MARGIN, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../lib/floatPlace';
@@ -1149,7 +1152,19 @@ export default function HomePage() {
     const warnFloor = Math.min(0, ...remainWarnAxes);
     const yMin = Math.min(0, dataMin, warnFloor);
     const yMax = Math.max(100, ...values);
+    // 轴夹 ±100；带外点 pin 贴边标真实值
     const yAxisRange = percentShareYAxis(yMin, yMax);
+    const visibleRemainWarnAxes = remainWarnAxes.filter(
+      (y) => y >= yAxisRange.min && y <= yAxisRange.max,
+    );
+    const firstLabel = remainForecast[0]?.label;
+    const overflowMarks = percentShareOverflowMarks(
+      remainForecast.map((point) => ({ label: point.label, value: point.value })),
+    );
+    const currentCoordY = Math.min(
+      PERCENT_SHARE_Y_FOCUS_MAX,
+      Math.max(PERCENT_SHARE_Y_FOCUS_MIN, current),
+    );
     return {
     animation: false,
     // 右侧留白给 markLine；375 下 10%≈32px 仍裁字，窄屏用 68px
@@ -1171,7 +1186,10 @@ export default function HomePage() {
         symbolSize: isNarrow ? 44 : 52,
         // 首点贴 Y 轴时 pin 会盖住刻度；略右移
         symbolOffset: [isNarrow ? 18 : 28, 0],
-        data: [{ name: '当前', coord: [remainForecast[0]?.label, current], value: current }],
+        data: [
+          { name: '当前', coord: [firstLabel, currentCoordY], value: current },
+          ...overflowMarks.filter((mark) => mark.coord[0] !== firstLabel),
+        ],
         label: { show: true, formatter: (p: { value?: number }) => `${Number(p.value ?? 0).toFixed(1)}%`, color: '#fff', fontSize: isNarrow ? 11 : 12, fontWeight: 700 },
         itemStyle: { color: BRAND.coral, borderColor: '#fff', borderWidth: 1 },
       },
@@ -1188,7 +1206,7 @@ export default function HomePage() {
               [-20]: { name: '警告 −20%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 −20%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
               [-50]: { name: '警告 −50%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 −50%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
             };
-            return remainWarnAxes.map((yAxis) => ({ yAxis, ...remainWarnMeta[yAxis] }));
+            return visibleRemainWarnAxes.map((yAxis) => ({ yAxis, ...remainWarnMeta[yAxis] }));
           })(),
           ...planChangeMarkLinesForYearMonthAxis(planChanges),
         ],
@@ -1215,13 +1233,41 @@ export default function HomePage() {
     const expenseWarnCeil = expenseWarnAxes.length ? Math.max(...expenseWarnAxes) : 0;
     const yMin = Math.min(0, dataMin);
     const yMax = Math.max(100, dataMax, expenseWarnCeil);
+    // 轴夹 ±100；建议线按夹后峰谷判定，避免极端峰把引导线整段藏掉
     const yAxisRange = percentShareYAxis(yMin, yMax);
-    const guideFlags = pickCashFlowGuideFlags({ peakPct: dataMax, troughPct: dataMin });
+    const visibleExpenseWarnAxes = expenseWarnAxes.filter(
+      (y) => y >= yAxisRange.min && y <= yAxisRange.max,
+    );
+    const guideFlags = pickCashFlowGuideFlags({
+      peakPct: Math.min(dataMax, PERCENT_SHARE_Y_FOCUS_MAX),
+      troughPct: Math.max(dataMin, PERCENT_SHARE_Y_FOCUS_MIN),
+    });
     const expenseWarnMeta: Record<number, { name: string; lineStyle: { color: string; type: 'solid' | 'dashed'; width: number }; label: { formatter: string; color: string; fontSize: number } }> = {
       100: { name: '支出 100%', lineStyle: { color: BRAND.ink, type: 'solid', width: 1.5 }, label: { formatter: '支出 100%', color: BRAND.ink, fontSize: isNarrow ? 10 : 12 } },
       110: { name: '警告 110%', lineStyle: { color: '#f59e0b', type: 'dashed', width: 1 }, label: { formatter: '警告 110%', color: '#b45309', fontSize: isNarrow ? 10 : 11 } },
       120: { name: '警告 120%', lineStyle: { color: '#f97316', type: 'dashed', width: 1 }, label: { formatter: '警告 120%', color: '#c2410c', fontSize: isNarrow ? 10 : 11 } },
       150: { name: '警告 150%', lineStyle: { color: '#dc2626', type: 'dashed', width: 1 }, label: { formatter: '警告 150%', color: '#b91c1c', fontSize: isNarrow ? 10 : 11 } },
+    };
+    const overflowPin = (vals: number[], color: string) => {
+      const marks = percentShareOverflowMarks(
+        labels.map((label, index) => ({ label, value: vals[index] ?? 0 })),
+      );
+      if (!marks.length) return {};
+      return {
+        markPoint: {
+          symbol: 'pin',
+          symbolSize: isNarrow ? 36 : 44,
+          data: marks,
+          label: {
+            show: true,
+            formatter: (p: { value?: number }) => `${Number(p.value ?? 0).toFixed(1)}%`,
+            color: '#fff',
+            fontSize: isNarrow ? 10 : 11,
+            fontWeight: 700,
+          },
+          itemStyle: { color, borderColor: '#fff', borderWidth: 1 },
+        },
+      };
     };
     const series: Array<{
       name: string;
@@ -1230,6 +1276,13 @@ export default function HomePage() {
       symbol: string;
       data: number[];
       lineStyle: { color: string; width: number };
+      markPoint?: {
+        symbol: string;
+        symbolSize: number;
+        data: Array<{ name: string; coord: [string, number]; value: number }>;
+        label: { show: boolean; formatter: (p: { value?: number }) => string; color: string; fontSize: number; fontWeight: number };
+        itemStyle: { color: string; borderColor: string; borderWidth: number };
+      };
       markLine?: {
         silent: boolean;
         symbol?: string;
@@ -1242,6 +1295,7 @@ export default function HomePage() {
       series.push({
         name: '偿债比 DTI', type: 'line', smooth: true, symbol: 'none', data: dti,
         lineStyle: { color: BRAND.coral, width: 3 },
+        ...overflowPin(dti, BRAND.coral),
         ...(guideFlags.showDti
           ? {
             markLine: {
@@ -1258,11 +1312,12 @@ export default function HomePage() {
       series.push({
         name: '支出率', type: 'line', smooth: true, symbol: 'none', data: expense,
         lineStyle: { color: '#64748b', width: 2.5 },
-        // 与分析占比图同档；峰值过高时已由 pickExpenseShareWarnYAxes 稀疏
+        ...overflowPin(expense, '#64748b'),
+        // 与分析占比图同档；轴夹后只保留可视区内警告线
         markLine: {
           silent: true,
           symbol: 'none',
-          data: expenseWarnAxes.map((yAxis) => ({ yAxis, ...expenseWarnMeta[yAxis] })),
+          data: visibleExpenseWarnAxes.map((yAxis) => ({ yAxis, ...expenseWarnMeta[yAxis] })),
         },
       });
     }
@@ -1270,6 +1325,7 @@ export default function HomePage() {
       series.push({
         name: '储蓄率', type: 'line', smooth: true, symbol: 'none', data: savings,
         lineStyle: { color: '#3d8f6e', width: 3 },
+        ...overflowPin(savings, '#3d8f6e'),
         ...(guideFlags.showSavings
           ? {
             markLine: {

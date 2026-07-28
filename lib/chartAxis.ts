@@ -45,6 +45,13 @@ export const PERCENT_SHARE_Y_MAX_SPLITS = 5;
 export const PERCENT_SHARE_Y_BASE_INTERVAL = 20;
 
 /**
+ * 占比图关注带：±100%；带外点只标数值，不拉长轴刷刻度。
+ * ponytail: 略扩边距=0，靠 interval 对齐即可；要松一点改 FOCUS 常量
+ */
+export const PERCENT_SHARE_Y_FOCUS_MIN = -100;
+export const PERCENT_SHARE_Y_FOCUS_MAX = 100;
+
+/**
  * 1-2-5 nice ceil：把 raw 抬到可读步长。
  * ponytail: 仅服务百分比轴；非正数回落到 BASE_INTERVAL
  */
@@ -58,15 +65,18 @@ export function niceCeilInterval(raw: number): number {
 }
 
 /**
- * 占比图 Y 轴：按跨度抬高 interval，避免固定 20 在极端超支时刷出过多刻度。
+ * 占比图 Y 轴：先夹在关注带 ±100，再按跨度抬高 interval。
+ * 极端超支/深度负区不把轴拉到上千，避免刷出过多刻度。
  * @param extentMin / extentMax 已含业务兜底（如 0～100、warn 档）
  */
 export function percentShareYAxis(
   extentMin: number,
   extentMax: number,
 ): { min: number; max: number; interval: number } {
-  const lo = Number.isFinite(extentMin) ? extentMin : 0;
-  const hi = Number.isFinite(extentMax) ? extentMax : 100;
+  const rawLo = Number.isFinite(extentMin) ? extentMin : 0;
+  const rawHi = Number.isFinite(extentMax) ? extentMax : 100;
+  const lo = Math.max(PERCENT_SHARE_Y_FOCUS_MIN, rawLo);
+  const hi = Math.min(PERCENT_SHARE_Y_FOCUS_MAX, rawHi);
   // 先按 10 对齐，与历史 floor/ceil 行为一致
   let min = Math.floor(lo / 10) * 10;
   let max = Math.ceil(hi / 10) * 10;
@@ -84,4 +94,32 @@ export function percentShareYAxis(
   max = Math.ceil(hi / interval) * interval;
   if (max <= min) max = min + interval;
   return { min, max, interval };
+}
+
+/** 关注带外点：轴仍夹 ±100，pin 贴边并标真实数值 */
+export type PercentShareOverflowMark = {
+  name: string;
+  coord: [string, number];
+  value: number;
+};
+
+/**
+ * 筛出超出关注带的点；coord.y 夹到带边，value 保留真实百分比供 label。
+ */
+export function percentShareOverflowMarks(
+  items: Array<{ label: string; value: number }>,
+  focusMin: number = PERCENT_SHARE_Y_FOCUS_MIN,
+  focusMax: number = PERCENT_SHARE_Y_FOCUS_MAX,
+): PercentShareOverflowMark[] {
+  const out: PercentShareOverflowMark[] = [];
+  for (const item of items) {
+    const v = item.value;
+    if (!Number.isFinite(v) || (v >= focusMin && v <= focusMax)) continue;
+    out.push({
+      name: '溢出',
+      coord: [item.label, Math.min(focusMax, Math.max(focusMin, v))],
+      value: v,
+    });
+  }
+  return out;
 }
