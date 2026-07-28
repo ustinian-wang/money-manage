@@ -1,8 +1,9 @@
 /**
  * 资产配置 · 现金/备用金：
  * 备用金 = 现金资产（不是并列另一坨钱）。
- * mode=amount：直接填现金（cashDirect）；mode=months：monthsPlan 往年÷12×月数 → 现金。
- * 两套分存，切换 mode 只换生效侧，互不覆盖。
+ * mode=amount：固定值主驱动；mode=months：公式（往年÷12×月数）主驱动。
+ * 联动：备用金额 ↔ 应急月数；往年支出仅用户填写，绝不被金额/月数/现金回写。
+ * 切 mode 只换驱动源，不卸表单。
  * 持久化：emergencyMode / emergencyCashDirect / emergencyMonths / emergencyMonthsCash /
  *         emergencyAnnualSpend；compat 仍写 emergencyAmount=生效现金。
  */
@@ -156,19 +157,20 @@ export function emergencyReserve(
   return activeCash(setting);
 }
 
-/** 改现金后：只写当前 mode 对应套，另一套不动 */
+/**
+ * 改备用金额/现金：写 cashDirect + monthsPlan.cash，并按月均反推月数。
+ * 绝不改 annualSpend（往年支出只由用户填）。
+ */
 export function syncSettingFromCash(
   setting: EmergencySetting,
   cash: number,
   monthlyExpenses: number,
 ): EmergencySetting {
   const safeCash = Math.max(0, Number.isFinite(cash) ? cash : 0);
-  if (setting.mode === 'amount') {
-    return { ...setting, cashDirect: safeCash };
-  }
   const expense = resolvePlanMonthly(setting.monthsPlan.annualSpend, monthlyExpenses);
   return {
     ...setting,
+    cashDirect: safeCash,
     monthsPlan: {
       ...setting.monthsPlan,
       cash: safeCash,
@@ -178,8 +180,8 @@ export function syncSettingFromCash(
 }
 
 /**
- * 按应急月数得到目标现金（可再 clamp 到总资产），只写 monthsPlan。
- * 理财侧由调用方走「现金+理财=总资产」联动。
+ * 按应急月数得到目标现金（可再 clamp 到总资产）；回写 cashDirect。
+ * 绝不改 annualSpend；理财侧由调用方走「现金+理财=总资产」联动。
  */
 export function applyMonthsPlan(
   setting: EmergencySetting,
@@ -200,6 +202,7 @@ export function applyMonthsPlan(
       ...setting,
       mode: 'months',
       enabled: true,
+      cashDirect: cash,
       monthsPlan: {
         ...setting.monthsPlan,
         months: syncedMonths,
@@ -243,8 +246,8 @@ export function switchEmergencyMode(
 }
 
 /**
- * 切到「应急月数」：已有应急套则只改 mode；
- * 空套时用本月×12 播种，月数/现金自 cashDirect 反算（现金先连续）。
+ * 切到「公式计算」：已有应急套则只改 mode；
+ * 空套时不写 annualSpend（往年支出只由用户填），月数自 cashDirect 反算。
  */
 export function enableMonthsPlan(
   setting: EmergencySetting,
@@ -254,15 +257,14 @@ export function enableMonthsPlan(
   if (hasMonthsPlanData(setting.monthsPlan)) {
     return { ...setting, mode: 'months', enabled: true };
   }
-  const annual = annualFromMonthly(liveMonthly);
-  const monthly = resolvePlanMonthly(annual, liveMonthly);
+  const monthly = Math.max(0, Number.isFinite(liveMonthly) ? liveMonthly : 0);
   const seedCash = Math.max(0, setting.cashDirect);
   return {
     ...setting,
     mode: 'months',
     enabled: true,
     monthsPlan: {
-      annualSpend: annual,
+      annualSpend: 0,
       cash: seedCash,
       months: monthly > 0 ? monthsFromCash(seedCash, monthly) : 0,
     },

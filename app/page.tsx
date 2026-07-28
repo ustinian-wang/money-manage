@@ -2977,8 +2977,8 @@ function formatExpenseInstallment(expense: Expense) {
   return `${repaymentModeLabel(expense.repaymentMode)} · ${money(total)} · 首付 ${money(down)}（${pct.toFixed(1)}%）· ${term} 期 / ${yearLabel} 年 · ${expense.interest || 0}%`;
 }
 /**
- * 资产配置：FloatPanel density=panel → 移动 sheet-page 全屏内页（SheetPageShell）。
- * 备用金：固定值 | 公式计算；公式字段铺在内页下方，不套二级弹窗。
+ * 资产配置：FloatPanel density=panel → sheet-page 全屏内页（SheetPageShell）。
+ * 两区块：总资产 | 备用金；往年支出独立；应急月数↔备用金额用 LinkedNumberFields。
  */
 function AssetLinkedEditor({
   totalAssets,
@@ -3015,11 +3015,12 @@ function AssetLinkedEditor({
 }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const monthsPlan = emergency.mode === 'months';
+  const formulaMode = emergency.mode === 'months';
   const plan = emergency.monthsPlan;
-  const cashSummary = monthsPlan
-    ? (plan.months > 0 ? `公式计算 · ${plan.months} 月` : '公式计算 · 去设置')
-    : '固定值';
+  const modeLabel = formulaMode ? '公式计算' : '固定值';
+  const cashSummary = formulaMode
+    ? (plan.months > 0 ? `${modeLabel} · ${plan.months} 月 · ${money(cash)}` : `${modeLabel} · ${money(cash)}`)
+    : `${modeLabel} · ${money(cash)}`;
   const setCashMode = (mode: 'amount' | 'months') => {
     onMonthsPlanChecked(mode === 'months');
   };
@@ -3033,10 +3034,10 @@ function AssetLinkedEditor({
             <span className="inline-flex items-center gap-0.5 rounded-full bg-coral/10 px-1.5 py-0.5 text-[10px] font-semibold text-coral-deep" title="现金+理财=总资产">
               <LinkLockIcon className="h-3 w-3" />联动
             </span>
-            <InfoTip>{`总资产 / 理财 / 备用金在同一内页编辑。\n备用金可选「固定值」或「公式计算」（往年支出÷12×应急月数）。`}</InfoTip>
+            <InfoTip>{`点开内页改总资产与备用金。\n备用金：固定值或公式（往年支出÷12×月数）；月数与金额联动，往年支出只由你填。`}</InfoTip>
           </span>
           <span className="text-[11px] font-normal leading-snug text-slate-400">
-            总资产 / 理财 / 备用金 · {cashSummary}
+            总资产 {money(totalAssets)} · 备用金 {cashSummary}
           </span>
         </span>
         <button
@@ -3050,7 +3051,6 @@ function AssetLinkedEditor({
           {money(totalAssets)}
         </button>
       </span>
-      {/* density=panel：移动全屏 sheet-page；PC 仍居中大面板；壳走 SheetPageShell */}
       <FloatPanel
         open={open}
         anchorRef={anchorRef}
@@ -3060,67 +3060,59 @@ function AssetLinkedEditor({
         headerTitle="资产配置"
         density="panel"
       >
-        <label className="mb-2 block text-xs text-slate-500">总资产
-          <SoftNumberInput min={0} step={1000} value={totalAssets} onCommit={onTotal} />
-        </label>
-        <div className="mb-3">
-          <LinkedNumberFields alwaysRow hint="理财金额 ↔ 占比（相对总资产）">
-            <label className="block text-xs text-slate-500">理财资产
-              <SoftNumberInput min={0} max={totalAssets} step={1000} value={invest} onCommit={onInvestAmount} />
+        <div className="space-y-5">
+          {/* —— 总资产 —— */}
+          <section className="space-y-3" data-asset-section="total">
+            <h4 className="text-sm font-semibold text-slate-800">总资产</h4>
+            <label className="block text-xs text-slate-500">总资产
+              <SoftNumberInput min={0} step={1000} value={totalAssets} onCommit={onTotal} />
             </label>
-            <label className="block text-xs text-slate-500">理财占比
-              <SoftNumberInput min={0} max={100} step={1} suffix="%" value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
-            </label>
-          </LinkedNumberFields>
-        </div>
-        <div className="mb-3">
-          <div className="mb-1 flex items-center gap-1 text-xs text-slate-500">
-            备用金（现金）
-            <InfoTip>{EMERGENCY_CASH_MODE_TIP}</InfoTip>
-          </div>
-          {/* select 切固定值/公式；固定值同行填金额，公式同行填月数 */}
-          <SelectNumberField
-            select={(
+            <LinkedNumberFields alwaysRow hint="理财金额 ↔ 占比（相对总资产）">
+              <label className="block text-xs text-slate-500">理财资产
+                <SoftNumberInput min={0} max={totalAssets} step={1000} value={invest} onCommit={onInvestAmount} />
+              </label>
+              <label className="block text-xs text-slate-500">理财占比
+                <SoftNumberInput min={0} max={100} step={1} suffix="%" value={Number.isInteger(investRatio) ? investRatio : Number(investRatio.toFixed(1))} onCommit={onInvestRatio} />
+              </label>
+            </LinkedNumberFields>
+            <p className="text-[11px] leading-snug text-slate-400">现金（备用金）+ 理财 = 总资产</p>
+          </section>
+
+          {/* —— 备用金：表单常显；模式只换驱动 —— */}
+          <section className="space-y-3 border-t border-slate-100 pt-4" data-asset-section="emergency">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="inline-flex items-center gap-1 text-sm font-semibold text-slate-800">
+                备用金
+                <InfoTip>{EMERGENCY_CASH_MODE_TIP}</InfoTip>
+              </h4>
               <select
                 aria-label="备用金方式"
                 className="field-input !mt-0 !w-auto max-w-full py-1 text-xs font-medium text-slate-700"
-                value={monthsPlan ? 'months' : 'amount'}
+                value={formulaMode ? 'months' : 'amount'}
                 onChange={(event) => setCashMode(event.target.value === 'months' ? 'months' : 'amount')}
               >
                 <option value="amount">固定值</option>
                 <option value="months">公式计算</option>
               </select>
+            </div>
+
+            <label className="block text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
+              <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
+            </label>
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+              <span>每月支出（自动）</span>
+              <span className="font-mono font-semibold tabular-nums text-ink">
+                {money(autoMonthly)}
+                <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
+              </span>
+            </div>
+            {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
+              <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
             )}
-            input={monthsPlan ? (
-              <SoftNumberInput
-                min={0}
-                max={36}
-                step={0.5}
-                suffix="个月"
-                value={plan.months}
-                onCommit={onCashByMonths}
-              />
-            ) : (
-              <SoftNumberInput min={0} max={totalAssets} step={1000} value={cash} onCommit={onCash} />
-            )}
-          />
-          <p className="mt-1 text-[11px] leading-snug text-slate-500">现金 + 理财 = 总资产（改一端同步其它）</p>
-          {monthsPlan && (
-            <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-              <label className="block text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1">往年支出额度<InfoTip>{EMERGENCY_ANNUAL_SPEND_TIP}</InfoTip></span>
-                <SoftNumberInput min={0} step={1000} value={plan.annualSpend} onCommit={onAnnualSpend} />
-              </label>
-              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                <span>每月支出（自动）</span>
-                <span className="font-mono font-semibold tabular-nums text-ink">
-                  {money(autoMonthly)}
-                  <span className="ml-1 font-sans font-normal text-slate-400">= 往年÷12</span>
-                </span>
-              </div>
-              {plan.annualSpend <= 0 && monthlyExpenses > 0 && (
-                <p className="text-[11px] leading-snug text-slate-400">尚未填往年时，暂用账本本月支出 {money(monthlyExpenses)} 作月均</p>
-              )}
+
+            {/* 仅月数↔金额进 LinkedNumberFields；往年支出不进 */}
+            <LinkedNumberFields alwaysRow hint="应急月数 ↔ 备用金额（月均×月数；改金额反推月数，不改往年支出）">
               <label className="block text-xs text-slate-500">
                 <span className="inline-flex items-center gap-1">应急月数<InfoTip>{EMERGENCY_MONTHS_FIELD_TIP}</InfoTip></span>
                 <SoftNumberInput
@@ -3132,20 +3124,17 @@ function AssetLinkedEditor({
                   onCommit={onCashByMonths}
                 />
               </label>
-              <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                <div className="flex items-center justify-between gap-2">
-                  <span>推算现金（备用金）</span>
-                  <span className="font-mono font-semibold tabular-nums text-ink">{money(cash)}</span>
-                </div>
-                <p className="leading-snug text-slate-400">现金 = 每月支出 × 应急月数；理财 = 总资产 − 现金</p>
-              </div>
+              <label className="block text-xs text-slate-500">备用金额
+                <SoftNumberInput min={0} max={totalAssets} step={1000} value={cash} onCommit={onCash} />
+              </label>
+            </LinkedNumberFields>
+          </section>
+
+          <div className="border-t border-slate-100 pt-3">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1">调整后可用资产<InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip></span>
+              <span className="font-mono tabular-nums text-ink">{money(adjustedAvailableAssets)}</span>
             </div>
-          )}
-        </div>
-        <div className="border-t border-slate-100 pt-3">
-          <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1">调整后可用资产<InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip></span>
-            <span className="font-mono tabular-nums text-ink">{money(adjustedAvailableAssets)}</span>
           </div>
         </div>
       </FloatPanel>

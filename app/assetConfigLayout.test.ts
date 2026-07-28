@@ -1,7 +1,6 @@
 /**
- * 资产配置：FloatPanel density=panel 全屏内页；备用金「固定值 | 公式计算」同行；
- * 公式字段铺在内页下方，不再套二级弹窗 / sheet 子页。
- * 需求：资产配置改内页 + 备用金双模式
+ * 资产配置内页终态：density=panel；总资产 | 备用金两区块；
+ * 往年支出独立；应急月数↔备用金额 LinkedNumberFields；表单常显、无二级弹层。
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -28,29 +27,39 @@ function sourceBetween(src: string, startMarker: string, endMarker?: string): st
 
 const assetSource = sourceBetween(pageSource, 'function AssetLinkedEditor({', 'function InstallmentSettingsPanel');
 
-describe('AssetLinkedEditor 内页 + 备用金双模式', () => {
-  it('入口 FloatPanel 用 density=panel（移动全屏内页），不用 field 矮卡', () => {
+describe('AssetLinkedEditor 内页终态', () => {
+  it('入口 FloatPanel density=panel，不用 field 矮卡 / 二级应急弹层', () => {
     assert.match(assetSource, /headerTitle=["']资产配置["']/);
     assert.match(assetSource, /density=["']panel["']/);
     assert.doesNotMatch(assetSource, /density=["']field["']/);
-  });
-
-  it('备用金走 SelectNumberField：固定值 | 公式计算，无二级应急弹层', () => {
-    assert.match(assetSource, /<SelectNumberField/);
-    assert.match(assetSource, /option value=["']amount["'][^>]*>固定值/);
-    assert.match(assetSource, /option value=["']months["'][^>]*>公式计算/);
-    // 不再套 nested FloatPanel / sheet 子页推应急设置
     assert.doesNotMatch(assetSource, /emergencyOpen|setEmergencyOpen|popEmergency/);
     assert.doesNotMatch(assetSource, /data-sheet-subview=["']emergency["']/);
     assert.doesNotMatch(assetSource, /Z_INDEX\.nestedPanel/);
     assert.doesNotMatch(assetSource, /onBack=/);
   });
 
-  it('公式计算时内页下方铺往年支出 / 应急月数（非弹窗）', () => {
+  it('两区块：总资产 / 备用金；入口摘要含总资产与备用金', () => {
+    assert.match(assetSource, /data-asset-section=["']total["']/);
+    assert.match(assetSource, /data-asset-section=["']emergency["']/);
+    assert.match(assetSource, /<h4[^>]*>[\s\S]*?总资产[\s\S]*?<\/h4>/);
+    assert.match(assetSource, /<h4[^>]*>[\s\S]*?备用金[\s\S]*?<\/h4>/);
+    assert.match(assetSource, /总资产 \{money\(totalAssets\)\} · 备用金/);
+  });
+
+  it('往年支出独立；应急月数↔备用金额走 LinkedNumberFields；模式 select 常显', () => {
+    assert.match(assetSource, /option value=["']amount["'][^>]*>固定值/);
+    assert.match(assetSource, /option value=["']months["'][^>]*>公式计算/);
     assert.match(assetSource, /往年支出额度/);
-    assert.match(assetSource, /应急月数/);
-    assert.match(assetSource, /推算现金（备用金）/);
-    // 公式块应在 monthsPlan 条件内，与一级主字段同页
-    assert.match(assetSource, /monthsPlan[\s\S]*往年支出额度[\s\S]*应急月数/);
+    // 往年支出不进 LinkedNumberFields
+    assert.match(
+      assetSource,
+      /往年支出额度[\s\S]*?<LinkedNumberFields alwaysRow hint="应急月数 ↔ 备用金额/,
+    );
+    assert.match(assetSource, /<LinkedNumberFields alwaysRow hint="应急月数 ↔ 备用金额[\s\S]*?应急月数[\s\S]*?备用金额/);
+    // 表单常显：无 monthsPlan && 隐藏整块
+    assert.doesNotMatch(assetSource, /\{monthsPlan && \(/);
+    assert.doesNotMatch(assetSource, /\{formulaMode && \(/);
+    // 不再用 SelectNumberField 切换输入槽
+    assert.doesNotMatch(assetSource, /<SelectNumberField/);
   });
 });

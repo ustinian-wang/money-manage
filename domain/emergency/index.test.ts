@@ -93,7 +93,7 @@ describe('往年支出 ÷12 月均', () => {
     assert.equal(resolvePlanMonthly(0, 5000), 5000);
   });
 
-  it('applyAnnualSpendPlan：改往年 → 月均×月数 → 只写 monthsPlan', () => {
+  it('applyAnnualSpendPlan：改往年 → 月均×月数重算金额；往年=用户值', () => {
     const { cash, setting } = applyAnnualSpendPlan(
       {
         ...DEFAULT_EMERGENCY,
@@ -108,7 +108,25 @@ describe('往年支出 ÷12 月均', () => {
     assert.equal(cash, 30000);
     assert.equal(setting.monthsPlan.months, 3);
     assert.equal(setting.monthsPlan.cash, 30000);
-    assert.equal(setting.cashDirect, 50000);
+    assert.equal(setting.cashDirect, 30000);
+  });
+
+  it('改金额不回写往年支出；改往年支出会更新金额（保持月数）', () => {
+    const base = {
+      ...DEFAULT_EMERGENCY,
+      mode: 'months' as const,
+      cashDirect: 30000,
+      monthsPlan: { months: 3, annualSpend: 120000, cash: 30000 },
+    };
+    const afterCash = syncSettingFromCash(base, 40000, 10000);
+    assert.equal(afterCash.monthsPlan.annualSpend, 120000);
+    assert.equal(afterCash.monthsPlan.months, 4);
+    assert.equal(afterCash.monthsPlan.cash, 40000);
+
+    const afterAnnual = applyAnnualSpendPlan(base, 240000, 1000000);
+    assert.equal(afterAnnual.setting.monthsPlan.annualSpend, 240000);
+    assert.equal(afterAnnual.setting.monthsPlan.months, 3);
+    assert.equal(afterAnnual.cash, 60000);
   });
 });
 
@@ -124,18 +142,24 @@ describe('现金 ↔ 月数换算', () => {
     assert.equal(cashFromMonths(1.5, 8000), 12000);
   });
 
-  it('syncSettingFromCash amount：只写 cashDirect，不动 monthsPlan', () => {
-    const plan = { months: 6, annualSpend: 120000, cash: 60000 };
+  it('syncSettingFromCash：改金额写两侧并反推月数，不改往年支出', () => {
     const next = syncSettingFromCash(
-      { ...DEFAULT_EMERGENCY, mode: 'amount', cashDirect: 10000, monthsPlan: plan },
+      {
+        ...DEFAULT_EMERGENCY,
+        mode: 'amount',
+        cashDirect: 10000,
+        monthsPlan: { months: 6, annualSpend: 120000, cash: 60000 },
+      },
       24000,
       8000,
     );
     assert.equal(next.cashDirect, 24000);
-    assert.deepEqual(next.monthsPlan, plan);
+    assert.equal(next.monthsPlan.cash, 24000);
+    assert.equal(next.monthsPlan.months, 3);
+    assert.equal(next.monthsPlan.annualSpend, 120000);
   });
 
-  it('syncSettingFromCash months：只写 monthsPlan，不动 cashDirect', () => {
+  it('syncSettingFromCash months：改金额同步 cashDirect，不改往年支出', () => {
     const next = syncSettingFromCash(
       {
         ...DEFAULT_EMERGENCY,
@@ -146,19 +170,20 @@ describe('现金 ↔ 月数换算', () => {
       16000,
       8000,
     );
-    assert.equal(next.cashDirect, 50000);
+    assert.equal(next.cashDirect, 16000);
     assert.equal(next.monthsPlan.cash, 16000);
     assert.equal(next.monthsPlan.months, 2);
+    assert.equal(next.monthsPlan.annualSpend, 96000);
   });
 
-  it('applyMonthsPlan：月数→现金，并被总资产封顶；不动 cashDirect', () => {
+  it('applyMonthsPlan：月数→现金封顶；回写 cashDirect；不改往年支出', () => {
     const { cash, setting } = applyMonthsPlan(
       {
         ...DEFAULT_EMERGENCY,
         enabled: true,
         mode: 'months',
         cashDirect: 50000,
-        monthsPlan: { months: 0, annualSpend: 0, cash: 0 },
+        monthsPlan: { months: 0, annualSpend: 120000, cash: 0 },
       },
       6,
       10000,
@@ -168,19 +193,26 @@ describe('现金 ↔ 月数换算', () => {
     assert.equal(cash, 40000);
     assert.equal(setting.monthsPlan.months, 4);
     assert.equal(setting.monthsPlan.cash, 40000);
-    assert.equal(setting.cashDirect, 50000);
+    assert.equal(setting.cashDirect, 40000);
+    assert.equal(setting.monthsPlan.annualSpend, 120000);
   });
 
-  it('applyMonthsPlan：未超总资产时现金=月数×支出', () => {
+  it('applyMonthsPlan：未超总资产时现金=月数×支出；回写 cashDirect', () => {
     const { cash, setting } = applyMonthsPlan(
-      { ...DEFAULT_EMERGENCY, mode: 'months', cashDirect: 10000, monthsPlan: { months: 0, annualSpend: 0, cash: 0 } },
+      {
+        ...DEFAULT_EMERGENCY,
+        mode: 'months',
+        cashDirect: 10000,
+        monthsPlan: { months: 0, annualSpend: 96000, cash: 0 },
+      },
       3,
       8000,
       100000,
     );
     assert.equal(cash, 24000);
     assert.equal(setting.monthsPlan.months, 3);
-    assert.equal(setting.cashDirect, 10000);
+    assert.equal(setting.cashDirect, 24000);
+    assert.equal(setting.monthsPlan.annualSpend, 96000);
   });
 });
 
@@ -256,43 +288,38 @@ describe('分存：select 切换互不覆盖', () => {
     assert.deepEqual(next.monthsPlan, plan);
   });
 
-  it('enableMonthsPlan：空应急套时用本月×12 播种，月数反算自 cashDirect', () => {
+  it('enableMonthsPlan：空应急套不写往年支出，月数反算自 cashDirect', () => {
     const next = enableMonthsPlan(
       { ...DEFAULT_EMERGENCY, mode: 'amount', cashDirect: 16000 },
       8000,
     );
     assert.equal(next.mode, 'months');
-    assert.equal(next.monthsPlan.annualSpend, 96000);
+    assert.equal(next.monthsPlan.annualSpend, 0);
     assert.equal(next.monthsPlan.months, 2);
     assert.equal(next.monthsPlan.cash, 16000);
     assert.equal(next.cashDirect, 16000);
   });
 
-  it('往返切换：默认现金与应急推算现金互不丢失', () => {
+  it('往返切换：切 mode 保留分存；规划后金额两侧一致且不改往年', () => {
     let setting: EmergencySetting = {
       ...DEFAULT_EMERGENCY,
       mode: 'amount' as const,
       cashDirect: 50000,
-      monthsPlan: { months: 0, annualSpend: 0, cash: 0 },
+      monthsPlan: { months: 0, annualSpend: 96000, cash: 0 },
     };
-    // 填默认现金
-    setting = syncSettingFromCash(setting, 50000, 8000);
-    // 切应急并规划 3 月
     setting = enableMonthsPlan(setting, 8000);
+    assert.equal(setting.mode, 'months');
     const planned = applyMonthsPlan(setting, 3, monthlyFromAnnual(setting.monthsPlan.annualSpend), 200000);
     setting = planned.setting;
     assert.equal(setting.monthsPlan.cash, 24000);
-    assert.equal(setting.cashDirect, 50000);
-    // 切回默认
+    assert.equal(setting.cashDirect, 24000);
+    assert.equal(setting.monthsPlan.annualSpend, 96000);
     setting = switchEmergencyMode(setting, 'amount', 8000);
     assert.equal(setting.mode, 'amount');
-    assert.equal(activeCash(setting), 50000);
-    assert.equal(setting.monthsPlan.cash, 24000);
-    // 再切应急
+    assert.equal(activeCash(setting), 24000);
     setting = enableMonthsPlan(setting, 8000);
     assert.equal(setting.mode, 'months');
     assert.equal(activeCash(setting), 24000);
-    assert.equal(setting.cashDirect, 50000);
   });
 
   it('emergencyToProfile 写出分存字段；compat emergencyAmount=生效现金', () => {
