@@ -1,0 +1,32 @@
+app/globals.css
+  s_9169277953255f::t_a09f7d081c2c9f 43-48
+  s_9169277953255f::t_b10b053f9a5483 150-152,159
+app/components/FloatPanel.tsx
+  s_9169277953255f::t_692b1c256cfbb6 16
+  s_9169277953255f::t_408c17b9219bd3 274-277
+lib/ui/overlayEvents.ts
+  s_9169277953255f::t_7743ab175be47d 12-51,57-94,99-105,111-115
+app/incomeDetailLayout.test.ts
+  s_9169277953255f::t_f0cb72b3228188 113-116
+  s_9169277953255f::t_6d57dd88c92a22 18
+lib/ui/overlayEvents.test.ts
+  s_9169277953255f::t_a57ab253c482ab 1-85
+app/sheetPageShell.test.ts
+  s_9169277953255f::t_ddfa55779501e0 35-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "db2d9b041f530640384a11a318f748e511c2526c",
+  "prompts": {},
+  "sessions": {
+    "s_9169277953255f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8565ac1a-3d40-4d06-b3fb-21f9c58557af",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
