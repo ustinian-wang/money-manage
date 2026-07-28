@@ -2,7 +2,7 @@
 
 /**
  * 通用浮层：PC popover / 移动 sheet；field 矮卡居中
- * 移动 density=panel：全屏内页（贴顶贴底）；field 仍矮卡
+ * 移动 density=panel：全屏内页（100vh、无 mask）；field 仍矮卡+遮罩
  * 供 ConfirmDialog、Editable、明细面板等复用
  */
 import { useEffect, useRef, useState } from 'react';
@@ -229,13 +229,16 @@ export default function FloatPanel({
   // panel 全屏内页用满视口；field 仍跟调用方 maxHeightVh
   const sheetMaxVh = isPanelSheet ? 100 : maxHeightVh;
   const isFieldCard = asSheet && density === 'field';
-  // panel：place 前用 VV CSS 变量兜底，避免 height=0 时 hug 内容露底
+  // panel：主高 100vh（勿用 height:100%）；place()/--vv-height 仅键盘改 VV 时兜底
+  const panelSheetHeight = pos.height
+    ? `${pos.height}px`
+    : 'var(--vv-height, 100vh)';
   const panelWidth = pos.width
     || (isPanelSheet
       ? '100%'
       : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width));
   const panelHeight = isPanelSheet
-    ? (pos.height || 'var(--vv-height, 100dvh)')
+    ? panelSheetHeight
     : (pos.height || undefined);
   const panelTop = isPanelSheet && !pos.height
     ? 'var(--vv-offset-top, 0px)'
@@ -245,7 +248,8 @@ export default function FloatPanel({
   const showHeader = asSheet || Boolean(headerTitle) || draggable;
   return createPortal(
     <>
-      {asSheet && (
+      {/* panel 全屏内页已铺满，勿再渲染半透明 mask；field/tip 矮卡仍要遮罩 */}
+      {isFieldCard && (
         <div
           data-sheet-backdrop
           className="sheet-backdrop"
@@ -274,9 +278,9 @@ export default function FloatPanel({
           zIndex,
           width: panelWidth,
           height: panelHeight,
-          // panel：maxHeight 跟显式 height，勿再 min(dvh) 裁切导致四周露遮罩
+          // panel：maxHeight 跟显式 height；主兜底 100vh，勿再 min(dvh) 裁切
           maxHeight: isPanelSheet
-            ? (pos.height ? `${pos.height}px` : 'var(--vv-height, 100dvh)')
+            ? panelSheetHeight
             : asSheet || density === 'field' || center
               ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
               : `${sheetMaxVh}vh`,

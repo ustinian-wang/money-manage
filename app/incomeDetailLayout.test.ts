@@ -88,7 +88,7 @@ describe('incomeDetailLayout detail 主区契约', () => {
 });
 
 describe('FloatPanel sheet mask 交互契约', () => {
-  it('mask 点击吞掉默认行为与冒泡，且不触发关闭', () => {
+  it('field 矮卡 mask 点击吞掉默认行为与冒泡，且不触发关闭；panel 全屏无 mask', () => {
     const calls: string[] = [];
     blockOverlayEvent({
       preventDefault: () => calls.push('preventDefault'),
@@ -97,8 +97,11 @@ describe('FloatPanel sheet mask 交互契约', () => {
     assert.deepEqual(calls, ['preventDefault', 'stopPropagation']);
 
     const floatPanelSource = floatPanelModuleSource;
+    // field 仍渲染 backdrop；panel 全屏内页已铺满，条件为 isFieldCard 而非 asSheet
+    assert.match(floatPanelSource, /\{isFieldCard && \(/);
+    assert.doesNotMatch(floatPanelSource, /\{asSheet && \([\s\S]*data-sheet-backdrop/);
     const backdropTag = floatPanelSource.match(/<div\b[^>]*data-sheet-backdrop[^>]*>/)?.[0];
-    assert.ok(backdropTag, 'sheet backdrop missing');
+    assert.ok(backdropTag, 'sheet backdrop missing for field');
     assert.match(backdropTag, /onPointerDown=\{blockOverlayEvent\}/);
     assert.match(backdropTag, /onPointerUp=\{blockOverlayEvent\}/);
     assert.match(backdropTag, /onClick=\{blockOverlayEvent\}/);
@@ -252,15 +255,21 @@ describe('移动禁浮层叠浮层契约', () => {
   });
 
   it('移动 density=panel 走全屏内页（sheet-page），非半高抽屉', () => {
-    // 契约：panel → data-ux=sheet-page + placeFullscreenInViewport 宽高贴满 VV；field 仍矮卡
+    // 契约：panel → data-ux=sheet-page + placeFullscreenInViewport；主高 100vh，无 mask
     assert.match(floatPanelSource, /data-ux=\{isPanelSheet \? 'sheet-page'/);
     assert.match(floatPanelSource, /placeFullscreenInViewport/);
     assert.match(floatPanelSource, /paddingTop: isPanelSheet \? 'env\(safe-area-inset-top/);
     assert.match(floatPanelSource, /shadow-none/);
-    // 全屏 maxHeight 跟显式像素高，不靠半高 dvh 裁切
-    assert.match(floatPanelSource, /pos\.height \? `\$\{pos\.height\}px`/);
+    // 主高 100vh（勿用 100% / 仅 100dvh）；键盘用 --vv-height / place 像素兜底
+    assert.match(floatPanelSource, /var\(--vv-height, 100vh\)/);
+    assert.doesNotMatch(floatPanelSource, /var\(--vv-height, 100dvh\)/);
+    assert.match(floatPanelSource, /\{isFieldCard && \(/);
+    // 全屏 maxHeight 跟显式像素高或 100vh 兜底，不靠半高 dvh 裁切
+    assert.match(floatPanelSource, /pos\.height[\s\S]*\$\{pos\.height\}px/);
     assert.doesNotMatch(floatPanelSource, /sheet-handle/);
     assert.doesNotMatch(floatPanelSource, /rounded-t-3xl/);
+    const globalsCss = fs.readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+    assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?height:\s*var\(--vv-height,\s*100vh\)/);
   });
 
   it('SocialTaxBreakdown 移动不 portal nestedPanel（资产配置见 assetConfigLayout.test）', () => {

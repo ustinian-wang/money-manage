@@ -3,7 +3,7 @@
 /**
  * 内页外壳：顶栏（标题+关闭/返回）+ 内容滚动区 + 可选底栏。
  * FloatPanel density=panel 全屏内页与 field 矮卡共用此壳，避免业务各写一套布局。
- * 定位/遮罩/portal 仍由 FloatPanel 负责；safe-area 由外层 padding 消化。
+ * 定位/portal 由 FloatPanel 负责；panel 全屏无 mask（field 矮卡才有 backdrop）；safe-area 由外层 padding 消化。
  */
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import PanelHeader from './PanelHeader';

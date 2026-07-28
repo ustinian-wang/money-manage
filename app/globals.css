@@ -134,9 +134,12 @@ html.kb-open .auth-gate-root {
   /* place() 写入显式 height + max-height；勿再叠 --kb-inset */
   max-height: min(92dvh, var(--vv-height, 92dvh));
 }
-/* 全屏内页：宽高贴满 VV；勿套用半高 92dvh；圆角/阴影由 JSX 关掉 */
+/* 全屏内页：主高 100vh（勿用 height:100%）；键盘时 --vv-height / place() 像素高兜底 */
+/* 勿套用半高 92dvh；圆角/阴影由 JSX 关掉；无 sheet-backdrop（内页已铺满） */
 [data-float-panel][data-ux='sheet-page'] {
   max-width: 100%;
+  height: var(--vv-height, 100vh);
+  max-height: var(--vv-height, 100vh);
   border-radius: 0;
   box-sizing: border-box;
 }
