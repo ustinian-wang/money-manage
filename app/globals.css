@@ -30,7 +30,11 @@
 }
 * { box-sizing: border-box; }
 /* ponytail: overflow 只挂 body，避免 html+body 双 overflow 在 Safari 里把 sticky 裁半截 */
-html { max-width: 100%; }
+html {
+  max-width: 100%;
+  /* 半透明顶/底栏背后露出的是这里的底色，勿透出正文 */
+  background: #fff;
+}
 body {
   margin: 0;
   max-width: 100%;
@@ -38,6 +42,9 @@ body {
   background: rgb(var(--color-paper));
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  /* iOS Safari：铺满可绘制区，减少底栏透出错层 */
+  min-height: 100%;
+  min-height: -webkit-fill-available;
 }
 /* ponytail: 勿用 touch-action:none——iOS 键盘弹出后 sheet 内滚动易失效 */
 /* 无 mask 时靠 overflow + overscroll + overlayEvents capture 拦背后页滚 */
@@ -45,6 +52,12 @@ body.sheet-open {
   overflow: hidden;
   overscroll-behavior: none;
   position: relative;
+  /* 全屏内页打开：整页底改白，半透明导航栏背后只见白 */
+  background: #fff;
+}
+html.sheet-open,
+html:has(body.sheet-open) {
+  background: #fff;
 }
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
@@ -98,6 +111,57 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
+/* 全屏内页托底：不透明白，并向上/下伸进 Safari 半透明导航背后 */
+.sheet-page-underlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 20vh;
+  bottom: 0;
+  width: 100%;
+  /* 大视口 + fill-available：盖住地址栏/底栏半透明区域 */
+  height: 100vh;
+  height: -webkit-fill-available;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  background: #fff;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Safari（粗检）：托底再向下多伸出一截，专堵半透明底栏透内容 */
+@supports (-webkit-touch-callout: none) {
+  .sheet-page-underlay {
+    bottom: auto;
+    top: 0;
+    height: 100vh;
+    height: 100lvh;
+    min-height: calc(100vh + 80px);
+    min-height: calc(100lvh + env(safe-area-inset-bottom, 0px) + 48px);
+  }
+  [data-float-panel][data-ux='sheet-page'] {
+    /* 面板仍贴 layout；背后靠 underlay 挡半透明栏 */
+    background: #fff;
+  }
+}
+/* 全屏内页：inset 贴 layout 视口；托底负责防透（含 Safari 半透明导航） */
+[data-float-panel][data-ux='sheet-page'] {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  border-radius: 0;
+  box-sizing: border-box;
+  background: #fff;
+  pointer-events: auto;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
 /* 键盘弹出：fixed 门禁/auth sheet 贴 visualViewport（高度已=可见区，勿再叠 --kb-inset） */
 /* 勿在 JSX 叠 min-h-screen：100vh 会盖住 height，scrollFocusedFieldIntoView 算得出 delta 但 canScroll=false */
 .auth-gate-root {
@@ -139,18 +203,6 @@ html.kb-open .auth-gate-root {
   /* place() 写入显式 height + max-height；勿再叠 --kb-inset */
   max-height: min(92dvh, var(--vv-height, 92dvh));
 }
-/* 全屏内页：主高 100vh（勿用 height:100%）；键盘时 --vv-height / place() 像素高兜底 */
-/* 勿套用半高 92dvh；圆角/阴影由 JSX 关掉；无 sheet-backdrop（内页已铺满） */
-[data-float-panel][data-ux='sheet-page'] {
-  max-width: 100%;
-  height: var(--vv-height, 100vh);
-  max-height: var(--vv-height, 100vh);
-  border-radius: 0;
-  box-sizing: border-box;
-  pointer-events: auto;
-  overscroll-behavior: none;
-  touch-action: manipulation;
-}
 /* 内容区：flex 子项可收缩，超高时滚到底；勿 touch-action:none */
 [data-float-scroll] {
   min-height: 0;
@@ -188,8 +240,16 @@ html.kb-open .auth-gate-root {
   background: #fef2f2;
   color: #991b1b;
 }
-/* 桌面：顶栏轻吸顶（始终展开） */
+/* 顶栏吸顶：下滑加 .is-header-hidden 收起，上滑展开 */
 /* ponytail: 勿用 backdrop-filter——Safari sticky 合成层在工具栏显隐时会把顶栏裁半截；改用不透明底 */
+.mobile-sticky-top {
+  transition: transform 0.22s ease;
+  will-change: transform;
+}
+.mobile-sticky-top.is-header-hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
 @media (min-width: 640px) {
   .mobile-sticky-top {
     position: sticky;
@@ -199,6 +259,71 @@ html.kb-open .auth-gate-root {
     border-bottom: 1px solid #e8eeea;
   }
   .scroll-mt-24 { scroll-margin-top: 5.5rem; }
+}
+/* 类 vConsole 调试浮层（默认开启；?debug=0 关闭） */
+.mm-debug-fab {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+  bottom: max(4.5rem, env(safe-area-inset-bottom, 0px));
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid #1e293b;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+.mm-debug-panel {
+  position: fixed;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: max(7.5rem, env(safe-area-inset-bottom, 0px));
+  max-height: min(55vh, 28rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.85rem;
+  border: 1px solid #334155;
+  background: rgba(15, 23, 42, 0.96);
+  color: #e2e8f0;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.mm-debug-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid #334155;
+  font-size: 0.75rem;
+}
+.mm-debug-toolbar button {
+  border-radius: 0.4rem;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.68rem;
+}
+.mm-debug-status {
+  margin: 0;
+  padding: 0.35rem 0.65rem 0;
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+.mm-debug-pre {
+  margin: 0;
+  padding: 0.55rem 0.65rem 0.75rem;
+  overflow: auto;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .expense-meta-chip {
   display: inline-flex;

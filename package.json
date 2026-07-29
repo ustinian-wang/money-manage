@@ -25,7 +25,8 @@
     "check": "npm run typecheck && npm test && npm run build",
     "test:mobile-smoke": "node tests/mobile-smoke.mjs",
     "test:e2e": "npm run build && playwright test",
-    "test:e2e:dev": "playwright test"
+    "test:e2e:dev": "playwright test",
+    "debug:watch": "node scripts/watch-mm-debug.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.6.5",

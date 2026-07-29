@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { BRAND } from '../lib/ui/brandColors';
+import AppChrome from './components/AppChrome';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,7 +37,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        <AppChrome>{children}</AppChrome>
+      </body>
     </html>
   );
 }

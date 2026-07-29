@@ -59,12 +59,13 @@ describe('planChangeLayout 入口契约', () => {
   });
 
   it('计划变更 FloatPanel：scrollResetKey + 显式用高路径', () => {
-    // 入口仍在 page；用高/footer 标记在抽出的 FloatPanel 组件
+    // 入口仍在 page；用高在 FloatPanel；footer/scroll 标记在 SheetPageShell
     assert.match(pageSource, /scrollResetKey=\{view\}/);
     const floatSource = fs.readFileSync(new URL('./components/FloatPanel.tsx', import.meta.url), 'utf8');
+    const shellSource = fs.readFileSync(new URL('./components/SheetPageShell.tsx', import.meta.url), 'utf8');
     assert.match(floatSource, /calcPanelUsedHeight/);
-    assert.match(floatSource, /data-float-footer/);
-    assert.match(floatSource, /data-float-scroll/);
+    assert.match(shellSource, /data-float-footer/);
+    assert.match(shellSource, /data-float-scroll/);
   });
 });
 

@@ -2,7 +2,7 @@
 
 /**
  * 通用浮层：PC popover / 移动 sheet；field 矮卡居中
- * 移动 density=panel：全屏内页（100vh、无 mask）；field 仍矮卡+遮罩
+ * 移动 density=panel：全屏内页（top/bottom:0、无 mask）；field 仍矮卡+遮罩
  * 供 ConfirmDialog、Editable、明细面板等复用
  */
 import { useEffect, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import SheetPageShell from './SheetPageShell';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '../../lib/useVisualViewport';
-import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeFullscreenInViewport, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
+import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
 import { Z_INDEX } from '../../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent, isolateOverlayEvent } from '../../lib/ui/overlayEvents';
 
@@ -81,15 +81,8 @@ export default function FloatPanel({
       const vv = window.visualViewport;
       const viewH = vv?.height ?? window.innerHeight;
       const vp = viewportBounds(vv, window.innerWidth, window.innerHeight, FLOAT_MARGIN, safe);
-      // panel：直接贴满 VV（宽=VV宽、高=VV高）；safe 只走内 padding，勿预扣到 top/left/宽高
+      // panel：满屏 top/bottom:0；此处只保焦点入视口
       if (isPanelSheet) {
-        const full = placeFullscreenInViewport(vv, window.innerWidth, window.innerHeight);
-        setPos({
-          top: full.top,
-          left: full.left,
-          width: Math.max(full.width, 1),
-          height: Math.max(full.height, 1),
-        });
         const active = document.activeElement;
         if (active && panelRef.current?.contains(active)) {
           ensureFocusedInVisualViewportNow(active);
@@ -229,26 +222,32 @@ export default function FloatPanel({
   // panel 全屏内页用满视口；field 仍跟调用方 maxHeightVh
   const sheetMaxVh = isPanelSheet ? 100 : maxHeightVh;
   const isFieldCard = asSheet && density === 'field';
-  // panel：主高 100vh（勿用 height:100%）；place()/--vv-height 仅键盘改 VV 时兜底
-  const panelSheetHeight = pos.height
-    ? `${pos.height}px`
-    : 'var(--vv-height, 100vh)';
-  const panelWidth = pos.width
-    || (isPanelSheet
-      ? '100%'
-      : Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width));
+  // panel 满屏：top/bottom:0 贴 layout 视口（勿用 100vh——iOS 大视口虚高透底）
+  const panelWidth = isPanelSheet
+    ? '100vw'
+    : (pos.width || Math.min(width, typeof window !== 'undefined' ? window.innerWidth - 16 : width));
   const panelHeight = isPanelSheet
-    ? panelSheetHeight
+    ? undefined
     : (pos.height || undefined);
-  const panelTop = isPanelSheet && !pos.height
-    ? 'var(--vv-offset-top, 0px)'
-    : pos.top;
-  const panelLeft = isPanelSheet && !pos.width ? 0 : pos.left;
+  const panelTop = isPanelSheet ? 0 : pos.top;
+  const panelBottom = isPanelSheet ? 0 : undefined;
+  const panelLeft = isPanelSheet ? 0 : pos.left;
   // PC：仅显式标题/可拖时出标题栏；移动 panel/field：标题+关闭
   const showHeader = asSheet || Boolean(headerTitle) || draggable;
   return createPortal(
     <>
-      {/* panel 全屏内页已铺满，勿再渲染半透明 mask；field/tip 矮卡仍要遮罩 */}
+      {/* panel 全屏：不透明托底，挡住 Safari 底缝透出主页面；field 仍用半透明 mask */}
+      {isPanelSheet && (
+        <div
+          data-sheet-underlay
+          className="sheet-page-underlay"
+          style={{ zIndex: zIndex - 1 }}
+          aria-hidden
+          onPointerDown={isolateOverlayEvent}
+          onPointerUp={isolateOverlayEvent}
+          onClick={isolateOverlayEvent}
+        />
+      )}
       {isFieldCard && (
         <div
           data-sheet-backdrop
@@ -271,26 +270,27 @@ export default function FloatPanel({
         tabIndex={-1}
         onKeyDown={onPanelKeyDown}
         onFocusCapture={(event) => { scrollFocusedFieldIntoView(event.target); }}
-        // panel 无 mask：点击/指针不冒泡到背后页；wheel/touch 由 body 锁上的 capture 隔离
+        // panel 无半透明 mask：点击/指针不冒泡到背后页；wheel/touch 由 body 锁上的 capture 隔离
         onPointerDown={isPanelSheet ? isolateOverlayEvent : undefined}
         onPointerUp={isPanelSheet ? isolateOverlayEvent : undefined}
         onClick={isPanelSheet ? isolateOverlayEvent : undefined}
         className={`fixed flex flex-col overscroll-contain bg-white ${isPanelSheet ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-slate-200 shadow-xl'} overflow-hidden`}
         style={{
           top: panelTop,
+          right: isPanelSheet ? 0 : undefined,
+          bottom: panelBottom,
           left: panelLeft,
           zIndex,
-          width: panelWidth,
+          width: isPanelSheet ? undefined : panelWidth,
           height: panelHeight,
-          // panel：maxHeight 跟显式 height；主兜底 100vh，勿再 min(dvh) 裁切
           maxHeight: isPanelSheet
-            ? panelSheetHeight
+            ? undefined
             : asSheet || density === 'field' || center
               ? `min(${sheetMaxVh}dvh, var(--vv-height, ${sheetMaxVh}vh))`
               : `${sheetMaxVh}vh`,
           maxWidth: isPanelSheet ? '100%' : undefined,
           boxSizing: 'border-box',
-          // place() 已按 visualViewport 贴顶贴底/居中；safe-area 由 padding 消化
+          // safe-area 由面板内 padding 消化
           paddingTop: isPanelSheet ? 'env(safe-area-inset-top, 0px)' : undefined,
           paddingBottom: asSheet ? 'env(safe-area-inset-bottom, 0px)' : undefined,
         }}

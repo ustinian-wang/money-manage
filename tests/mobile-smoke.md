@@ -3,6 +3,8 @@
 > **发布前 UI 清单**：完整人工项见 [`docs/ui-checklist.md`](../docs/ui-checklist.md)（portal 层级、375 横撑、图表 canvas、鉴权独立页、移动禁叠浮层等）。本文件负责可重复步骤与轻量脚本；清单负责「看起来对不对」。
 >
 > **能力边界**：Chromium / Cursor 设备模式 **不能 100% 等价 iOS Safari 键盘**（visualViewport、橡皮筋、`position: fixed` 与键盘顶起均可能不同）。真机仍需 Safari Web Inspector 复核键盘场景。
+>
+> **真机调试浮层**：默认右下角 `dbg`；刷新/上报含页面、浮层、内页。本机可 `npm run debug:watch` 常驻监听 `logs/mm-debug.ndjson`，有上报自动打印分析。
 
 另有最小 Playwright 访客冒烟：`npm run test:e2e`（见根目录 README「E2E 冒烟」）。本文件仍覆盖更细的移动端人工清单与轻量脚本，分两层：
 

@@ -55,6 +55,7 @@ type SheetBodyLockTarget = {
 
 let sheetBodyLockCount = 0;
 let sheetScrollIsolationCleanup: (() => void) | undefined;
+let sheetPrevThemeColor: string | null = null;
 
 function installSheetScrollIsolation(): () => void {
   const onWheel = (event: WheelEvent) => {
@@ -101,6 +102,13 @@ export function acquireSheetBodyLock(target: SheetBodyLockTarget): () => void {
     // node 单测无 document；浏览器里顺带拦住 wheel/touch 链式滚到背后页
     if (typeof document !== 'undefined') {
       sheetScrollIsolationCleanup = installSheetScrollIsolation();
+      // Safari 半透明导航：theme-color 改白，栏背后少透出深色/杂色
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        sheetPrevThemeColor = meta.getAttribute('content');
+        meta.setAttribute('content', '#ffffff');
+      }
+      document.documentElement.classList.add('sheet-open');
     }
   }
   let released = false;
@@ -112,6 +120,14 @@ export function acquireSheetBodyLock(target: SheetBodyLockTarget): () => void {
       target.classList.remove('sheet-open');
       sheetScrollIsolationCleanup?.();
       sheetScrollIsolationCleanup = undefined;
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.remove('sheet-open');
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta && sheetPrevThemeColor != null) {
+          meta.setAttribute('content', sheetPrevThemeColor);
+          sheetPrevThemeColor = null;
+        }
+      }
     }
   };
 }

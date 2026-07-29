@@ -15,6 +15,7 @@ import { authHref } from '../lib/auth/authHref';
 import { REGISTER_DEFAULT_DATA_MESSAGE } from '../lib/auth/bindEmptyAccount';
 import { restartSite } from '../lib/restartSite';
 import { useIsMobile } from '../lib/useIsMobile';
+import { useScrollHideHeader } from '../lib/useScrollHideHeader';
 import {
   formatAssetChartAxisLabel,
   formatYearMonthChartAxisLabel,
@@ -550,6 +551,7 @@ export default function HomePage() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [retirement, setRetirement] = useState(retirementDefaults);
   const isNarrow = useIsMobile();
+  const headerCollapsed = useScrollHideHeader(true);
   const router = useRouter();
   // 顶栏下拉：访客=登录/注册/重启；登录=安装/重启/登出
   const [headerMoreOpen, setHeaderMoreOpen] = useState(false);
@@ -1383,7 +1385,7 @@ export default function HomePage() {
   if (!authReady || !hydrated) {
     return (
       <main className="min-h-screen bg-paper text-ink" aria-busy="true" aria-live="polite">
-        <div className="mobile-sticky-top">
+        <div className={`mobile-sticky-top${headerCollapsed ? ' is-header-hidden' : ''}`}>
           <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink text-sm font-bold text-white">M</div>
@@ -1420,7 +1422,7 @@ export default function HomePage() {
   }
   // 访客与登录均可进主应用；未登录用示例/本机草稿
   return <main className="min-h-screen bg-paper text-ink pb-[env(safe-area-inset-bottom,0px)]">
-    <div className="mobile-sticky-top">
+    <div className={`mobile-sticky-top${headerCollapsed ? ' is-header-hidden' : ''}`}>
     <header className="app-header page-pad mx-auto flex max-w-[1920px] items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-6 lg:px-10">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-ink text-sm font-bold text-white">M</div>

@@ -259,21 +259,26 @@ describe('移动禁浮层叠浮层契约', () => {
   });
 
   it('移动 density=panel 走全屏内页（sheet-page），非半高抽屉', () => {
-    // 契约：panel → data-ux=sheet-page + placeFullscreenInViewport；主高 100vh，无 mask
+    // 契约：panel → sheet-page + 不透明托底防透；inset 贴视口，无半透明 mask
     assert.match(floatPanelSource, /data-ux=\{isPanelSheet \? 'sheet-page'/);
-    assert.match(floatPanelSource, /placeFullscreenInViewport/);
+    assert.match(floatPanelSource, /data-sheet-underlay/);
+    assert.match(floatPanelSource, /sheet-page-underlay/);
     assert.match(floatPanelSource, /paddingTop: isPanelSheet \? 'env\(safe-area-inset-top/);
     assert.match(floatPanelSource, /shadow-none/);
-    // 主高 100vh（勿用 100% / 仅 100dvh）；键盘用 --vv-height / place 像素兜底
-    assert.match(floatPanelSource, /var\(--vv-height, 100vh\)/);
-    assert.doesNotMatch(floatPanelSource, /var\(--vv-height, 100dvh\)/);
+    assert.match(floatPanelSource, /panelBottom = isPanelSheet \? 0/);
+    assert.doesNotMatch(floatPanelSource, /panelSheetHeight = '100vh'/);
+    assert.doesNotMatch(floatPanelSource, /placeFullscreenInViewport/);
     assert.match(floatPanelSource, /\{isFieldCard && \(/);
-    // 全屏 maxHeight 跟显式像素高或 100vh 兜底，不靠半高 dvh 裁切
-    assert.match(floatPanelSource, /pos\.height[\s\S]*\$\{pos\.height\}px/);
+    assert.doesNotMatch(floatPanelSource, /\$\{pos\.height\}px/);
     assert.doesNotMatch(floatPanelSource, /sheet-handle/);
     assert.doesNotMatch(floatPanelSource, /rounded-t-3xl/);
     const globalsCss = fs.readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
-    assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?height:\s*var\(--vv-height,\s*100vh\)/);
+    assert.match(globalsCss, /\.sheet-page-underlay/);
+    assert.match(globalsCss, /@supports\s*\(-webkit-touch-callout:\s*none\)/);
+    assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?top:\s*0/);
+    assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?bottom:\s*0/);
+    assert.doesNotMatch(globalsCss, /background:\s*pink/);
+    assert.doesNotMatch(globalsCss, /height:\s*130vh/);
   });
 
   it('SocialTaxBreakdown 移动不 portal nestedPanel（资产配置见 assetConfigLayout.test）', () => {
