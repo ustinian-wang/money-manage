@@ -38,8 +38,8 @@ export default function LinkedNumberFields({
           className={alwaysRow
             ? 'flex w-7 shrink-0 flex-col items-center justify-center text-coral'
             : 'flex h-6 shrink-0 flex-row items-center justify-center gap-1 text-coral sm:h-auto sm:w-7 sm:flex-col sm:gap-0'}
-          title="联动"
-          aria-label="联动"
+          title="两项自动换算"
+          aria-label="两项自动换算"
         >
           {alwaysRow ? (
             <>

@@ -18,10 +18,10 @@ function analyzeBlock(): string {
 describe('消费影响分析 · 资产走势对比', () => {
   it('分析面板含资产对比图与 tip', () => {
     assert.match(page, /ANALYZE_ASSET_TIP/);
-    assert.match(page, /资产走势对比/);
+    assert.match(page, /长期代价：30 年资产走势/);
     assert.match(page, /assetCompareOption/);
-    assert.match(page, /消费前 · 最终资产/);
-    assert.match(page, /测算后 · 最终资产/);
+    assert.match(page, /不算所选支出 · 预计总资产/);
+    assert.match(page, /算上所选支出 · 预计总资产/);
     const block = analyzeBlock();
     assert.match(block, /ChartHost[^]*assetCompareOption/);
     assert.match(block, /expenseShareOption/);

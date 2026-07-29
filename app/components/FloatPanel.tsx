@@ -14,6 +14,7 @@ import { ensureFocusedInVisualViewportNow, scrollFocusedFieldIntoView } from '..
 import { FLOAT_MARGIN, calcPanelUsedHeight, measurePanelNaturalHeight, placeCenteredInViewport, placeNearAnchor, readSafeAreaInsets, viewportBounds } from '../../lib/floatPlace';
 import { Z_INDEX } from '../../lib/ui/zIndex';
 import { acquireSheetBodyLock, blockOverlayEvent, isolateOverlayEvent } from '../../lib/ui/overlayEvents';
+import { useOverlayPresence } from '../../lib/useOverlayPresence';
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
@@ -39,6 +40,8 @@ export type FloatPanelProps = {
   scrollResetKey?: string | number;
   /** 同 sheet 子页：标题栏「返回」；Esc/关闭仍走 onClose（调用方做层级） */
   onBack?: () => void;
+  /** 退场动画结束并卸载后回调（用于父级延迟清 draft） */
+  onExited?: () => void;
   children: ReactNode;
 };
 
@@ -57,6 +60,7 @@ export default function FloatPanel({
   footer,
   scrollResetKey,
   onBack,
+  onExited,
   children,
 }: FloatPanelProps) {
   const isMobile = useIsMobile();
@@ -68,9 +72,10 @@ export default function FloatPanel({
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const userDraggedRef = useRef(false);
   const dragRef = useRef<{ startX: number; startY: number; origTop: number; origLeft: number } | null>(null);
+  const { present, state: motionState } = useOverlayPresence(open, onExited);
 
   useEffect(() => {
-    if (!open) {
+    if (!present) {
       userDraggedRef.current = false;
       return;
     }
@@ -126,7 +131,7 @@ export default function FloatPanel({
         ensureFocusedInVisualViewportNow(active);
       }
     };
-    // 仅 panel sheet 锁滚动；field 矮卡 / tip / PC 不锁
+    // 仅 panel sheet 锁滚动；field 矮卡 / tip / PC 不锁；退场期间保持锁避免背后页跳动
     const releaseBodyLock = lockBody ? acquireSheetBodyLock(document.body) : undefined;
     place();
     const raf = window.requestAnimationFrame(() => {
@@ -146,29 +151,38 @@ export default function FloatPanel({
       vv?.removeEventListener('scroll', place);
       releaseBodyLock?.();
     };
-  }, [open, anchorRef, width, maxHeightVh, center, asSheet, density, isPanelSheet, lockBody, footer, scrollResetKey]);
+  }, [present, anchorRef, width, maxHeightVh, center, asSheet, density, isPanelSheet, lockBody, footer, scrollResetKey]);
 
   useEffect(() => {
-    if (!open) return;
-    const trigger = anchorRef.current;
+    if (!open || !present) return;
     const raf = window.requestAnimationFrame(() => {
       const panel = panelRef.current;
       if (panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
     });
-    return () => {
-      window.cancelAnimationFrame(raf);
-      trigger?.focus({ preventScroll: true });
-    };
-  }, [open, anchorRef]);
+    return () => window.cancelAnimationFrame(raf);
+  }, [open, present, anchorRef]);
+
+  // 退场卸载后再还焦，避免关闭瞬间闪回触发钮
+  const wasPresentRef = useRef(false);
+  useEffect(() => {
+    if (present) {
+      wasPresentRef.current = true;
+      return;
+    }
+    if (!wasPresentRef.current) return;
+    wasPresentRef.current = false;
+    anchorRef.current?.focus({ preventScroll: true });
+  }, [present, anchorRef]);
 
   // 列表↔编辑切换：内容区回顶，避免底部字段仍被上一屏 scrollTop 挡住
   useEffect(() => {
-    if (!open || scrollResetKey === undefined) return;
+    if (!present || !open || scrollResetKey === undefined) return;
     const scroll = panelRef.current?.querySelector<HTMLElement>('[data-float-scroll]');
     if (scroll) scroll.scrollTop = 0;
-  }, [open, scrollResetKey]);
+  }, [present, open, scrollResetKey]);
 
   const onPanelKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (motionState !== 'open') return;
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -218,7 +232,7 @@ export default function FloatPanel({
     window.addEventListener('mouseup', onUp);
   };
 
-  if (!open) return null;
+  if (!present) return null;
   // panel 全屏内页用满视口；field 仍跟调用方 maxHeightVh
   const sheetMaxVh = isPanelSheet ? 100 : maxHeightVh;
   const isFieldCard = asSheet && density === 'field';
@@ -240,6 +254,7 @@ export default function FloatPanel({
       {isPanelSheet && (
         <div
           data-sheet-underlay
+          data-state={motionState}
           className="sheet-page-underlay"
           style={{ zIndex: zIndex - 1 }}
           aria-hidden
@@ -251,6 +266,7 @@ export default function FloatPanel({
       {isFieldCard && (
         <div
           data-sheet-backdrop
+          data-state={motionState}
           className="sheet-backdrop"
           style={{ zIndex: zIndex - 1 }}
           aria-hidden
@@ -262,11 +278,13 @@ export default function FloatPanel({
       <div
         ref={panelRef}
         data-float-panel
+        data-state={motionState}
         data-ux={isPanelSheet ? 'sheet-page' : isFieldCard ? 'field-card' : 'popover'}
         data-density={density}
         role="dialog"
         aria-modal={asSheet ? 'true' : undefined}
         aria-label={headerTitle || '编辑'}
+        aria-hidden={motionState === 'closed' ? true : undefined}
         tabIndex={-1}
         onKeyDown={onPanelKeyDown}
         onFocusCapture={(event) => { scrollFocusedFieldIntoView(event.target); }}
@@ -293,6 +311,7 @@ export default function FloatPanel({
           // safe-area 由面板内 padding 消化
           paddingTop: isPanelSheet ? 'env(safe-area-inset-top, 0px)' : undefined,
           paddingBottom: asSheet ? 'env(safe-area-inset-bottom, 0px)' : undefined,
+          pointerEvents: motionState === 'closed' ? 'none' : undefined,
         }}
       >
         <SheetPageShell

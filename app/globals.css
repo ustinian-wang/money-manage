@@ -31,21 +31,24 @@
 * { box-sizing: border-box; }
 /* ponytail: overflow 只挂 body，避免 html+body 双 overflow 在 Safari 里把 sticky 裁半截 */
 html {
-  max-width: 100%;
   /* 半透明顶/底栏背后露出的是这里的底色，勿透出正文 */
   background: #fff;
 }
 body {
   margin: 0;
   max-width: 100%;
-  overflow-x: clip;
   background: rgb(var(--color-paper));
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   padding-bottom: env(safe-area-inset-bottom, 0);
   /* iOS Safari：铺满可绘制区，减少底栏透出错层 */
-  min-height: 100%;
-  min-height: -webkit-fill-available;
 }
+
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: auto;
+}
+
 /* ponytail: 勿用 touch-action:none——iOS 键盘弹出后 sheet 内滚动易失效 */
 /* 无 mask 时靠 overflow + overscroll + overlayEvents capture 拦背后页滚 */
 body.sheet-open {
@@ -58,6 +61,19 @@ body.sheet-open {
 html.sheet-open,
 html:has(body.sheet-open) {
   background: #fff;
+}
+/* 仅满屏内页（sheet-page → body.sheet-open）：隐去主栏 page-pad；field/popover 不触发 */
+.page-pad {
+  transition: opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.sheet-open .page-pad {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-pad {
+    transition: none;
+  }
 }
 button, input, select { font: inherit; }
 .eyebrow { color: #84918d; font-size: .68rem; font-weight: 700; letter-spacing: .16em; }
@@ -116,7 +132,7 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
   position: fixed;
   left: 0;
   right: 0;
-  top: 20vh;
+  top: 0;
   bottom: 0;
   width: 100%;
   /* 大视口 + fill-available：盖住地址栏/底栏半透明区域 */
@@ -151,10 +167,8 @@ main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; 
   right: 0;
   bottom: 0;
   left: 0;
-  width: auto;
-  max-width: none;
-  height: auto;
-  max-height: none;
+  width: 100vw;
+  overflow: auto;
   border-radius: 0;
   box-sizing: border-box;
   background: #fff;
@@ -757,3 +771,159 @@ td { color: #52605b; }
 }
 .cold-skel-row-short { width: 72%; }
 .cold-skel-row-mid { width: 88%; }
+
+/* —— 通用微动效（纸感轻反馈；图表保持 animation:false）—— */
+:root {
+  --mm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mm-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --mm-dur-fast: 0.14s;
+  --mm-dur: 0.22s;
+  --mm-dur-slow: 0.32s;
+}
+@keyframes mm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mm-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes mm-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mm-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes mm-scale-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+@keyframes mm-sheet-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mm-sheet-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(14px); }
+}
+/* 托底：修正调试残留 top；进出场跟 data-state */
+.sheet-page-underlay {
+  top: 0;
+}
+.sheet-page-underlay[data-state='open'],
+.sheet-backdrop[data-state='open'] {
+  animation: mm-fade-in var(--mm-dur) var(--mm-ease-out) both;
+}
+.sheet-page-underlay[data-state='closed'],
+.sheet-backdrop[data-state='closed'] {
+  animation: mm-fade-out var(--mm-dur) var(--mm-ease-out) both;
+}
+[data-float-panel][data-ux='sheet-page'][data-state='open'] {
+  animation: mm-sheet-in var(--mm-dur-slow) var(--mm-ease-out) both;
+}
+[data-float-panel][data-ux='sheet-page'][data-state='closed'] {
+  animation: mm-sheet-out var(--mm-dur-slow) var(--mm-ease-out) both;
+}
+[data-float-panel][data-ux='field-card'][data-state='open'],
+[data-float-panel][data-ux='popover'][data-state='open'] {
+  animation: mm-scale-in var(--mm-dur) var(--mm-ease-spring) both;
+  transform-origin: top center;
+}
+[data-float-panel][data-ux='field-card'][data-state='closed'],
+[data-float-panel][data-ux='popover'][data-state='closed'] {
+  animation: mm-scale-out var(--mm-dur) var(--mm-ease-out) both;
+  transform-origin: top center;
+}
+.header-more-menu[data-state='open'] {
+  animation: mm-scale-in var(--mm-dur) var(--mm-ease-spring) both;
+  transform-origin: top right;
+}
+.header-more-menu[data-state='closed'] {
+  animation: mm-scale-out var(--mm-dur) var(--mm-ease-out) both;
+  transform-origin: top right;
+}
+.header-more-mask[data-state='open'] {
+  animation: mm-fade-in var(--mm-dur-fast) var(--mm-ease-out) both;
+}
+.header-more-mask[data-state='closed'] {
+  animation: mm-fade-out var(--mm-dur-fast) var(--mm-ease-out) both;
+}
+/* 主栏卡片：错落入场，避免整页同时弹 */
+main .section-card {
+  animation: mm-fade-up var(--mm-dur-slow) var(--mm-ease-out) both;
+}
+main .section-card:nth-child(1) { animation-delay: 0.02s; }
+main .section-card:nth-child(2) { animation-delay: 0.06s; }
+main .section-card:nth-child(3) { animation-delay: 0.1s; }
+main .section-card:nth-child(4) { animation-delay: 0.14s; }
+main .section-card:nth-child(5) { animation-delay: 0.18s; }
+main .section-card:nth-child(n + 6) { animation-delay: 0.2s; }
+@media (min-width: 640px) {
+  .section-card {
+    transition: box-shadow var(--mm-dur) var(--mm-ease-out), transform var(--mm-dur) var(--mm-ease-out);
+  }
+  .section-card:hover {
+    box-shadow: 0 12px 32px rgba(23, 33, 43, 0.08);
+    transform: translateY(-1px);
+  }
+}
+.touch-btn {
+  transition: transform var(--mm-dur-fast) var(--mm-ease-out), opacity var(--mm-dur-fast) ease, background-color var(--mm-dur-fast) ease;
+}
+.touch-btn:active {
+  transform: scale(0.96);
+  opacity: 0.88;
+}
+.field-click:active {
+  transform: scale(0.98);
+  background: rgb(var(--color-coral) / 0.14);
+}
+.field-click {
+  transition:
+    background-color var(--mm-dur-fast) ease,
+    border-color var(--mm-dur-fast) ease,
+    color var(--mm-dur-fast) ease,
+    border-bottom-style var(--mm-dur-fast) ease,
+    transform var(--mm-dur-fast) var(--mm-ease-out);
+}
+.expense-card {
+  transition: background-color var(--mm-dur) ease, box-shadow var(--mm-dur) ease, transform var(--mm-dur-fast) var(--mm-ease-out);
+}
+.expense-card:active {
+  transform: scale(0.995);
+}
+.header-more-item {
+  transition: background-color var(--mm-dur-fast) ease, transform var(--mm-dur-fast) var(--mm-ease-out);
+}
+.header-more-item:active {
+  transform: scale(0.98);
+}
+/* 系统「减少动态效果」：关掉入场，保留瞬时反馈可关 */
+@media (prefers-reduced-motion: reduce) {
+  .sheet-page-underlay,
+  .sheet-backdrop,
+  [data-float-panel],
+  .header-more-menu,
+  .header-more-mask,
+  main .section-card {
+    animation: none !important;
+  }
+  .section-card,
+  .touch-btn,
+  .field-click,
+  .expense-card,
+  .header-more-item,
+  .mobile-sticky-top,
+  .forecast-bar {
+    transition: none !important;
+  }
+  .touch-btn:active,
+  .field-click:active,
+  .expense-card:active,
+  .header-more-item:active,
+  .section-card:hover {
+    transform: none !important;
+  }
+}

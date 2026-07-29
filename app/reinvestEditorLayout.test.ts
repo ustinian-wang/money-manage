@@ -34,10 +34,10 @@ describe('SelectNumberField 组件契约', () => {
     );
   });
 
-  // 数字槽优先可读：flex-1 + min-w；select 可 shrink，避免挤没 SoftNumberInput
+  // 数字槽优先可读：flex-1 + min-w；select 可 shrink；双槽 items-center 垂直对齐
   it('input 槽 flex-1 + min-w；select 可 shrink', () => {
-    assert.match(selectNumberSrc, /min-w-\[6\.75rem\] flex-1/);
-    assert.match(selectNumberSrc, /min-w-0 shrink/);
+    assert.match(selectNumberSrc, /min-w-\[6\.75rem\] flex-1 items-center/);
+    assert.match(selectNumberSrc, /flex min-w-0 shrink items-center/);
     assert.doesNotMatch(selectNumberSrc, /shrink-0/);
   });
 });
@@ -53,7 +53,8 @@ describe('ReinvestEditor 行内编辑', () => {
     const src = reinvestEditorSource();
     // Editable 同款：field-row-mobile + justify-between；左标签右 SelectNumberField
     assert.match(src, /field-row-mobile flex items-center justify-between/);
-    assert.match(src, /月结余再投入[\s\S]*?<SelectNumberField/);
+    assert.match(src, /每月理财投入[\s\S]*?<SelectNumberField/);
+    assert.match(src, /w-\[7\.5rem\] shrink-0[\s\S]*?whitespace-nowrap/);
     assert.doesNotMatch(src, /flex-col gap-1\.5/);
   });
 
@@ -61,7 +62,7 @@ describe('ReinvestEditor 行内编辑', () => {
     const src = reinvestEditorSource();
     assert.match(pageSource, /from '\.\/components\/SelectNumberField'/);
     assert.match(src, /<SelectNumberField/);
-    assert.match(src, /select=\{\(/);
+    assert.match(src, /select\s*=\s*\{/);
     assert.match(src, /<select[\s\S]*?value=\{setting\.mode\}/);
     assert.match(src, /option value="percent"/);
     assert.match(src, /option value="amount"/);
@@ -70,13 +71,13 @@ describe('ReinvestEditor 行内编辑', () => {
     assert.match(src, /<SoftNumberInput[\s\S]*?suffix="\/月"/);
   });
 
-  // 百分比 / 固定金额共用同一套数字槽宽度（以百分比为准），避免切模式时输入框跳动
+  // 百分比 / 固定金额共用 w-24（以百分比为准）；select 收窄并与 input 微距
   it('再投入 SoftNumberInput 两种模式同宽，select 略限宽', () => {
     const src = reinvestEditorSource();
-    const widthMatches = src.match(/min-w-\[6\.5rem\] w-32/g) ?? [];
-    assert.equal(widthMatches.length, 2, '百分比与固定金额应同用 min-w-[6.5rem] w-32');
+    const widthMatches = src.match(/field-input !mt-0 w-24/g) ?? [];
+    assert.equal(widthMatches.length, 2, '百分比与固定金额应同用 w-24');
     assert.doesNotMatch(src, /min-w-\[7\.5rem\] w-36/);
-    assert.match(src, /max-w-\[5\.5rem\]/);
-    assert.match(src, /min-w-\[12rem\]/);
+    assert.match(src, /!w-\[5\.5rem\] max-w-\[5\.5rem\]/);
+    assert.match(src, /!gap-1/);
   });
 });

@@ -24,10 +24,10 @@ export default function SelectNumberField({
     <div
       className={`flex min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2${className ? ` ${className}` : ''}`}
     >
-      {/* select 可 shrink，窄屏时让位给数字 */}
-      <div className="min-w-0 shrink">{select}</div>
+      {/* select 可 shrink，窄屏时让位给数字；槽内垂直居中 */}
+      <div className="flex min-w-0 shrink items-center">{select}</div>
       {/* 数字优先：min-w 保可读；覆盖 field-row 下 .field-value-with-unit 的 min-w-0/max-w 挤压 */}
-      <div className="min-w-[6.75rem] flex-1 [&_.field-value-with-unit]:max-w-none [&_.field-value-with-unit]:min-w-[6.75rem]">
+      <div className="flex min-w-[6.75rem] flex-1 items-center [&_.field-value-with-unit]:max-w-none">
         {input}
       </div>
     </div>

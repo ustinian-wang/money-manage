@@ -137,8 +137,8 @@ describe('FloatPanel sheet mask 交互契约', () => {
 describe('退休与社保二级弹层归属契约', () => {
   const paramsSectionSource = sourceBetween(
     pageSource,
-    '<section id="sec-params"',
-    '<section id="sec-expenses"',
+    'id="sec-params"',
+    'id="sec-expenses"',
   );
   const socialTaxSource = sourceBetween(pageSource, 'function SocialTaxBreakdown({');
   const retirementEditorSource = sourceBetween(
@@ -166,12 +166,12 @@ describe('退休与社保二级弹层归属契约', () => {
     assert.match(retirementEditorSource, /retirement:\s*RetirementSetting/);
     assert.match(retirementEditorSource, /retirementDate:\s*string/);
     assert.match(retirementEditorSource, /onChange:\s*\(patch:\s*Partial<RetirementSetting>\)\s*=>\s*void/);
-    assert.match(retirementEditorSource, /关联退休计算/);
+    assert.match(retirementEditorSource, /退休规划/);
     assert.match(retirementEditorSource, /出生日期[\s\S]*retirement\.birthDate/);
     assert.match(retirementEditorSource, /身份[\s\S]*retirement\.identity/);
     assert.match(retirementEditorSource, /参保开始日期[\s\S]*retirement\.insuranceStartDate/);
     assert.match(retirementEditorSource, /计划缴费年限[\s\S]*retirement\.contributionYears/);
-    assert.match(retirementEditorSource, /<SocialBaseEditor value=\{retirement\.base\}/);
+    assert.match(retirementEditorSource, /<SocialBaseEditor[\s\S]*?value=\{retirement\.base\}/);
     assert.match(retirementEditorSource, /预计退休[\s\S]*retirementDate/);
     assert.match(retirementEditorSource, /money-manage-save/);
     // 编辑体本身不套 FloatPanel；由 SocialTaxBreakdown 二级承载
@@ -258,6 +258,17 @@ describe('移动禁浮层叠浮层契约', () => {
     assert.match(panelHeaderSource, /返回/);
   });
 
+  it('FloatPanel 进出场：presence + data-state，关闭不立刻卸载', () => {
+    assert.match(floatPanelSource, /useOverlayPresence/);
+    assert.match(floatPanelSource, /data-state=\{motionState\}/);
+    assert.match(floatPanelSource, /if \(!present\) return null/);
+    assert.match(floatPanelSource, /onExited\?:/);
+    const globalsCss = fs.readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+    assert.match(globalsCss, /mm-sheet-out/);
+    assert.match(globalsCss, /mm-scale-out/);
+    assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\]\[data-state='closed'\]/);
+  });
+
   it('移动 density=panel 走全屏内页（sheet-page），非半高抽屉', () => {
     // 契约：panel → sheet-page + 不透明托底防透；inset 贴视口，无半透明 mask
     assert.match(floatPanelSource, /data-ux=\{isPanelSheet \? 'sheet-page'/);
@@ -277,6 +288,7 @@ describe('移动禁浮层叠浮层契约', () => {
     assert.match(globalsCss, /@supports\s*\(-webkit-touch-callout:\s*none\)/);
     assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?top:\s*0/);
     assert.match(globalsCss, /\[data-float-panel\]\[data-ux='sheet-page'\][\s\S]*?bottom:\s*0/);
+    assert.match(globalsCss, /body\.sheet-open\s+\.page-pad[\s\S]*?opacity:\s*0/);
     assert.doesNotMatch(globalsCss, /background:\s*pink/);
     assert.doesNotMatch(globalsCss, /height:\s*130vh/);
   });

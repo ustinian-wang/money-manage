@@ -47,15 +47,15 @@ describe('AssetLinkedEditor 内页终态', () => {
   });
 
   it('往年支出独立；应急月数↔备用金额走 LinkedNumberFields；模式 select 常显', () => {
-    assert.match(assetSource, /option value=["']amount["'][^>]*>固定值/);
-    assert.match(assetSource, /option value=["']months["'][^>]*>公式计算/);
-    assert.match(assetSource, /往年支出额度/);
+    assert.match(assetSource, /option value=["']amount["'][^>]*>填金额/);
+    assert.match(assetSource, /option value=["']months["'][^>]*>按月数计算/);
+    assert.match(assetSource, /每年大概花费/);
     // 往年支出不进 LinkedNumberFields
     assert.match(
       assetSource,
-      /往年支出额度[\s\S]*?<LinkedNumberFields alwaysRow hint="应急月数 ↔ 备用金额/,
+      /每年大概花费[\s\S]*?<LinkedNumberFields[\s\S]*?alwaysRow[\s\S]*?hint="应急月数 ↔ 备用金额/,
     );
-    assert.match(assetSource, /<LinkedNumberFields alwaysRow hint="应急月数 ↔ 备用金额[\s\S]*?应急月数[\s\S]*?备用金额/);
+    assert.match(assetSource, /<LinkedNumberFields[\s\S]*?alwaysRow[\s\S]*?hint="应急月数 ↔ 备用金额[\s\S]*?备用月数[\s\S]*?备用金额/);
     // 表单常显：无 monthsPlan && 隐藏整块
     assert.doesNotMatch(assetSource, /\{monthsPlan && \(/);
     assert.doesNotMatch(assetSource, /\{formulaMode && \(/);

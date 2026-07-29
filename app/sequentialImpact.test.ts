@@ -67,7 +67,7 @@ describe('impactLineAndBandSeries 曲线与色带', () => {
     );
     const series = impactLineAndBandSeries(layers);
     const names = series.map((row) => String(row.name));
-    assert.ok(names.includes('基线（不含勾选）'));
+  assert.ok(names.includes('不算所选支出'));
     assert.ok(names.includes('A'));
     assert.ok(names.includes('B'));
     assert.ok(names.includes('A·带'));
@@ -107,7 +107,7 @@ describe('impactTemporalStackedSeries 堆叠面积不重叠', () => {
       { id: 'once', kind: 'point', startIndex: 1, endIndex: 1 },
       { id: 'rent', kind: 'range', startIndex: 1, endIndex: 2 },
     ]);
-    const baseline = series.find((row) => row.name === '基线（不含勾选）');
+    const baseline = series.find((row) => row.name === '不算所选支出');
     const once = series.find((row) => row.name === '一次');
     const rent = series.find((row) => row.name === '房租');
     assert.equal(baseline?.stack, 'impact-temporal');

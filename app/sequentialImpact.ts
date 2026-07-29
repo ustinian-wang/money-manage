@@ -168,7 +168,7 @@ export function toStackedLayersColored(
     const prev = i === 0 ? null : layers[i - 1].cumulative;
     const delta = cumulative.map((value, index) => (prev ? value - prev[index] : value));
     const meta = i === 0
-      ? { id: 'baseline', name: '基线（不含勾选）', color: BASELINE_COLOR }
+      ? { id: 'baseline', name: '不算所选支出', color: BASELINE_COLOR }
       : {
         id: items[i - 1]?.id ?? `item-${i}`,
         name: items[i - 1]?.name || `项 ${i}`,

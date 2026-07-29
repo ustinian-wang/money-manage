@@ -28,10 +28,10 @@ function sourceBetween(source: string, startMarker: string, endMarker: string): 
 
 describe('planChangeLayout 入口契约', () => {
   it('文案常量固定', () => {
-    assert.equal(PLAN_CHANGE_ENTRY, '计划变更');
-    assert.equal(PLAN_CHANGE_PANEL_TITLE, '计划变更');
-    assert.match(PLAN_CHANGE_TIP, /从某月起改参数/);
-    assert.match(PLAN_CHANGE_TIP, /不改你现在填的数/);
+    assert.equal(PLAN_CHANGE_ENTRY, '未来调整');
+    assert.equal(PLAN_CHANGE_PANEL_TITLE, '未来调整');
+    assert.match(PLAN_CHANGE_TIP, /未来某个月开始生效/);
+    assert.match(PLAN_CHANGE_TIP, /不会改动你现在填写的数/);
   });
 
   it('财务参数区块标题旁有计划变更入口与 tip', () => {
@@ -40,7 +40,7 @@ describe('planChangeLayout 入口契约', () => {
       'id="sec-params"',
       'id="sec-expenses"',
     );
-    assert.match(section, /SectionTitle title="财务参数"/);
+    assert.match(section, /SectionTitle[\s\S]*?title="财务参数"/);
     assert.match(section, /\{PLAN_CHANGE_ENTRY\}/);
     assert.match(section, /\{PLAN_CHANGE_TIP\}/);
     // 税前旁不做主入口：税前 Editable 行内无计划变更按钮

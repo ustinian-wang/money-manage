@@ -15,7 +15,7 @@ const cssSrc = fs.readFileSync(path.join(dir, 'globals.css'), 'utf8');
 
 function expenseSection(): string {
   const start = pageSrc.indexOf('id="sec-expenses"');
-  const end = pageSrc.indexOf('<div className="mt-4"><ExpenseAddButton');
+  const end = pageSrc.indexOf('ExpenseAddButton');
   assert.ok(start >= 0 && end > start, 'sec-expenses 边界');
   return pageSrc.slice(start, end);
 }
@@ -31,7 +31,7 @@ describe('LinkedNumberFields 组件契约', () => {
   it('默认窄屏竖排、sm+ 横排；alwaysRow 强制一行', () => {
     assert.match(compSrc, /flex flex-col gap-2 sm:flex-row/);
     assert.match(compSrc, /alwaysRow \? 'flex flex-row/);
-    assert.match(compSrc, /aria-label="联动"/);
+    assert.match(compSrc, /aria-label="两项自动换算"/);
   });
 
   it('children 双槽位，不 import SoftNumberInput（调用方传入）', () => {

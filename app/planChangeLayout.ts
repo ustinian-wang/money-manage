@@ -9,12 +9,12 @@ import {
   type PlanChangeField,
 } from '../domain/planChange';
 
-export const PLAN_CHANGE_ENTRY = '计划变更';
+export const PLAN_CHANGE_ENTRY = '未来调整';
 
 export const PLAN_CHANGE_TIP =
-  '从某月起改参数（税前/到手/年化），下面测算和图表会一起重算；不改你现在填的数。同一指标可设多个时间点。';
+  '设置未来某个月开始生效的新收入或收益率；只影响预测，不会改动你现在填写的数。同一项目可以设置多个时间点。';
 
-export const PLAN_CHANGE_PANEL_TITLE = '计划变更';
+export const PLAN_CHANGE_PANEL_TITLE = '未来调整';
 
 export const PLAN_CHANGE_FIELD_LABEL: Record<PlanChangeField, string> = {
   grossSalary: '税前工资',
