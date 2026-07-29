@@ -1,0 +1,100 @@
+app/components/ViewportSync.tsx
+  s_a3926c7d9cfead::t_f1bc657a2666f8 1-21
+lib/debugEnvSnapshot.test.ts
+  s_a3926c7d9cfead::t_9b50f4c5091dc5 92-101,106-117,154-162,167-169,171-172
+  s_a3926c7d9cfead::t_9c5f57e42072a2 177-178
+  s_a3926c7d9cfead::t_51561c1a7249a1 1,3-5,13,91,102-105,118-128,164,173-176,179-182
+  s_a3926c7d9cfead::t_fea163f95e6609 2,6-12,14-90,129-153,163,165-166,170
+app/page.tsx
+  s_a3926c7d9cfead::t_cd940289b92792 18
+  s_a3926c7d9cfead::t_950689dc01118a 1388
+  s_a3926c7d9cfead::t_a95e7afb0d175b 554
+  s_a3926c7d9cfead::t_846f8cdd373113 1425
+app/components/AppChrome.tsx
+  s_a3926c7d9cfead::t_e5a3b57a3ffab8 1-18
+app/incomeDetailLayout.test.ts
+  s_a3926c7d9cfead::t_96e6ed8f467660 262,264-265,276
+  s_a3926c7d9cfead::t_1f021a174cfe2f 268-269
+  s_a3926c7d9cfead::t_476e661ca064c5 277-281
+  s_a3926c7d9cfead::t_dcb111bcc12f91 270,272
+app/debugChrome.test.ts
+  s_a3926c7d9cfead::t_68552f39179e3d 1-22,24-25,28-38
+  s_a3926c7d9cfead::t_ad323096dcec60 23,26-27
+tests/mobile-smoke.md
+  s_a3926c7d9cfead::t_0f8a7f4eaaaa9c 7
+  s_a3926c7d9cfead::t_352e0620048035 6
+package.json
+  s_a3926c7d9cfead::t_23745560490af6 28-29
+app/components/FloatPanel.tsx
+  s_a3926c7d9cfead::t_d35fcc1e4e9e35 226-228,234
+  s_a3926c7d9cfead::t_c75dfdffd1c814 239-250,273,280,284
+  s_a3926c7d9cfead::t_b9e43cb3f03810 232
+  s_a3926c7d9cfead::t_8f9a2fea618daa 5
+  s_a3926c7d9cfead::t_ef74f3bf8e42d3 84
+  s_a3926c7d9cfead::t_1b05d38b8f814e 14
+  s_a3926c7d9cfead::t_76175569a2079f 225,230,233,281,287,293
+lib/useScrollHideHeader.ts
+  s_a3926c7d9cfead::t_704a577a08a973 1-33
+lib/scrollHideHeader.ts
+  s_a3926c7d9cfead::t_a7a290ae8e508a 1-35
+lib/debugEnvSnapshot.ts
+  s_a3926c7d9cfead::t_56baea4aaf68cf 88-92
+  s_a3926c7d9cfead::t_171f8a7f6d6c26 121-122
+  s_a3926c7d9cfead::t_bb9d103725b2c8 184-186,197,199-201,219,230-231
+  s_a3926c7d9cfead::t_04079511b277ef 1,3-4,6-15,60,71-72,96-99,101-114,123-128,130-140,142,177-179,188-191,204-215,220,232-258,356,386-388,426,452-457,461-463,465-471,473,475-479,481-482,487-491,493-494,496-500
+  s_a3926c7d9cfead::t_2aac6d68157162 324-327,353-355,378-383,389-425,439,458,472
+  s_a3926c7d9cfead::t_0c487c596bbd06 68-69
+  s_a3926c7d9cfead::t_d71440c5da65b3 73-87,93-95,100,129
+  s_a3926c7d9cfead::t_770bc1e2b69659 183,187,192-196,198,202-203,218,221-229
+  s_a3926c7d9cfead::t_b4c46cea9a27df 480,483-486,492,495
+  s_a3926c7d9cfead::t_22cfd3ad75091c 2,5,16-59,61-67,70,115-120,141,143-176,180-182,216-217,259-321,323,328-352,357-377,384-385,427-438,440-451,459-460,464,474
+  s_a3926c7d9cfead::t_1a3c127106bad0 322
+lib/analyzeDebugSnapshot.ts
+  s_a3926c7d9cfead::t_d346471610708a 1-144
+lib/analyzeDebugSnapshot.test.ts
+  s_a3926c7d9cfead::t_c51d50b7e6791f 1-57
+app/planChangeLayout.test.ts
+  s_a3926c7d9cfead::t_ed52ab3592d96f 62,65,67-68
+app/layout.tsx
+  s_a3926c7d9cfead::t_8cd9beee9d1485 3,40-42
+app/api/debug-log/route.ts
+  s_a3926c7d9cfead::t_fdb49616ac5519 1,3,6,8,13-20,23,43
+  s_a3926c7d9cfead::t_b7c6a7e5400095 2,4-5,7,9-12,21-22,24-42
+app/globals.css
+  s_a3926c7d9cfead::t_5626d99092a12b 243,245-252,264-327
+  s_a3926c7d9cfead::t_c3e48dc39146eb 263
+  s_a3926c7d9cfead::t_0660fff1da5f8d 33-37,45-47,55-60
+  s_a3926c7d9cfead::t_06ff9b5193d6ce 114,117-118,120,122,124-127,132-146,148,156-157,160
+  s_a3926c7d9cfead::t_2d95d2eba2bf8e 115-116,121,128-131,147,149-155,158-159,161-164
+  s_a3926c7d9cfead::t_a49b0a3c40f5ea 119
+  s_a3926c7d9cfead::t_9b1fbcfe903598 123
+app/components/DebugConsole.tsx
+  s_a3926c7d9cfead::t_3f1707a5cea46a 84
+  s_a3926c7d9cfead::t_2377571909c810 1-3,7-13,15-30,32,41-52,55,58-63,65,67-72,78-83,85-103,105-109,111-116
+  s_a3926c7d9cfead::t_16160fe0b4dd3a 4-6,14,31,33-40,53-54,56-57,64,66,73-77,104,110
+scripts/watch-mm-debug.mjs
+  s_a3926c7d9cfead::t_f3288a64db378f 1-4,6,8-16,18-26,30-48,50-64,67-81,83-86
+  s_a3926c7d9cfead::t_662de6d9ac4e8a 5,7,17,27-29,49,65-66,82
+lib/ui/overlayEvents.ts
+  s_a3926c7d9cfead::t_fb1d9e4fff37d6 58
+  s_a3926c7d9cfead::t_c786532dee7d41 108,126-128
+  s_a3926c7d9cfead::t_a8d0d3a0a433a0 105-107,109-111,123-125,129-130
+lib/scrollHideHeader.test.ts
+  s_a3926c7d9cfead::t_b85d6c0029d615 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6d09e83aeb2a045443c3ebf0a32269dd32cd01e7",
+  "prompts": {},
+  "sessions": {
+    "s_a3926c7d9cfead": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "547e80e0-8fe9-4077-a08f-aa185bf59099",
+        "model": "default"
+      },
+      "human_author": "jser <87244899@qq.com>"
+    }
+  }
+}
