@@ -274,7 +274,7 @@ html.kb-open .auth-gate-root {
   }
   .scroll-mt-24 { scroll-margin-top: 5.5rem; }
 }
-/* 类 vConsole 调试浮层（默认开启；?debug=0 关闭） */
+/* 类 vConsole 调试浮层（本机默认开；线上 ?debug=true 开 / ?debug=0 关） */
 .mm-debug-fab {
   position: fixed;
   right: max(0.75rem, env(safe-area-inset-right, 0px));
@@ -322,6 +322,25 @@ html.kb-open .auth-gate-root {
   color: #f8fafc;
   padding: 0.25rem 0.45rem;
   font-size: 0.68rem;
+}
+.mm-debug-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid #334155;
+  font-size: 0.65rem;
+}
+.mm-debug-links-label {
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.mm-debug-links a {
+  color: #7dd3fc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .mm-debug-status {
   margin: 0;

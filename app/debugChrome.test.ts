@@ -27,6 +27,8 @@ describe('调试浮层与顶栏滚动收起', () => {
     assert.match(debugSrc, /刷新最新/);
     assert.match(debugSrc, /\/api\/debug-log/);
     assert.match(debugSrc, /mm-debug-fab/);
+    assert.match(debugSrc, /promo-mobile\.html/);
+    assert.match(debugSrc, /宣发\/页面/);
   });
 
   it('主页顶栏随滚动加 is-header-hidden', () => {

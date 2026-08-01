@@ -477,22 +477,43 @@ export function collectDebugEnvSnapshot(): DebugEnvSnapshot {
 
 const DEBUG_LS_KEY = 'mm-debug';
 
-/** 默认开启；?debug=0 / localStorage=0 关闭；?debug=1 强制开启 */
-export function resolveDebugEnabled(search = typeof window !== 'undefined' ? window.location.search : ''): boolean {
+/** 本机 hostname：默认显示 dbg；workers.dev 等非本机默认隐藏 */
+export function isLocalDebugHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+/**
+ * dbg 开关：
+ * - localhost / 127.0.0.1：默认开启
+ * - 非本机（含 CF workers.dev）：默认关闭
+ * - ?debug=true|1：开启并写入 localStorage
+ * - ?debug=0|false：关闭并持久化
+ * - 非本机仅当 LS 已开或 query 开启时显示
+ * - 不兼容 debug=tue 等拼写
+ */
+export function resolveDebugEnabled(
+  search = typeof window !== 'undefined' ? window.location.search : '',
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+): boolean {
   const q = new URLSearchParams(search).get('debug');
-  if (typeof window === 'undefined') {
-    if (q === '0' || q === 'false') return false;
-    return true;
-  }
   if (q === '1' || q === 'true') {
-    window.localStorage.setItem(DEBUG_LS_KEY, '1');
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(DEBUG_LS_KEY, '1');
+    }
     return true;
   }
   if (q === '0' || q === 'false') {
-    window.localStorage.setItem(DEBUG_LS_KEY, '0');
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(DEBUG_LS_KEY, '0');
+    }
     return false;
   }
-  return window.localStorage.getItem(DEBUG_LS_KEY) !== '0';
+  if (typeof window !== 'undefined') {
+    const ls = window.localStorage.getItem(DEBUG_LS_KEY);
+    if (ls === '1') return true;
+    if (ls === '0') return false;
+  }
+  return isLocalDebugHost(hostname);
 }
 
 export function formatDebugSnapshot(snap: DebugEnvSnapshot): string {

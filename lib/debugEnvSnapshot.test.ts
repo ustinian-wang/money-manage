@@ -174,9 +174,47 @@ describe('buildDebugEnvSnapshot', () => {
 });
 
 describe('resolveDebugEnabled', () => {
-  test('默认开启；debug=0 关闭；debug=1 开启', () => {
-    assert.equal(resolveDebugEnabled(''), true);
-    assert.equal(resolveDebugEnabled('?debug=1'), true);
-    assert.equal(resolveDebugEnabled('?debug=0'), false);
+  test('本机默认开启；非本机（含 workers.dev）默认关闭', () => {
+    assert.equal(resolveDebugEnabled('', 'localhost'), true);
+    assert.equal(resolveDebugEnabled('', '127.0.0.1'), true);
+    assert.equal(resolveDebugEnabled('', 'money-manage.wangjser.workers.dev'), false);
+    assert.equal(resolveDebugEnabled('', 'example.com'), false);
+  });
+
+  test('query：true/1 开，0/false 关；不认 tue', () => {
+    assert.equal(resolveDebugEnabled('?debug=true', 'example.com'), true);
+    assert.equal(resolveDebugEnabled('?debug=1', 'example.com'), true);
+    assert.equal(resolveDebugEnabled('?debug=0', 'localhost'), false);
+    assert.equal(resolveDebugEnabled('?debug=false', 'localhost'), false);
+    assert.equal(resolveDebugEnabled('?debug=tue', 'example.com'), false);
+    assert.equal(resolveDebugEnabled('?debug=tue', 'localhost'), true);
+  });
+
+  test('query 写入 localStorage；非本机依赖 LS 持久化', () => {
+    const store = new Map<string, string>();
+    const prev = (globalThis as { window?: unknown }).window;
+    (globalThis as { window: unknown }).window = {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          store.set(k, v);
+        },
+      },
+      location: { search: '', hostname: 'money-manage.wangjser.workers.dev' },
+    };
+    try {
+      assert.equal(resolveDebugEnabled('?debug=true', 'money-manage.wangjser.workers.dev'), true);
+      assert.equal(store.get('mm-debug'), '1');
+      assert.equal(resolveDebugEnabled('', 'money-manage.wangjser.workers.dev'), true);
+      assert.equal(resolveDebugEnabled('?debug=0', 'money-manage.wangjser.workers.dev'), false);
+      assert.equal(store.get('mm-debug'), '0');
+      assert.equal(resolveDebugEnabled('', 'money-manage.wangjser.workers.dev'), false);
+    } finally {
+      if (prev === undefined) {
+        delete (globalThis as { window?: unknown }).window;
+      } else {
+        (globalThis as { window: unknown }).window = prev;
+      }
+    }
   });
 });

@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * 类 vConsole 调试浮层：默认开启
+ * 类 vConsole 调试浮层
+ * 本机默认开启；线上默认隐藏，?debug=true|1 开启并持久化，?debug=0|false 关闭
  * 刷新/上报均重新采集：页面 + 浮层 + 内页（subview/scroll/footer）
- * 关闭：?debug=0 或「关闭调试」；再开：?debug=1
  */
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -15,6 +15,16 @@ import {
   type DebugEnvSnapshot,
 } from '../../lib/debugEnvSnapshot';
 import { Z_INDEX } from '../../lib/ui/zIndex';
+
+const PROMO_LINKS: Array<{ href: string; label: string }> = [
+  { href: '/promo-mobile.html', label: 'promo' },
+  { href: '/promo-mobile.html?static=1', label: 'promo static' },
+  { href: '/', label: '/' },
+  { href: '/login', label: 'login' },
+  { href: '/register', label: 'register' },
+  { href: '/icons/icon-192.png', label: 'icon-192' },
+  { href: '/icons/icon-512.png', label: 'icon-512' },
+];
 
 export default function DebugConsole() {
   const [enabled, setEnabled] = useState(false);
@@ -106,6 +116,12 @@ export default function DebugConsole() {
             <button type="button" onClick={() => void report()}>上报终端</button>
             <button type="button" onClick={disable}>关闭调试</button>
           </div>
+          <nav className="mm-debug-links" aria-label="宣发/页面">
+            <span className="mm-debug-links-label">宣发/页面</span>
+            {PROMO_LINKS.map((link) => (
+              <a key={link.href} href={link.href}>{link.label}</a>
+            ))}
+          </nav>
           {status && <p className="mm-debug-status">{status}</p>}
           <pre className="mm-debug-pre">{text || '点击「刷新最新」采集页面/浮层/内页…'}</pre>
         </div>
