@@ -10,6 +10,7 @@ import FloatPanel from './components/FloatPanel';
 import LinkedNumberFields, {
   LinkLockIcon,
 } from './components/LinkedNumberFields';
+import { AssetDetailsEntry } from './components/MonthlyAssetDetailTable';
 import SelectNumberField from './components/SelectNumberField';
 import { useRouter } from 'next/navigation';
 import { logoutSession, type AuthUser } from './AuthBar';
@@ -856,8 +857,6 @@ export default function HomePage() {
   // 简便套独立字段；缺省 null，hydrate/切模式后用 detailNet 播种一次（不改详细套）
   const [takeHomeIncome, setTakeHomeIncome] = useState<number | null>(null);
   const takeHomeSeededRef = useRef(false);
-  const [showAssetDetails, setShowAssetDetails] = useState(false);
-  const assetDetailBtnRef = useRef<HTMLButtonElement>(null);
   const [visibleAssetLines, setVisibleAssetLines] = useState({
     cash: true,
     investment: true,
@@ -2905,53 +2904,15 @@ export default function HomePage() {
                   '预计总资产 = 理财资产 + 现金余额。每月先扣当月支出（分期：首月仅首付，次月起月供）；理财占比 > 0 时按比例拆分剩余资产，为 0 时按每月理财投入累积。\n现金低于备用金水位时从理财赎回补足。'
                 }
               />
-              <button
-                ref={assetDetailBtnRef}
-                type="button"
-                onClick={() => setShowAssetDetails((current) => !current)}
-                className="text-sm font-semibold text-coral-deep"
-              >
-                查看明细
-              </button>
-              <FloatPanel
-                open={showAssetDetails}
-                anchorRef={assetDetailBtnRef}
-                onClose={() => setShowAssetDetails(false)}
-                width={620}
-                mode="sheet"
-                density="panel"
-                headerTitle="月度资产明细"
-              >
-                <div className="table-wrap table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>月份</th>
-                        <th>现金余额</th>
-                        <th>理财资产</th>
-                        <th>预计总资产</th>
-                        <th>
-                          <span className="inline-flex items-center gap-1">
-                            真正可动用的钱
-                            <InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip>
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthlyAssetForecast.map((row) => (
-                        <tr key={row.month}>
-                          <td>{row.label}</td>
-                          <td>{money(row.cash)}</td>
-                          <td>{money(row.investment)}</td>
-                          <td>{money(row.total)}</td>
-                          <td>{money(row.available)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </FloatPanel>
+              <AssetDetailsEntry
+                rows={monthlyAssetForecast}
+                availableHeader={
+                  <span className="inline-flex items-center gap-1">
+                    真正可动用的钱
+                    <InfoTip>{ADJUSTED_AVAILABLE_ASSETS_TIP}</InfoTip>
+                  </span>
+                }
+              />
             </div>
             <ChartHost className="mt-5" option={assetChartOption} />
             <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">

@@ -119,6 +119,11 @@ button, input, select { font: inherit; }
   max-height: none;
   overflow: visible;
 }
+/* 离屏行跳过布局/绘制；行高估测避免滚动条跳动过大 */
+[data-float-panel] .table-wrap.table-scroll tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.75rem;
+}
 /* 内满屏：面板本身不另开滚动条 */
 [data-float-panel][data-ux='sheet-page']:has(.table-wrap.table-scroll) {
   overflow: hidden;
