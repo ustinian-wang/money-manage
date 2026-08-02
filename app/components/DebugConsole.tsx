@@ -5,7 +5,7 @@
  * 本机默认开启；线上默认隐藏，?debug=true|1 开启并持久化，?debug=0|false 关闭
  * 刷新/上报均重新采集：页面 + 浮层 + 内页（subview/scroll/footer）
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   collectDebugEnvSnapshot,
@@ -14,6 +14,12 @@ import {
   summarizeDebugSnapshot,
   type DebugEnvSnapshot,
 } from '../../lib/debugEnvSnapshot';
+import {
+  applyImportedProfile,
+  parseImportProfileJson,
+  resolveExportProfile,
+  serializeProfileForClipboard,
+} from '../../lib/debugProfileTransfer';
 import { Z_INDEX } from '../../lib/ui/zIndex';
 
 const PROMO_LINKS: Array<{ href: string; label: string }> = [
@@ -32,6 +38,8 @@ export default function DebugConsole() {
   const [snap, setSnap] = useState<DebugEnvSnapshot | null>(null);
   const [status, setStatus] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [importText, setImportText] = useState('');
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -90,6 +98,68 @@ export default function DebugConsole() {
     }
   };
 
+  /** 导出用户数据 → 剪贴板（主路径） */
+  const exportProfile = async () => {
+    try {
+      const profile = await resolveExportProfile();
+      if (!profile) {
+        setStatus('无可导出的用户数据（本机草稿与云端均为空）');
+        return;
+      }
+      const payload = serializeProfileForClipboard(profile);
+      await navigator.clipboard.writeText(payload);
+      setStatus('已复制到剪贴板');
+    } catch (err) {
+      setStatus(`导出失败：${err instanceof Error ? err.message : '无法写入剪贴板'}`);
+    }
+  };
+
+  const runImportText = async (raw: string) => {
+    const parsed = parseImportProfileJson(raw);
+    if (!parsed.ok) {
+      setStatus(`导入失败：${parsed.error}`);
+      return;
+    }
+
+    const ok = window.confirm(
+      '将用所选 JSON 覆盖当前用户数据（不可撤销）。\n登录态会写云端+本机；访客只写本机草稿。\n确定继续？',
+    );
+    if (!ok) {
+      setStatus('已取消导入');
+      return;
+    }
+
+    setStatus('正在导入覆盖…');
+    const applied = await applyImportedProfile(parsed.profile);
+    if (!applied.ok) {
+      setStatus(`导入失败：${applied.error}`);
+      return;
+    }
+    setStatus(applied.mode === 'user' ? '已覆盖云端+本机，刷新中…' : '已覆盖本机草稿，刷新中…');
+    window.location.reload();
+  };
+
+  const pasteAndImport = async () => {
+    try {
+      const clip = await navigator.clipboard.readText();
+      setImportText(clip);
+      await runImportText(clip);
+    } catch {
+      setStatus('读取剪贴板失败，请粘贴到下方文本框后点「从文本导入」');
+    }
+  };
+
+  const onImportFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const raw = await file.text();
+      setImportText(raw);
+      await runImportText(raw);
+    } catch {
+      setStatus('读取文件失败');
+    }
+  };
+
   const disable = () => {
     window.localStorage.setItem('mm-debug', '0');
     setEnabled(false);
@@ -114,8 +184,35 @@ export default function DebugConsole() {
             <button type="button" onClick={refresh}>刷新最新</button>
             <button type="button" onClick={() => void copy()}>复制</button>
             <button type="button" onClick={() => void report()}>上报终端</button>
+            <button type="button" onClick={() => void exportProfile()}>导出用户数据</button>
+            <button type="button" onClick={() => void pasteAndImport()}>粘贴导入</button>
+            <button type="button" onClick={() => void runImportText(importText)}>从文本导入</button>
+            <button type="button" onClick={() => importInputRef.current?.click()}>选文件导入</button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="mm-debug-file"
+              aria-label="选择要导入的用户数据 JSON"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.target.value = '';
+                void onImportFile(file);
+              }}
+            />
             <button type="button" onClick={disable}>关闭调试</button>
           </div>
+          <label className="mm-debug-import">
+            <span className="mm-debug-import-label">导入 JSON（可粘贴）</span>
+            <textarea
+              className="mm-debug-import-ta"
+              rows={3}
+              value={importText}
+              placeholder='在此粘贴 profile JSON，或点「粘贴导入」'
+              onChange={(event) => setImportText(event.target.value)}
+              spellCheck={false}
+            />
+          </label>
           <nav className="mm-debug-links" aria-label="宣发/页面">
             <span className="mm-debug-links-label">宣发/页面</span>
             {PROMO_LINKS.map((link) => (

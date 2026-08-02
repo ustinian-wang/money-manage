@@ -31,6 +31,19 @@ describe('调试浮层与顶栏滚动收起', () => {
     assert.match(debugSrc, /宣发\/页面/);
   });
 
+  it('DebugConsole：导出到剪贴板 / 粘贴或文本导入覆盖', () => {
+    assert.match(debugSrc, /导出用户数据/);
+    assert.match(debugSrc, /已复制到剪贴板/);
+    assert.match(debugSrc, /clipboard\.writeText/);
+    assert.match(debugSrc, /serializeProfileForClipboard/);
+    assert.match(debugSrc, /粘贴导入/);
+    assert.match(debugSrc, /从文本导入/);
+    assert.match(debugSrc, /parseImportProfileJson/);
+    assert.match(debugSrc, /applyImportedProfile/);
+    assert.match(debugSrc, /window\.confirm/);
+    assert.match(pageSrc, /registerDebugLiveProfile/);
+  });
+
   it('主页顶栏随滚动加 is-header-hidden', () => {
     assert.match(pageSrc, /useScrollHideHeader/);
     assert.match(pageSrc, /is-header-hidden/);

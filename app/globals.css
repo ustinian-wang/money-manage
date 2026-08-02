@@ -323,6 +323,43 @@ html.kb-open .auth-gate-root {
   padding: 0.25rem 0.45rem;
   font-size: 0.68rem;
 }
+.mm-debug-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mm-debug-import {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid #334155;
+}
+.mm-debug-import-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.mm-debug-import-ta {
+  width: 100%;
+  resize: vertical;
+  min-height: 3.2rem;
+  border-radius: 0.4rem;
+  border: 1px solid #475569;
+  background: #0b1220;
+  color: #e2e8f0;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-sizing: border-box;
+}
 .mm-debug-links {
   display: flex;
   flex-wrap: wrap;
