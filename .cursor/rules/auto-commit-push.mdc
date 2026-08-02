@@ -1,0 +1,29 @@
+---
+description: 代码修改验证后自动 git commit 并 push（无需口头确认）
+alwaysApply: true
+---
+
+# 自动 Commit + Push
+
+在本工作区（`d:\software\faiscoApp\res`，主要项目 `money-manage`）完成代码修改并验证通过后，**自动**执行 git commit 与 push，无需再口头确认。
+
+## 何时执行
+
+- 完成代码修改，且相关验证（测试/检查）已通过或无需验证时
+- 有实际可提交的改动（非空 commit）
+
+## 流程
+
+1. `git status` / `git diff` / `git log` 了解改动与既有 commit message 风格
+2. Stage 相关文件并 commit（HEREDOC 写 message）
+3. `git push` 到当前分支的远程跟踪分支（需要完整网络权限）
+4. `git status` 确认成功
+
+## 必须遵守
+
+- **不要** push `--force` / `--force-with-lease` 到 `main` / `master`；其他危险操作除非用户明确要求
+- **不要** commit secrets（`.env`、credentials、密钥等）
+- **不要** 修改 git config
+- **不要** 跳过 hooks（`--no-verify` 等），除非用户明确要求
+- Commit message 跟随仓库既有风格，侧重 why
+- 若无改动则不创建空 commit、不 push
