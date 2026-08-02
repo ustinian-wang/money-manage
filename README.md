@@ -147,7 +147,7 @@ wrangler login
 npm run deploy       # OpenNext 构建并发布到 Workers
 ```
 
-Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `https://money-manage.<account>.workers.dev`（以 `npm run deploy` 输出为准）。
+Worker 名：`money-manage`（见 `wrangler.jsonc`）。当前线上：<https://money-manage.wangjser.workers.dev>（其它账号一般为 `https://money-manage.<subdomain>.workers.dev`，以 `npm run deploy` 输出为准）。
 
 本地用 Workers 运行时预览：`npm run preview`（含 KV 本地模拟）。日常开发仍可用 `npm run dev`（经 `initOpenNextCloudflareForDev` 注入 bindings）。
 
@@ -155,26 +155,55 @@ Worker 名：`money-manage`（见 `wrangler.jsonc`）。线上入口一般为 `h
 
 ### GitHub Actions 自动部署
 
-`.github/workflows/ci.yml`：PR / 非 `main` 分支只跑 `npm run check`；**push 到 `main`** 且 check 通过后执行 `npm run deploy`（`opennextjs-cloudflare build && deploy`）。
+工作流文件：`.github/workflows/ci.yml`（**不要**再加第二套 deploy workflow）。
 
-请在 GitHub 仓库 **Settings → Secrets and variables → Actions** 配置（变量名须与 workflow 一致，**不要**把 token 写入仓库或 commit）：
+| 触发 | 行为 |
+| --- | --- |
+| PR / push 到非 `main` | 只跑 `check`（`typecheck` + `test` + `build`） |
+| **push 到 `main`** | 先 `check`，通过后再 `npm run deploy`（`opennextjs-cloudflare build` + `scripts/cf-deploy.mjs` → `wrangler deploy`）；check 失败则**不部署** |
+
+CI 跑在 **ubuntu-latest + Node 22**（Linux，可正常跑 OpenNext / wrangler；与本机 Windows workerd 崩溃无关）。
+
+#### 1. 配置 GitHub Secrets（必做）
+
+在仓库 **Settings → Secrets and variables → Actions** 添加（**不要**写入仓库、`.env` 或 commit）：
 
 | Secret | 说明 |
 | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（见下方创建步骤） |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID（Dashboard 右侧或 Workers 概览；须与 `wrangler.jsonc` 里 KV `id` 所属账号一致） |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（见下） |
+| `CLOUDFLARE_ACCOUNT_ID` | 账号 ID；须与 `wrangler.jsonc` 里 KV `id` 所属账号一致 |
 
-**创建 API Token（推荐）：**
+用 [GitHub CLI](https://cli.github.com/)（需先 `gh auth login`）：
 
-1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Token**
-2. 使用模板 **Edit Cloudflare Workers**，或自定义权限至少包含：
+```bash
+# 在 money-manage 仓库根目录
+gh secret set CLOUDFLARE_API_TOKEN   # 粘贴 token 后回车
+gh secret set CLOUDFLARE_ACCOUNT_ID  # 粘贴 Account ID 后回车
+gh secret list                       # 应能看到上述两个名字（不显示值）
+```
+
+#### 2. 创建 Cloudflare API Token
+
+1. 打开 [API Tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Token**
+2. 使用模板 **Edit Cloudflare Workers**，或自定义至少：
    - Account → **Cloudflare Workers Scripts** → **Edit**
-   - Account → **Workers KV Storage** → **Edit**（本项目绑定了 `MONEY_DATA` KV）
-   - 如模板要求，再勾选 Account 资源范围到你的账号
-3. 创建后复制 token，只粘贴到 GitHub Secret `CLOUDFLARE_API_TOKEN`（只显示一次）
-4. 配好 Secrets 后，对 `main` 再 push 一次或在 Actions 里 **Re-run failed jobs**
+   - Account → **Workers KV Storage** → **Edit**（本项目绑定 `MONEY_DATA`）
+   - Account 资源范围选到你的账号
+3. 创建后复制 token（只显示一次）→ 只放进 GitHub Secret `CLOUDFLARE_API_TOKEN`
 
-若 deploy 仍失败：看 job 日志里是否有 `Authentication error` / `Invalid account` / `KV namespace` / OpenNext build 报错，再分别查 token 权限、Account ID、KV id 或构建问题。
+#### 3. 查找 Account ID
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 选中正确账号后，右侧边栏 **Account ID**（或 Workers & Pages 概览页也可看到）
+3. 复制到 GitHub Secret `CLOUDFLARE_ACCOUNT_ID`
+
+#### 4. 验证
+
+1. Secrets 配好后，向 `main` push 一次，或在 **Actions** 里对失败的 CI 点 **Re-run**
+2. 打开 Actions → 工作流 **CI** → 确认 `check` 绿、`deploy` 绿
+3. 浏览器打开 <https://money-manage.wangjser.workers.dev> 确认已更新
+
+若 deploy 失败：看日志是否有 `Authentication error` / `Invalid account` / `KV namespace` / OpenNext build 报错，再分别查 token 权限、Account ID、KV id 或构建问题。
 
 ---
 
