@@ -104,6 +104,25 @@ button, input, select { font: inherit; }
   background: #fff;
   box-shadow: 0 1px 0 #edf1ee; /* collapse 下滚动时补一条底边 */
 }
+/*
+ * 浮层内表格（PC/移动 内满屏 sheet-page 等）：
+ * 唯一滚动上下文挂在 [data-float-scroll]（与 overlayEvents 一致），吃满标题栏以下高度；
+ * 勿再给 .table-scroll 套一层 overflow，否则外壳 overflow:hidden 时 wheel/touch 会被隔离逻辑误判为不可滚并 preventDefault，出现「条在动/手势在、内容不动」。
+ */
+[data-float-panel] [data-float-scroll]:has(> .table-wrap.table-scroll) {
+  overflow: auto;
+  overscroll-behavior: contain;
+  /* 盖过 SheetPageShell 的 p-4：顶贴标题栏，左右底仍 1rem */
+  padding: 0 1rem 1rem;
+}
+[data-float-panel] [data-float-scroll] > .table-wrap.table-scroll {
+  max-height: none;
+  overflow: visible;
+}
+/* 内满屏：面板本身不另开滚动条 */
+[data-float-panel][data-ux='sheet-page']:has(.table-wrap.table-scroll) {
+  overflow: hidden;
+}
 /* grid/flex 子项默认 min-width:auto 会被长文案/canvas 撑破 375 */
 main, section, aside, article, .space-y-2, .space-y-6, .min-w-0 { min-width: 0; }
 .retirement-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; border: 1px solid #e3eae5; border-radius: .9rem; background: #f8faf9; color: #52605b; padding: .75rem 1rem; font-size: .78rem; }

@@ -2918,6 +2918,8 @@ export default function HomePage() {
                 anchorRef={assetDetailBtnRef}
                 onClose={() => setShowAssetDetails(false)}
                 width={620}
+                mode="sheet"
+                density="panel"
                 headerTitle="月度资产明细"
               >
                 <div className="table-wrap table-scroll">

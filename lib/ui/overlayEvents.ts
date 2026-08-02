@@ -20,10 +20,34 @@ type ScrollMetrics = {
   clientHeight: number;
 };
 
-/** 从事件目标向上找内页滚动容器。 */
+function isCssScrollPort(el: HTMLElement, axis: 'x' | 'y'): boolean {
+  const style = getComputedStyle(el);
+  const mode = axis === 'y' ? style.overflowY : style.overflowX;
+  return /(auto|scroll|overlay)/.test(mode);
+}
+
+function canScroll(el: HTMLElement): boolean {
+  const y = isCssScrollPort(el, 'y') && el.scrollHeight > el.clientHeight + 1;
+  const x = isCssScrollPort(el, 'x') && el.scrollWidth > el.clientWidth + 1;
+  return y || x;
+}
+
+/**
+ * 从事件目标向上找浮层内真实可滚容器。
+ * 优先可溢出的祖先（如 .table-scroll）；否则回退 [data-float-scroll]。
+ * 避免外壳 overflow:hidden、内层表格才可滚时误判「不可滚」而 preventDefault。
+ */
 export function findFloatScrollTarget(target: EventTarget | null): Element | null {
   if (!(target instanceof Element)) return null;
-  return target.closest('[data-float-scroll]');
+  const panel = target.closest('[data-float-panel]');
+  if (!panel) return target.closest('[data-float-scroll]');
+  let cur: Element | null = target;
+  while (cur && panel.contains(cur)) {
+    if (cur instanceof HTMLElement && canScroll(cur)) return cur;
+    if (cur === panel) break;
+    cur = cur.parentElement;
+  }
+  return panel.querySelector('[data-float-scroll]');
 }
 
 /**
