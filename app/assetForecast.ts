@@ -11,8 +11,9 @@ export type AssetForecastInput = {
   months: number;
   committedDownPayments?: number;
   /**
-   * 理财比例 0–100；若提供，每月结算后按「剩余总资产 × 比例」再平衡现金/理财
-   * （应急水位优先：先保证 cash≥floor，再拆比例）
+   * 理财比例 0–100；仅当有限且 > 0 时启用月末再平衡（剩余总资产 × 比例）。
+   * 0 / 未传 / 非有限 → 走 reinvestFromSurplus（按每月理财投入累积）。
+   * 再平衡时应急水位优先：先保证 cash≥floor，再拆比例。
    */
   investRatio?: number;
   /**
@@ -105,7 +106,8 @@ export function rebalanceByInvestRatio(
  *
  * 恒等式：任意月 total === cash + investment（图表「最终=理财+闲置」；备用金=cash）。
  * 每月：结余/再投入后，若 cash < floor，从理财赎回 min(invest, floor−cash) 补备用金。
- * 若设 investRatio：再按剩余总资产 × 比例拆分现金/理财（仍优先 floor）。
+ * 若 investRatio 有限且 > 0：再按剩余总资产 × 比例拆分现金/理财（仍优先 floor）。
+ * investRatio 为 0 / 未传 / 非有限：走 reinvestFromSurplus。
  * 理财赎光仍不够时，才允许 cash < floor（含穿零），此时可出现 total < investment。
  */
 export function buildMonthlyAssetForecast(input: AssetForecastInput): MonthlyAssetRow[] {
@@ -116,7 +118,8 @@ export function buildMonthlyAssetForecast(input: AssetForecastInput): MonthlyAss
   const committed = Math.max(0, input.committedDownPayments ?? 0);
   const fixedReserve = Math.max(0, input.emergencyReserve ?? 0);
   const useOutflow = typeof input.expenseOutflowAtMonth === 'function';
-  const hasRatio = Number.isFinite(input.investRatio);
+  // 仅 > 0 才启用比例再平衡；0 与「未设」同走每月理财投入路径，避免理财恒为 0
+  const hasRatio = Number.isFinite(input.investRatio) && (input.investRatio as number) > 0;
   let cash = input.cash;
   let investment = Math.max(0, input.investment);
   const rows: MonthlyAssetRow[] = [];

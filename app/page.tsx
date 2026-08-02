@@ -44,6 +44,7 @@ import {
   pickExpenseShareWarnYAxes,
   pickRemainShareWarnYAxes,
 } from '../lib/shareWarnMarkLines';
+import { registerDebugLiveProfile } from '../lib/debugProfileTransfer';
 import {
   loadGuestDraft,
   resolveGuestProfile,
@@ -1176,6 +1177,8 @@ export default function HomePage() {
   };
   const saveRef = useRef(save);
   saveRef.current = save;
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   // 登出 → 访客键；不把当前账号画像写入访客键（保留原访客草稿或回落轻演示）
   const handleLogout = () => {
@@ -1220,6 +1223,12 @@ export default function HomePage() {
       window.removeEventListener('money-manage-save', onPersist);
     };
   }, [hydrated]);
+
+  // dbg 导出用当前内存 profile（含未 blur 的编辑）
+  useEffect(() => {
+    registerDebugLiveProfile(() => profileRef.current as Record<string, unknown>);
+    return () => registerDebugLiveProfile(null);
+  }, []);
   const retirementDate = retirementDateFor(
     retirement.birthDate,
     retirement.identity,
@@ -2893,7 +2902,7 @@ export default function HomePage() {
               <SectionTitle
                 title="资产走势"
                 tip={
-                  '预计总资产 = 理财资产 + 现金余额。每月先扣当月支出（分期：首月仅首付，次月起月供），再按理财比例拆分剩余资产。\n现金低于备用金水位时从理财赎回补足。'
+                  '预计总资产 = 理财资产 + 现金余额。每月先扣当月支出（分期：首月仅首付，次月起月供）；理财占比 > 0 时按比例拆分剩余资产，为 0 时按每月理财投入累积。\n现金低于备用金水位时从理财赎回补足。'
                 }
               />
               <button
@@ -4561,7 +4570,7 @@ function ReinvestEditor({
           每月理财投入
           <InfoTip>
             {
-              '每月剩余的钱中，有多少拿去理财。\n可以按结余比例投入，也可以填写每月固定金额；不会超过当月剩余。'
+              '每月剩余的钱中，有多少拿去理财。\n可以按结余比例投入，也可以填写每月固定金额；不会超过当月剩余。\n理财占比 > 0 时按比例再平衡，本项（每月投入）不生效。'
             }
           </InfoTip>
         </div>
