@@ -27,7 +27,8 @@
     "test:mobile-smoke": "node tests/mobile-smoke.mjs",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:dev": "playwright test",
-    "debug:watch": "node scripts/watch-mm-debug.mjs"
+    "debug:watch": "node scripts/watch-mm-debug.mjs",
+    "perf:lh": "node scripts/lh-home.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.6.5",
@@ -43,6 +44,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "autoprefixer": "^10.4.21",
+    "lighthouse": "^12.8.2",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",

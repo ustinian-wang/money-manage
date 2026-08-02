@@ -16,6 +16,7 @@ logs/
 playwright-report/
 test-results/
 blob-report/
+tmp/
 
 # local secrets (never commit)
 .env

@@ -3,6 +3,10 @@ import { createRequire } from 'node:module';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // 缩小首包：按需解析大依赖的子路径（echarts 仍由 ChartHost 动态加载）
+  experimental: {
+    optimizePackageImports: ['echarts', 'echarts-for-react'],
+  },
 };
 
 export default nextConfig;

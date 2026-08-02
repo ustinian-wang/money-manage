@@ -3,14 +3,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import ReactECharts from 'echarts-for-react';
-import InstallToDesktop from './InstallToDesktop';
+import dynamic from 'next/dynamic';
 import ConfirmDialog from './components/ConfirmDialog';
 import FloatPanel from './components/FloatPanel';
 import LinkedNumberFields, {
   LinkLockIcon,
 } from './components/LinkedNumberFields';
-import { AssetDetailsEntry } from './components/MonthlyAssetDetailTable';
 import SelectNumberField from './components/SelectNumberField';
 import { useRouter } from 'next/navigation';
 import { logoutSession, type AuthUser } from './AuthBar';
@@ -179,6 +177,23 @@ import {
   type PlanChangeEvent,
   type PlanChangeField,
 } from '../domain/planChange';
+
+const ChartHost = dynamic(() => import('./components/ChartHost'), {
+  ssr: false,
+  loading: () => (
+    <div className="chart-box overflow-hidden rounded-2xl bg-slate-50 p-2 sm:p-3" />
+  ),
+});
+const InstallToDesktop = dynamic(() => import('./InstallToDesktop'), {
+  ssr: false,
+});
+const AssetDetailsEntry = dynamic(
+  () =>
+    import('./components/MonthlyAssetDetailTable').then((m) => ({
+      default: m.AssetDetailsEntry,
+    })),
+  { ssr: false },
+);
 
 type Expense = {
   id: string;
@@ -4131,73 +4146,6 @@ function ExpenseAnalyzeButton({
           />
           </div>
         </FloatPanel>
-    </div>
-  );
-}
-
-/** 图表宿主：仅客户端挂载 ECharts + 固定高度 + 可见/尺寸变化时 resize，避免 SSR/hydration 后 0×0 */
-function ChartHost({
-  option,
-  className = '',
-}: {
-  option: Record<string, unknown>;
-  className?: string;
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<InstanceType<typeof ReactECharts>>(null);
-  // ponytail: SSR 与首屏一致留空盒，挂载后再画，躲开 echarts DOM 水合不一致
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  useEffect(() => {
-    if (!mounted) return;
-    const el = wrapRef.current;
-    if (!el) return;
-    const resize = () => {
-      try {
-        chartRef.current?.getEchartsInstance()?.resize();
-      } catch {
-        /* chart may unmount */
-      }
-    };
-    const ro =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(() => resize())
-        : null;
-    ro?.observe(el);
-    // 走势分区跳转后图进视口再 resize
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting))
-          requestAnimationFrame(resize);
-      },
-      { threshold: 0.05 },
-    );
-    io.observe(el);
-    const timer = window.setTimeout(resize, 80);
-    return () => {
-      ro?.disconnect();
-      io.disconnect();
-      window.clearTimeout(timer);
-    };
-  }, [mounted]);
-  return (
-    <div
-      ref={wrapRef}
-      className={`chart-box overflow-hidden rounded-2xl bg-slate-50 p-2 sm:p-3 ${className}`}
-    >
-      {mounted && (
-        <ReactECharts
-          ref={chartRef}
-          option={option}
-          style={{ height: '100%', width: '100%', minHeight: 220 }}
-          opts={{ renderer: 'canvas' }}
-          notMerge
-          lazyUpdate
-          onChartReady={(chart) => chart.resize()}
-        />
-      )}
     </div>
   );
 }
